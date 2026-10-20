@@ -56,6 +56,9 @@ file.addEventListener("change",async()=>{
    const data=await uploaded.text(),bars=parseCSV(data).slice(-200);
    const symbol=normSymbol();
    if(!symbol)throw Error("יש לבחור סימול מניה בשדה הגרף קודם");
+   const symbols=[...new Set(bars.map(b=>b.ticker).filter(Boolean))];
+   if(symbols.length>1)throw Error("בקובץ מופיעות כמה מניות; יש לבחור קובץ של מניה אחת");
+   if(symbols.length===1&&symbols[0].split(":").at(-1)!==symbol.split(":").at(-1))throw Error("הסימול בקובץ ("+symbols[0]+") שונה מהגרף ("+symbol+")");
    const context=stockContext(symbol,bars);
    loaded={symbol,bars,context};
    localChart.setData(symbol,bars);
