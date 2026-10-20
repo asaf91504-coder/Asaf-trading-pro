@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseCSV,analyze} from '../analyzer.mjs';
+const csv=(count,volume=100)=>'Date,High,Low,Close,Volume\n'+Array.from({length:count},(_,i)=>{const close=100+i;return ['2026-01-'+String(i+1).padStart(2,'0'),close+2,close-2,close,volume].join(',')}).join('\n');
+const data=(count)=>Array.from({length:count},(_,i)=>{const close=100+i;return {date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),high:close+2,low:close-2,close,volume:100}});
+test('rejects empty input',()=>assert.throws(()=>parseCSV(''),/שורות|קובץ/));
+test('parses valid CSV and sorts dates',()=>{const x=parseCSV('Date,High,Low,Close,Volume\n2026-01-02,12,10,11,200\n2026-01-01,11,9,10,100');assert.equal(x[0].date,'2026-01-01');assert.equal(x.length,2)});
+test('rejects missing OHLC columns',()=>assert.throws(()=>parseCSV('Date,Close\n2026-01-01,10\n2026-01-02,11'),/עמודות/));
+test('drops invalid prices',()=>{const x=parseCSV('Date,High,Low,Close\n2026-01-01,12,9,11\n2026-01-02,1,2,3');assert.equal(x.length,1)});
+test('requires 21 bars',()=>assert.throws(()=>analyze(data(20)),/21/));
+test('calculates MA20 and MA150',()=>{const x=analyze(data(150));assert.equal(x.sma20,239.5);assert.equal(x.sma150,174.5);assert.equal(x.aboveMA20,true)});
+test('detects breakout and volume ratio',()=>{const x=data(21);x[20].high=145;x[20].close=144;x[20].volume=250;const r=analyze(x);assert.equal(r.breakout20,true);assert.equal(r.volumeRatio,2.5)});
+test('reports unavailable MA150 for short series',()=>assert.equal(analyze(data(21)).sma150,null));
