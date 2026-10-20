@@ -49,7 +49,7 @@ export function answerStockQuestion(question, context=null) {
   const risk=`תנודתיות: ATR14 ${fmt(c.atr14)} (${c.atrPercent===null?"לא זמין":fmt(c.atrPercent)+"%"} מהמחיר). ATR מודד תנועה, לא את הכיוון שלה. הנר האחרון עשוי להיות חלקי.`;
   const daily=`יום המסחר האחרון: ${c.dailyChangePercent===null?"לא ניתן לחשב שינוי":fmt(c.dailyChangePercent)+"%"} לעומת הסגירה הקודמת; נר ${c.candleDirection}.`;
   const caution="⚠️ הנר האחרון עשוי להיות בתהליך היווצרות, ולכן מחזורו והאינדיקטורים עליו עשויים להשתנות. עדכניות הנתונים תלויה במקור ובזמן הנר האחרון. איני קורא את חלון TradingView ולא מאמת תבניות מורכבות מתמונת הגרף. כוס וידית, ראש וכתפיים ותחתית כפולה דורשות בדיקה נוספת.";
-  if(includes(q,["דוח","earnings","רווחיות","חדשות","המלצות אנליסטים","forecast","תחזית אנליסטים","שווי שוק","market cap"])) return title+"\nאין לי כאן גישה לדוחות, חדשות או תחזיות בזמן אמת. המקור הנוכחי מספק נרות מחיר בלבד, ולכן לא אמציא מידע על דוחות או המלצות.\n"+trend+"\n"+caution;
+  if(includes(q,["דוח","earnings","רווחיות","חדשות","המלצות אנליסטים","forecast","תחזית אנליסטים","שווי שוק","market cap"])) return title+"\nאין לי גישה לדוחות, חדשות או תחזיות בזמן אמת. המקור הנוכחי מספק נרות מחיר בלבד, ולכן לא אמציא מידע על דוחות או המלצות.\n"+trend+"\n"+caution;
   if(includes(q,["נפח","מחזור","ווליום","volume"])) return title+"\n"+volume+"\n"+breakout+"\n"+caution;
   if(includes(q,["תמיכה","התנגדות","רמות","support","resistance","סטופ","סיכון"])) return title+"\n"+levels+"\n"+risk+"\nלניהול סיכון, חשב את המרחק בין כניסה לסטופ ואת הכמות לפי גודל התיק. רמות אלה אינן המלצה להצבת הוראה.\n"+caution;
   if(includes(q,["פריצה","breakout","גבהים יורדים","cup","כוס","דאבל","תחתית כפולה","ראש וכתפיים","תבנית"])) return title+"\n"+breakout+"\n"+volume+"\n"+levels+"\n"+caution;
