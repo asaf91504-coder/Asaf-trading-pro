@@ -1,9 +1,11 @@
 import {parseCSV,stockContext,answerStockQuestion} from "./market-chat.mjs";
+import {initLocalChart} from "./local-chart.mjs";
 
 const $=id=>document.getElementById(id);
 const log=$("chatLog"),file=$("chatCsv"),message=$("chatInput"),badge=$("chatDataStatus");
 const status=$("chatStatus"),form=$("chatForm"),chartSymbol=$("symbol");
 const key="asaf_market_candles_v1";
+const localChart=initLocalChart();
 let loaded=null;
 const normSymbol=()=>String(chartSymbol.value||"").trim().toUpperCase().replace(/[^A-Z0-9:._-]/g,"").slice(0,30);
 function say(role,content){
@@ -34,7 +36,8 @@ function restore(){
  try{
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
   if(saved&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"){
-    loaded={symbol:saved.symbol,context:stockContext(saved.symbol,saved.bars)};
+    loaded={symbol:saved.symbol,bars:saved.bars,context:stockContext(saved.symbol,saved.bars)};
+    if(normSymbol()===saved.symbol)localChart.setData(saved.symbol,saved.bars);
   }
  }catch{}
  renderStatus();
@@ -50,11 +53,12 @@ file.addEventListener("change",async()=>{
  status.textContent="מחשב נתונים מקומית...";
  try{
    if(uploaded.size>2000000)throw Error("קובץ CSV גדול מ-2MB");
-   const data=await uploaded.text(),bars=parseCSV(data);
+   const data=await uploaded.text(),bars=parseCSV(data).slice(-200);
    const symbol=normSymbol();
    if(!symbol)throw Error("יש לבחור סימול מניה בשדה הגרף קודם");
    const context=stockContext(symbol,bars);
-   loaded={symbol,context};
+   loaded={symbol,bars,context};
+   localChart.setData(symbol,bars);
    try{sessionStorage.setItem(key,JSON.stringify({symbol,bars:bars.slice(-200)}))}catch{status.textContent="חושב, אך אין מספיק מקום לשמירה זמנית."}
    renderStatus();
    status.textContent="✓ הנתונים נותחו במכשיר בלבד. שיוך הסימול מבוסס על מה שהקלדת — ודא שה-CSV שייך לאותה מניה.";
@@ -71,6 +75,7 @@ form.addEventListener("submit",event=>{
 });
 $("chatClearData").addEventListener("click",()=>{
  loaded=null;
+ localChart.clear();
  try{sessionStorage.removeItem(key)}catch{}
  renderStatus();
  status.textContent="נתוני הגרף הזמניים נמחקו מהמכשיר.";
@@ -83,7 +88,7 @@ if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
  ask("תנתח את הגרף הנוכחי");
 });
-chartSymbol.addEventListener("input",renderStatus);
+chartSymbol.addEventListener("input",()=>{renderStatus();if(loaded&&normSymbol()===loaded.symbol)localChart.setData(loaded.symbol,loaded.bars);else localChart.clear()});
 restore();
 say("bot","אני ASAF Market Analyst — מתמחה רק בשוק ההון. טען נתוני נרות CSV כדי שאוכל לנתח את הגרף באמת. איני רואה ישירות את חלון TradingView, איני מקבל מחירים בזמן אמת, ואין כאן שימוש ב-API בתשלום.");
 if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" נטענו מחדש מהלשונית הנוכחית, עד "+loaded.context.date+".");
