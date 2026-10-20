@@ -18,12 +18,20 @@ function csvRow(line) {
 }
 const parseDate = raw => {
   const value=String(raw??"").trim();
-  if(/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0,10);
-  if(/^\d{4}\/\d{2}\/\d{2}$/.test(value)) return value.replaceAll("/","-");
-  if(/^\d{10}$/.test(value)||/^\d{13}$/.test(value)) {
-    const timestamp=Number(value)*(value.length===10?1000:1);
-    const parsed=new Date(timestamp);
-    return Number.isFinite(parsed.getTime())?parsed.toISOString().slice(0,10):null;
+  // Preserve individual intraday candles; collapsing to YYYY-MM-DD drops all but one bar per day.
+  if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value;
+  if(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?$/.test(value))return value.replace("T"," ");
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(value))return value.replaceAll("/","-");
+  if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    const parsed=new Date(value);
+    if(!Number.isFinite(parsed.getTime()))return null;
+    return parsed.toISOString().slice(0,19).replace("T"," ");
+  }
+  if(/^\d{10}$/.test(value)||/^\d{13}$/.test(value)){
+    const parsed=new Date(Number(value)*(value.length===10?1000:1));
+    if(!Number.isFinite(parsed.getTime()))return null;
+    const utc=parsed.toISOString().slice(0,19).replace("T"," ");
+    return utc.endsWith(" 00:00:00")?utc.slice(0,10):utc;
   }
   return null;
 };
