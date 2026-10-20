@@ -43,12 +43,12 @@ export function answerStockQuestion(question, context=null) {
   const timeframe=isIntraday?" (טווח "+c.interval+"; הממוצעים ופריצת 20 מתייחסים לנרות, לא לימים)":"";
   const title=`📈 ${c.symbol} | נר אחרון ${c.date} | ${c.bars} נרות | מקור: ${sourceText}${timeframe}`;
   const trend=`מגמה: סגירה ${fmt(c.close)}, MA20 ${fmt(c.sma20)} (${c.aboveMA20?"מעליו":"מתחתיו"}), MA150 ${fmt(c.sma150)} (${yes(c.aboveMA150)} מעליו).`;
-  const levels=`רמות מחושבות: שפל 20 הימים האחרונים ${fmt(c.rangeLow20)}; שיא 20 הימים הקודמים ${fmt(c.priorHigh20)}; טווח 50 ימים ${fmt(c.rangeLow50)}–${fmt(c.rangeHigh50)}. אלה רמות היסטוריות, לא קווי תמיכה/התנגדות מאומתים.`;
-  const breakout=`פריצה: סגירה מעל השיא של 20 הימים הקודמים — ${yes(c.breakout20)}. ${c.breakout20?"צריך לבדוק המשכיות והאם הפריצה נשמרת.":"לא התקבלה פריצה לפי התנאי הזה."}`;
-  const volume=`נפח מסחר: ${c.volumeRatio===null?"אין 20 ימי מחזור מלאים לחישוב":fmt(c.volumeRatio)+"× ממוצע 20 ימי המסחר הקודמים"}.`;
-  const risk=`תנודתיות: ATR14 ${fmt(c.atr14)} (${c.atrPercent===null?"לא זמין":fmt(c.atrPercent)+"%"} מהמחיר). ATR מודד תנועה, לא את הכיוון שלה.`;
+  const levels=`רמות מחושבות: שפל 20 הנרות האחרונים ${fmt(c.rangeLow20)}; שיא 20 הנרות הקודמים ${fmt(c.priorHigh20)}; טווח 50 נרות ${fmt(c.rangeLow50)}–${fmt(c.rangeHigh50)}. אלה רמות היסטוריות, לא קווי תמיכה/התנגדות מאומתים.`;
+  const breakout=`פריצה: סגירה מעל השיא של 20 הנרות הקודמים — ${yes(c.breakout20)}. ${c.breakout20?"צריך לבדוק המשכיות והאם הפריצה נשמרת.":"לא התקבלה פריצה לפי התנאי הזה."}`;
+  const volume=`נפח מסחר: ${c.volumeRatio===null?"אין נתוני מחזור ל-20 הנרות הקודמים":fmt(c.volumeRatio)+"× ממוצע מחזור 20 הנרות הקודמים"}.`;
+  const risk=`תנודתיות: ATR14 ${fmt(c.atr14)} (${c.atrPercent===null?"לא זמין":fmt(c.atrPercent)+"%"} מהמחיר). ATR מודד תנועה, לא את הכיוון שלה. הנר האחרון עשוי להיות חלקי.`;
   const daily=`יום המסחר האחרון: ${c.dailyChangePercent===null?"לא ניתן לחשב שינוי":fmt(c.dailyChangePercent)+"%"} לעומת הסגירה הקודמת; נר ${c.candleDirection}.`;
-  const caution="⚠️ עדכניות הנתונים תלויה במקור ובזמן הנר האחרון. איני קורא את חלון TradingView ולא מאמת תבניות מורכבות מתמונת הגרף. כוס וידית, ראש וכתפיים ותחתית כפולה דורשות בדיקה נוספת.";
+  const caution="⚠️ הנר האחרון עשוי להיות בתהליך היווצרות, ולכן מחזורו והאינדיקטורים עליו עשויים להשתנות. עדכניות הנתונים תלויה במקור ובזמן הנר האחרון. איני קורא את חלון TradingView ולא מאמת תבניות מורכבות מתמונת הגרף. כוס וידית, ראש וכתפיים ותחתית כפולה דורשות בדיקה נוספת.";
   if(includes(q,["דוח","earnings","רווחיות","חדשות","המלצות אנליסטים","forecast","תחזית אנליסטים","שווי שוק","market cap"])) return title+"\nאין לי כאן גישה לדוחות, חדשות או תחזיות בזמן אמת. המקור הנוכחי מספק נרות מחיר בלבד, ולכן לא אמציא מידע על דוחות או המלצות.\n"+trend+"\n"+caution;
   if(includes(q,["נפח","מחזור","ווליום","volume"])) return title+"\n"+volume+"\n"+breakout+"\n"+caution;
   if(includes(q,["תמיכה","התנגדות","רמות","support","resistance","סטופ","סיכון"])) return title+"\n"+levels+"\n"+risk+"\nלניהול סיכון, חשב את המרחק בין כניסה לסטופ ואת הכמות לפי גודל התיק. רמות אלה אינן המלצה להצבת הוראה.\n"+caution;
