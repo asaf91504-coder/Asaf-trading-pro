@@ -16,6 +16,17 @@ function csvRow(line) {
   cells.push(current.trim());
   return cells;
 }
+const parseDate = raw => {
+  const value=String(raw??"").trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0,10);
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(value)) return value.replaceAll("/","-");
+  if(/^\d{10}$/.test(value)||/^\d{13}$/.test(value)) {
+    const timestamp=Number(value)*(value.length===10?1000:1);
+    const parsed=new Date(timestamp);
+    return Number.isFinite(parsed.getTime())?parsed.toISOString().slice(0,10):null;
+  }
+  return null;
+};
 export function parseCSV(csv) {
   if (typeof csv !== 'string' || csv.length > 2_000_000) throw Error('קובץ גדול מדי או לא תקין');
   const lines=csv.replace(/^\uFEFF/, '').split(/\r?\n/).filter(x=>x.trim());
@@ -26,10 +37,10 @@ export function parseCSV(csv) {
   if ([ix.date,ix.high,ix.low,ix.close].some(x=>x<0)) throw Error('חסרות עמודות Date, High, Low, Close');
   const rows=[];
   for(const line of lines.slice(1)) {
-    const c=csvRow(line);const date=c[ix.date],high=number(c[ix.high]),low=number(c[ix.low]),close=number(c[ix.close]),volume=ix.volume<0?null:number(c[ix.volume]);
-    if(!/^\d{4}-\d{2}-\d{2}/.test(date||'')) continue;
-    if(![high,low,close].every(Number.isFinite)||low<=0||high<low||close<low||close>high) continue;
-    rows.push({date:date.slice(0,10),high,low,close,volume:Number.isFinite(volume)&&volume>=0?volume:null});
+    const c=csvRow(line);const date=parseDate(c[ix.date]),open=ix.open<0?null:number(c[ix.open]),high=number(c[ix.high]),low=number(c[ix.low]),close=number(c[ix.close]),volume=ix.volume<0?null:number(c[ix.volume]);
+    if(!date) continue;
+    if(![high,low,close].every(Number.isFinite)||low<=0||high<low||close<low||close>high||open!==null&&(!Number.isFinite(open)||open<low||open>high)) continue;
+    rows.push({date,open,high,low,close,volume:Number.isFinite(volume)&&volume>=0?volume:null});
   }
   rows.sort((a,b)=>a.date.localeCompare(b.date));
   const uniq=new Map(rows.map(x=>[x.date,x]));
