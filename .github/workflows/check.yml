@@ -1,0 +1,18 @@
+name: ASAF Trading Pro Checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check function syntax
+        run: node --check netlify/functions/chat.mjs
+      - name: Run security and UI smoke tests
+        run: node --test tests/smoke.test.mjs
