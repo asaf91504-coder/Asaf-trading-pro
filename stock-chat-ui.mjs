@@ -89,6 +89,7 @@ if(shortcut)shortcut.addEventListener("click",()=>{
  ask("תנתח את הגרף הנוכחי");
 });
 chartSymbol.addEventListener("input",()=>{renderStatus();if(loaded&&normSymbol()===loaded.symbol)localChart.setData(loaded.symbol,loaded.bars);else localChart.clear()});
+document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
 say("bot","אני ASAF Market Analyst — מתמחה רק בשוק ההון. טען נתוני נרות CSV כדי שאוכל לנתח את הגרף באמת. איני רואה ישירות את חלון TradingView, איני מקבל מחירים בזמן אמת, ואין כאן שימוש ב-API בתשלום.");
 if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" נטענו מחדש מהלשונית הנוכחית, עד "+loaded.context.date+".");
