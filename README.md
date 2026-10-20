@@ -59,3 +59,23 @@ After redeploy, choose a symbol and timeframe and click "📡 הבא נתוני 
 - TradingView is independently embedded for visual reference. Its data and image are not accessible to the app. Only the original Canvas chart is snapshotted and analyzed.
 
 Docs: https://twelvedata.com/docs | https://twelvedata.com/pricing | https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage | https://www.tradingview.com/widget-docs/widget-formats/
+
+
+## Real conversational chart AI (free model, private opt-in) — October 20, 2026
+**The former keyword-generated chat responses have been replaced in `stock-chat-ui.mjs` with a real multilingual LLM conversation via `netlify/functions/free-chat.mjs`.** The AI receives the user's question, up to eight conversation turns, computed OHLC technical indicators, the last 30 chart candles, and — when included — a compressed chart screenshot / uploaded image. This is different from the optional **"local mathematical analysis"** button, which remains explicitly deterministic.
+
+No cost activation takes place from the GitHub commit. The server returns HTTP 503 and calls no model unless the site owner explicitly sets:
+1. `OPENROUTER_API_KEY` — the owner-created OpenRouter key, secret in Netlify only
+2. `ASAF_FREE_AI_ACCESS_CODE` — an independent 24+ character personal passcode
+3. `ASAF_FREE_AI_ENABLED=true` — enable the *free model only*
+
+The model ID is **hardcoded `openrouter/free`**, which OpenRouter currently advertises with zero prompt and completion token prices. There is *no fallback* to premium models or OpenAI. Free accounts currently have a 50-request/day quota and limited availability, and model choice can change; image support depends on the dynamically selected free model. This is a research beta, not a guaranteed free hosted service or SLA; Netlify hosting usage still matters. The backend includes an owner passcode and only a per-instance best-effort 6-request/minute throttle — **not durable global authorization, spending protection, or a public service quota**. Keep private until proper authentication and server-side quotas have been deployed.
+
+The frontend now prefers actual AI over canned replies. If disabled or unavailable, it says so openly rather than pretending to be AI. Deterministic analysis only runs when specifically selected. A mobile user may upload a chart screenshot or click "Capture and analyze" on the site's original Canvas graph, which includes the same OHLC candles analyzed. The embedded third-party TradingView iframe itself **cannot be screenshotted/read directly by JavaScript**; take a normal device screenshot and upload it if needed.
+
+### Premium upgrade is optional and *not* currently implemented or enabled
+OpenRouter Standard is pay-as-you-go, with no minimum subscription commitment. Upgrading the site to a paid model should be done only after agreeing a spending cap, adding authentication and durable request quotas, using restricted API keys, and receiving the owner's explicit approval for the specific provider and budget. This deployment remains fixed to free-only routing.
+
+See `tests/free-chat.test.mjs` for mocked no-credential regression tests; no live LLM call or purchase has been performed.
+
+Official docs: https://openrouter.ai/openrouter/free | https://openrouter.ai/pricing | https://openrouter.ai/docs/api/api-reference/chat/send-chat-completion-request
