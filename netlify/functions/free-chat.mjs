@@ -4,6 +4,8 @@
  * Requires owner-only access code; in-memory throttling is NOT a global hard quota.
  */
 import {stockContext} from "../../market-chat.mjs";
+import {currentUser} from "../../server/auth-core.mjs";
+import {reserveAIRequest,storeConfigured} from "../../server/storage.mjs";
 const MODEL="openrouter/free"; // fixed zero-price router; never fallback to a paid model
 const reply=(payload,status=200)=>Response.json(payload,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 const seen=new Map();
@@ -59,8 +61,16 @@ export default async function handler(request){
  if(request.method!=="POST")return reply({error:"POST only"},405);
  if(process.env.ASAF_FREE_AI_ENABLED!=="true")return reply({error:"AI חופשי עדיין לא הוגדר. נדרש חיבור חינמי ב-Netlify; לא תבוצע קריאה בתשלום."},503);
  const key=process.env.OPENROUTER_API_KEY,pass=process.env.ASAF_FREE_AI_ACCESS_CODE;
- if(!key||!pass||pass.length<24)return reply({error:"הגדר OPENROUTER_API_KEY ו-ASAF_FREE_AI_ACCESS_CODE (24 תווים לפחות) ב-Netlify"},503);
- if(request.headers.get("x-asaf-free-ai-code")!==pass)return reply({error:"קוד גישה לא תקין"},401);
+ const publicMode=process.env.ASAF_PUBLIC_AUTH_ENABLED==='true';let member=null;
+ if(!key)return reply({error:'מפתח המודל טרם הוגדר בשרת'},503);
+ if(publicMode){
+  if(!storeConfigured())return reply({error:'כניסה ומגבלות שימוש משותפות טרם הוגדרו'},503);
+  try{member=await currentUser(request)}catch{return reply({error:'שירות אימות המשתמשים אינו זמין'},503)}
+  if(!member)return reply({error:'נדרשת כניסה לחשבון מוזמן'},401);
+ }else{
+  if(!pass||pass.length<24)return reply({error:'גישה פרטית טרם הוגדרה'},503);
+  if(request.headers.get("x-asaf-free-ai-code")!==pass)return reply({error:'קוד גישה לא תקין'},401);
+ }
  if(!(request.headers.get("content-type")||"").toLowerCase().includes("application/json"))return reply({error:"JSON only"},415);
  const origin=request.headers.get("origin");
  if(origin&&origin!==new URL(request.url).origin)return reply({error:"Origin mismatch"},403);
@@ -82,6 +92,10 @@ export default async function handler(request){
  const userText="Question: "+question+"\n\n"+description;
  const content=image?[{type:"text",text:userText},{type:"image_url",image_url:{url:image}}]:userText;
  if(!rateLimit())return reply({error:"יותר מדי בקשות בדקה. נסה שוב מאוחר יותר."},429);
+ if(publicMode||process.env.ASAF_FREE_AI_DURABLE_QUOTA==='true'){
+  if(!storeConfigured())return reply({error:'מגבלת השימוש המשותפת טרם הוגדרה; לא נשלחה בקשה למודל.'},503);
+  try{if(!await reserveAIRequest({memberId:member?.id}))return reply({error:'מכסת הבקשות המשותפת נוצלה. נסה מאוחר יותר.'},429)}catch{return reply({error:'שירות הגבלת השימוש אינו זמין. הבקשה נחסמה לפני פנייה למודל.'},503)}
+ }
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),18000);
  try{
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
@@ -100,3 +114,4 @@ export default async function handler(request){
  }catch{return reply({error:"אין כרגע חיבור למודל החינמי"},502)}
  finally{clearTimeout(timeout)}
 }
+
