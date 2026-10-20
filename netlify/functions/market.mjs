@@ -19,6 +19,7 @@ const validateBar=item=>{
 export default async function handler(request) {
  if(request.method!=="POST")return respond({error:"Only POST is supported"},405);
  if(process.env.ASAF_MARKET_ENABLED!=="true")return respond({error:"חיבור נתוני השוק עדיין לא הופעל — לא מתבצעות קריאות לספק"},503);
+ if(process.env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED!=="true")return respond({error:"נדרש אישור שהרישיון שלך מתיר הצגת נתוני שוק בגרף. מסלול Basic החינמי מוגדר non-display."},503);
  const expected=process.env.ASAF_MARKET_ACCESS_CODE;
  if(!expected||expected.length<20)return respond({error:"Private market access has not been configured"},503);
  if(request.headers.get("x-asaf-market-access")!==expected)return respond({error:"קוד גישה שגוי"},401);
