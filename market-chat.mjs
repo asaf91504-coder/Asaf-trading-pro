@@ -6,7 +6,7 @@ const n=v=>Number(v).toLocaleString("en-US",{maximumFractionDigits:2});
 const yes=v=>v===null?"לא ניתן לחשב":v?"כן":"לא";
 const fmt=v=>v===null?"אין נתונים":n(v);
 const includes=(q,list)=>list.some(s=>q.includes(s));
-export function stockContext(symbol,bars) {
+export function stockContext(symbol,bars,meta={}) {
   if (!Array.isArray(bars)||bars.length<21) throw Error("נדרשים 21 נרות לפחות");
   const m=analyze(bars),last=bars.at(-1),prev=bars.at(-2);
   const last20=bars.slice(-20),prior20=bars.slice(-21,-1);
@@ -15,7 +15,7 @@ export function stockContext(symbol,bars) {
   const changePct=prev.close>0?(last.close-prev.close)/prev.close*100:null;
   const candleRange=last.high-last.low,body=Math.abs(last.close-(last.open??last.close));
   return {
-    ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,
+    ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,source:meta.source==="Twelve Data"?"Twelve Data":"CSV",interval:typeof meta.interval==="string"?meta.interval:"1day",receivedAt:meta.receivedAt||null,exchangeTimezone:meta.exchangeTimezone||null,
     dailyChangePercent:changePct===null?null:Math.round(changePct*100)/100,
     rangeLow20:rangeLow,priorHigh20:priorHigh,rangeHigh50,rangeLow50,
     candleDirection:last.open==null?"לא ידוע":last.close>last.open?"עולה":last.close<last.open?"יורד":"דוג'י",
@@ -36,15 +36,20 @@ export function answerStockQuestion(question, context=null) {
     if(includes(q,["סיכון","פוזיציה","סטופ"])) return "גודל פוזיציה = סכום כסף שמוכנים לסכן ÷ מרחק בין כניסה לסטופ. חשוב להביא בחשבון עמלות והחלקה.\n\n"+prefix;
     return subjectGuide+"\n"+prefix;
   }
-  const c=context;const title=`📈 ${c.symbol} | נתונים עד ${c.date} | ${c.bars} נרות (לא נתוני זמן אמת)`;
+  const c=context;
+  const fromProvider=c.source==="Twelve Data";
+  const isIntraday=!["1day","1week","1month"].includes(c.interval);
+  const sourceText=fromProvider?"Twelve Data, נתונים שעשויים להיות מעוכבים":"קובץ CSV שהועלה";
+  const timeframe=isIntraday?" (טווח "+c.interval+"; הממוצעים ופריצת 20 מתייחסים לנרות, לא לימים)":"";
+  const title=`📈 ${c.symbol} | נר אחרון ${c.date} | ${c.bars} נרות | מקור: ${sourceText}${timeframe}`;
   const trend=`מגמה: סגירה ${fmt(c.close)}, MA20 ${fmt(c.sma20)} (${c.aboveMA20?"מעליו":"מתחתיו"}), MA150 ${fmt(c.sma150)} (${yes(c.aboveMA150)} מעליו).`;
   const levels=`רמות מחושבות: שפל 20 הימים האחרונים ${fmt(c.rangeLow20)}; שיא 20 הימים הקודמים ${fmt(c.priorHigh20)}; טווח 50 ימים ${fmt(c.rangeLow50)}–${fmt(c.rangeHigh50)}. אלה רמות היסטוריות, לא קווי תמיכה/התנגדות מאומתים.`;
   const breakout=`פריצה: סגירה מעל השיא של 20 הימים הקודמים — ${yes(c.breakout20)}. ${c.breakout20?"צריך לבדוק המשכיות והאם הפריצה נשמרת.":"לא התקבלה פריצה לפי התנאי הזה."}`;
   const volume=`נפח מסחר: ${c.volumeRatio===null?"אין 20 ימי מחזור מלאים לחישוב":fmt(c.volumeRatio)+"× ממוצע 20 ימי המסחר הקודמים"}.`;
   const risk=`תנודתיות: ATR14 ${fmt(c.atr14)} (${c.atrPercent===null?"לא זמין":fmt(c.atrPercent)+"%"} מהמחיר). ATR מודד תנועה, לא את הכיוון שלה.`;
   const daily=`יום המסחר האחרון: ${c.dailyChangePercent===null?"לא ניתן לחשב שינוי":fmt(c.dailyChangePercent)+"%"} לעומת הסגירה הקודמת; נר ${c.candleDirection}.`;
-  const caution="⚠️ הנתונים מגיעים מהקובץ שהועלה, לא מפיד בזמן אמת. תבניות מורכבות (כוס וידית, ראש וכתפיים, תחתית כפולה) דורשות בדיקה של שיאים ושפלים ואינן מאומתות אוטומטית כאן.";
-  if(includes(q,["דוח","earnings","רווחיות","חדשות","המלצות אנליסטים","forecast","תחזית אנליסטים","שווי שוק","market cap"])) return title+"\nאין לי גישה לדוחות, חדשות או תחזיות בזמן אמת. הנתונים שהעלית הם נרות מחיר בלבד, ולכן לא אמציא דוח או המלצות.\n"+trend+"\n"+caution;
+  const caution="⚠️ עדכניות הנתונים תלויה במקור ובזמן הנר האחרון. איני קורא את חלון TradingView ולא מאמת תבניות מורכבות מתמונת הגרף. כוס וידית, ראש וכתפיים ותחתית כפולה דורשות בדיקה נוספת.";
+  if(includes(q,["דוח","earnings","רווחיות","חדשות","המלצות אנליסטים","forecast","תחזית אנליסטים","שווי שוק","market cap"])) return title+"\nאין לי כאן גישה לדוחות, חדשות או תחזיות בזמן אמת. המקור הנוכחי מספק נרות מחיר בלבד, ולכן לא אמציא מידע על דוחות או המלצות.\n"+trend+"\n"+caution;
   if(includes(q,["נפח","מחזור","ווליום","volume"])) return title+"\n"+volume+"\n"+breakout+"\n"+caution;
   if(includes(q,["תמיכה","התנגדות","רמות","support","resistance","סטופ","סיכון"])) return title+"\n"+levels+"\n"+risk+"\nלניהול סיכון, חשב את המרחק בין כניסה לסטופ ואת הכמות לפי גודל התיק. רמות אלה אינן המלצה להצבת הוראה.\n"+caution;
   if(includes(q,["פריצה","breakout","גבהים יורדים","cup","כוס","דאבל","תחתית כפולה","ראש וכתפיים","תבנית"])) return title+"\n"+breakout+"\n"+volume+"\n"+levels+"\n"+caution;
