@@ -53,9 +53,11 @@ function ask(q){
  const answer=answerStockQuestion(q,context);
  say("bot",answer);
 }
-file.addEventListener("change",async()=>{
- const uploaded=file.files?.[0];if(!uploaded)return;
- status.textContent="מחשב נתונים מקומית...";
+async function loadCsv(uploaded){
+ if(!uploaded)return;
+ const chartFileStatus=$("chartCsvStatus");
+ const report=(text)=>{status.textContent=text;if(chartFileStatus)chartFileStatus.textContent=text};
+ report("מחשב נתונים מקומית...");
  try{
    if(uploaded.size>2000000)throw Error("קובץ CSV גדול מ-2MB");
    const data=await uploaded.text(),bars=parseCSV(data).slice(-200);
@@ -64,16 +66,19 @@ file.addEventListener("change",async()=>{
    const symbols=[...new Set(bars.map(b=>b.ticker).filter(Boolean))];
    if(symbols.length>1)throw Error("בקובץ מופיעות כמה מניות; יש לבחור קובץ של מניה אחת");
    if(symbols.length===1&&symbols[0].split(":").at(-1)!==symbol.split(":").at(-1))throw Error("הסימול בקובץ ("+symbols[0]+") שונה מהגרף ("+symbol+")");
-   const context=stockContext(symbol,bars);
-   loaded={symbol,bars,source:"CSV",interval:"1day",receivedAt:null,context};
+   const interval=bars.some(b=>b.date.includes(" "))?"intraday":"1day";
+   const context=stockContext(symbol,bars,{source:"CSV",interval});
+   loaded={symbol,bars,source:"CSV",interval,receivedAt:null,context};
    localChart.setData(symbol,bars);
-   try{sessionStorage.setItem(key,JSON.stringify({symbol,bars:bars.slice(-200),source:"CSV",interval:"1day"}))}catch{status.textContent="חושב, אך אין מספיק מקום לשמירה זמנית."}
+   try{sessionStorage.setItem(key,JSON.stringify({symbol,bars:bars.slice(-200),source:"CSV",interval}))}catch{report("חושב, אך אין מספיק מקום לשמירה זמנית.")}
    renderStatus();
-   status.textContent="✓ הנתונים נותחו במכשיר בלבד. שיוך הסימול מבוסס על מה שהקלדת — ודא שה-CSV שייך לאותה מניה.";
+   report("✓ "+bars.length+" נרות חושבו במכשיר בלבד עבור "+symbol+". מקור CSV. ודא שהנתונים שייכים לסימול שבחרת.");
    say("bot","קיבלתי "+context.bars+" נרות עבור הסימול "+symbol+" שבחרת, עד "+context.date+". אפשר לשאול אותי: 'תנתח את הגרף', 'מה התמיכות?', 'האם יש פריצה?', 'איך המחזורים?'");
- }catch(err){status.textContent="לא ניתן לנתח את הקובץ: "+err.message}
- file.value="";
-});
+ }catch(err){report("לא ניתן לנתח את הקובץ: "+err.message)}
+}
+file.addEventListener("change",async()=>{await loadCsv(file.files?.[0]);file.value=""});
+const chartCsv=$("chartCsv");
+chartCsv?.addEventListener("change",async()=>{await loadCsv(chartCsv.files?.[0]);chartCsv.value=""});
 
 const lastFetchBySymbol=new Map();
 marketButton.addEventListener("click",async()=>{
