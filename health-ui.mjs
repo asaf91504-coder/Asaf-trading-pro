@@ -9,7 +9,7 @@ button?.addEventListener("click",async()=>{
   if(!response.ok)throw Error("HTTP "+response.status+" — שרת Netlify לא פרוס או שיש תקלה");
   const body=await response.json();
   if(body.application!=="ASAF TRADING PRO"||body.status!=="ok")throw Error("השרת החזיר גרסה לא צפויה");
-  status.textContent="✓ שרת מחובר | גרסה "+body.version+" | נתוני שוק: "+(body.marketDataEnabled?"מופעלים":"כבויים")+" | AI בתשלום: "+(body.paidAIEnabled?"מופעל (בדוק תקציב ואימות)":"כבוי")+" | הבדיקה עצמה חינמית";
+  status.textContent="✓ שרת מחובר | גרסה "+body.version+" | נתוני שוק: "+(body.marketDataEnabled?"מופעלים":"כבויים")+" | AI חינמי: "+(body.freeAIEnabled?"מחובר":"לא הוגדר")+" | AI בתשלום: "+(body.paidAIEnabled?"מופעל (בדוק תקציב ואימות)":"כבוי")+" | הבדיקה עצמה חינמית";
  }catch(error){
   status.textContent="⚠️ לא אומת חיבור השרת: "+error.message+". חבר את המאגר ל-Netlify ובצע Deploy.";
  }finally{clearTimeout(timeout);button.disabled=false}
