@@ -29,6 +29,8 @@ function currentContext(){
  return loaded.context;
 }
 function renderStatus(){
+ const attribution=$("marketAttribution");
+ if(attribution)attribution.hidden=!(loaded&&loaded.source==="Twelve Data"&&normSymbol()===loaded.symbol);
  if(!loaded){badge.textContent="לא נטען עדיין קובץ נתוני גרף. בלי CSV אני יכול להסביר מושגים בלבד.";return;}
  const now=normSymbol();
  badge.textContent=now===loaded.symbol?
@@ -98,7 +100,7 @@ marketButton.addEventListener("click",async()=>{
      headers:{"Content-Type":"application/json","x-asaf-market-access":passcode},
      body:JSON.stringify({symbol,interval})
    });
-   const result=await response.json();
+   let result;try{result=await response.json()}catch{throw Error("פונקציית Netlify לא נפרסה או החזירה תשובה לא תקינה (ייתכן 404)")};
    if(!response.ok){
      if(response.status===401)sessionStorage.removeItem(privateAccessKey);
      throw Error(result.error||"קריאת נתונים נכשלה");
