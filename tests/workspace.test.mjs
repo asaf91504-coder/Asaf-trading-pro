@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {chartWindow,zoomWindow} from '../chart-view.mjs';
+import {scanFile,screenResult,safeSourceUrl} from '../scanner-core.mjs';
+const csv=(ticker='AAPL',volume='100')=>'Date,Open,High,Low,Close,Volume,Symbol\n'+Array.from({length:160},(_,i)=>{const price=100+i;return [new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10),price,price+2,price-2,price+1,volume,ticker].join(',')}).join('\n');
+test('chart view clamps at both history edges',()=>{assert.deepEqual(chartWindow(200,60,500),{start:0,end:60,count:60});assert.deepEqual(chartWindow(200,60,-30),{start:140,end:200,count:60})});
+test('zoom never reads outside candles, including short series',()=>{for(const total of [1,5,21,200])for(const offset of [0,5,500])for(const factor of [.001,.8,1.25,100]){const z=zoomWindow(total,60,offset,factor,1),w=chartWindow(total,z.count,z.offset);assert.ok(w.start>=0&&w.end<=total&&w.end>w.start)}});
+test('scanner uses symbol column and daily historical indicators',()=>{const r=scanFile('other.csv',csv());assert.equal(r.symbol,'AAPL');assert.equal(r.symbolFrom,'column');assert.equal(r.summary.aboveMA20,true);assert.equal(r.summary.sma150,185.5);assert.equal(screenResult(r).matches,true)});
+test('scanner rejects mixed tickers and intraday screening',()=>{assert.throws(()=>scanFile('x.csv',csv().replace(',AAPL',',NVDA')),/כמה מניות/);assert.throws(()=>scanFile('x.csv',csv().replace('2025-01-01','2025-01-01 12:00')),/יומיים/)});
+test('missing volume cannot silently pass the screen',()=>{const r=scanFile('a.csv',csv('AAPL',''));assert.equal(screenResult(r).matches,false);assert.ok(screenResult(r).reasons.includes('מחזור חסר'))});
+test('unsafe article links and embedded credentials are rejected',()=>{for(const x of ['javascript:alert(1)','data:text/html,test','https://user:secret@example.com/'])assert.throws(()=>safeSourceUrl(x));assert.equal(safeSourceUrl('https://example.com/report'),'https://example.com/report')});
