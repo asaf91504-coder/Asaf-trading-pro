@@ -1,3 +1,4 @@
+import {authState,refreshAuth} from "./auth-ui.mjs";
 import {parseCSV,stockContext,answerStockQuestion} from "./market-chat.mjs";
 import {initLocalChart} from "./local-chart.mjs";
 
@@ -53,6 +54,10 @@ const freeAiAccessKey="asaf_free_ai_code_v1";
 const aiStatus=$("freeAiStatus"),imageInput=$("chatImageUpload"),imageStatus=$("chatImageStatus");
 let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
 let conversation=[];
+function datasetReady(){if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars}}))}
+function resetRequest(){conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
+$('cancelChat')?.addEventListener('click',()=>requestController?.abort());
+window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
 function setAiStatus(text){if(aiStatus)aiStatus.textContent=text}
 async function shrinkImage(source){
  const isFile=typeof File!=="undefined"&&source instanceof File;
@@ -85,28 +90,32 @@ async function ask(q,extra={}){
  chatBusy=true;
  const epoch=conversationEpoch;
  const submitButton=form.querySelector('button');
- submitButton.disabled=true;
+ submitButton.disabled=true;if($("cancelChat"))$("cancelChat").disabled=false;
  const requestState=$('chatRequestState');
  if(requestState)requestState.textContent='ממתין למודל החינמי…';
  const activeController=new AbortController();requestController=activeController;
  const requestTimeout=setTimeout(()=>activeController.abort(),26000);
- say("user",question);
+ say("user",(normSymbol()?"["+normSymbol()+"] ":"")+question);
  const waiting=say("bot","מנתח עם AI...");
  try{
-  let code=sessionStorage.getItem(freeAiAccessKey)||"";
-  if(!code){
+  await refreshAuth();
+  if(epoch!==conversationEpoch||activeController.signal.aborted)return;
+  if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
+  let code=authState.enabled?"":sessionStorage.getItem(freeAiAccessKey)||"";
+  if(!authState.enabled&&!code){
    code=prompt("הכנס קוד גישה פרטי ל-AI החינמי (לא API key):")||"";
    if(!code)throw Error("כדי לקבל תשובות AI אמיתיות, יש להפעיל חיבור OpenRouter החינמי ב-Netlify ולהכניס קוד גישה.");
   }
-  if(code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
+  if(!authState.enabled&&code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
   const context=currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let image=null;
   const candidate=extra.image||pendingImage;
   if(candidate)image=await shrinkImage(candidate);
+  if(epoch!==conversationEpoch||activeController.signal.aborted)return;
   const response=await fetch("/.netlify/functions/free-chat",{
    method:"POST",signal:activeController.signal,
-   headers:{"Content-Type":"application/json","x-asaf-free-ai-code":code},
+   headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},
    body:JSON.stringify({
     message:question,
     symbol:activeData?.symbol||normSymbol(),
@@ -125,7 +134,7 @@ async function ask(q,extra={}){
   }
   if(epoch!==conversationEpoch)return;
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
-  sessionStorage.setItem(freeAiAccessKey,code);
+  if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   waiting.textContent=data.answer;
   conversation.push({role:"user",content:question},{role:"assistant",content:data.answer});
   conversation=conversation.slice(-8);
@@ -139,11 +148,11 @@ async function ask(q,extra={}){
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
  }finally{
   clearTimeout(requestTimeout);
-  if(epoch===conversationEpoch){chatBusy=false;requestController=null;submitButton.disabled=false;if(requestState)requestState.textContent='';}
+  if(epoch===conversationEpoch){chatBusy=false;requestController=null;submitButton.disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(requestState)requestState.textContent='';}
  }
 }
 $('clearConversation')?.addEventListener('click',()=>{
- conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;log.replaceChildren();form.querySelector('button').disabled=false;if(imageInput)imageInput.value='';if(imageStatus)imageStatus.textContent='אפשר לצרף צילום גרף חדש.';if($('chatRequestState'))$('chatRequestState').textContent='';say('bot','שיחה חדשה. נתוני הגרף שנבחרו נשארו זמינים.');
+ conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;log.replaceChildren();form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if(imageStatus)imageStatus.textContent='אפשר לצרף צילום גרף חדש.';if($('chatRequestState'))$('chatRequestState').textContent='';say('bot','שיחה חדשה. נתוני הגרף שנבחרו נשארו זמינים.');
 });
 $('exportConversation')?.addEventListener('click',()=>{
  const text=[...log.querySelectorAll('.bubble')].map(el=>(el.classList.contains('user')?'אתה: ':'ASAF AI: ')+el.textContent).join('\n\n');
@@ -152,16 +161,14 @@ $('exportConversation')?.addEventListener('click',()=>{
 window.addEventListener('asaf:load-dataset',event=>{
  const data=event.detail;if(!data||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
- try{
- const bars=data.bars.slice(-200),context=stockContext(symbol,bars,{source:'CSV',interval:'1day'});
- conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;form.querySelector('button').disabled=false;if($('chatRequestState'))$('chatRequestState').textContent='';chartSymbol.value=symbol;conversation=[];pendingImage=null;if(imageInput)imageInput.value='';
- loaded={symbol,bars,context,source:'CSV',interval:'1day',receivedAt:null};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source:'CSV',interval:'1day'}))}catch{}
- renderStatus();status.textContent='נתוני '+symbol+' הועברו מהסורק לגרף ולצ׳אט.';
+ try{const bars=data.bars.slice(-200),interval=data.interval==='intraday'?'intraday':'1day',context=stockContext(symbol,bars,{source:'CSV',interval});
+ resetRequest();chartSymbol.value=symbol;loaded={symbol,bars,context,source:'CSV',interval,receivedAt:null};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source:'CSV',interval}))}catch{}
+ renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
 $("forgetFreeAiCode")?.addEventListener("click",()=>{
  sessionStorage.removeItem(freeAiAccessKey);
- conversation=[];
+ resetRequest();
  setAiStatus("קוד הגישה הפרטי נשכח; יידרש בכניסה הבאה.");
 });
 $("offlineAnalysis")?.addEventListener("click",()=>{
@@ -194,10 +201,10 @@ async function loadCsv(uploaded){
    if(symbols.length===1&&symbols[0].split(":").at(-1)!==symbol.split(":").at(-1))throw Error("הסימול בקובץ ("+symbols[0]+") שונה מהגרף ("+symbol+")");
    const interval=bars.some(b=>b.date.includes(" "))?"intraday":"1day";
    const context=stockContext(symbol,bars,{source:"CSV",interval});
-   loaded={symbol,bars,source:"CSV",interval,receivedAt:null,context};
+   resetRequest();loaded={symbol,bars,source:"CSV",interval,receivedAt:null,context};
    localChart.setData(symbol,bars);
    try{sessionStorage.setItem(key,JSON.stringify({symbol,bars:bars.slice(-200),source:"CSV",interval}))}catch{report("חושב, אך אין מספיק מקום לשמירה זמנית.")}
-   renderStatus();
+   renderStatus();datasetReady();
    report("✓ "+bars.length+" נרות חושבו במכשיר בלבד עבור "+symbol+". מקור CSV. ודא שהנתונים שייכים לסימול שבחרת.");
    say("bot","קיבלתי "+context.bars+" נרות עבור הסימול "+symbol+" שבחרת, עד "+context.date+". אפשר לשאול אותי: 'תנתח את הגרף', 'מה התמיכות?', 'האם יש פריצה?', 'איך המחזורים?'");
  }catch(err){report("לא ניתן לנתח את הקובץ: "+err.message)}
@@ -242,12 +249,12 @@ marketButton.addEventListener("click",async()=>{
    const bars=result.bars.slice(-200);
    const meta={source:"Twelve Data",interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone};
    const context=stockContext(symbol,bars,meta);
-   loaded={symbol,bars,context,source:"Twelve Data",interval,receivedAt:result.receivedAt};
+   resetRequest();loaded={symbol,bars,context,source:"Twelve Data",interval,receivedAt:result.receivedAt};
    localChart.setData(symbol,bars);
    sessionStorage.setItem(privateAccessKey,passcode);
    try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
    lastFetchBySymbol.set(fetchKey,Date.now());
-   renderStatus();
+   renderStatus();datasetReady();
    marketStatus.textContent="✓ נר אחרון: "+result.latestBarTime+" | "+(result.exchange||"בורסה לא ידועה")+" | אזור זמן: "+(result.exchangeTimezone||"לא ידוע")+" | מקור Twelve Data"+(result.cached?" (מטמון)":"")+"; נתונים עשויים להיות מעוכבים.";
    status.textContent="הגרף המקורי והצ'אט מציגים כעת את אותם "+bars.length+" נרות. אפשר לצלם ולבקש ניתוח.";
    say("bot","📡 קיבלתי "+bars.length+" נרות מאושרים של "+symbol+" בטווח "+interval+". נר אחרון: "+result.latestBarTime+". כל התשובות מכאן מבוססות על נתוני הספק שנקלטו, לא על צילום חלון TradingView.");
@@ -292,7 +299,7 @@ form.addEventListener("submit",event=>{
  ask(q);
 });
 $("chatClearData").addEventListener("click",()=>{
- loaded=null;
+ resetRequest();loaded=null;
  localChart.clear();
  try{sessionStorage.removeItem(key)}catch{}
  renderStatus();
@@ -306,11 +313,12 @@ if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
  ask("תנתח את הגרף הנוכחי");
 });
-chartSymbol.addEventListener("input",()=>{conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;form.querySelector("button").disabled=false;if($("chatRequestState"))$("chatRequestState").textContent="";conversation=[];pendingImage=null;if(imageInput)imageInput.value="";renderStatus();if(loaded&&normSymbol()===loaded.symbol)localChart.setData(loaded.symbol,loaded.bars);else localChart.clear()});
+chartSymbol.addEventListener("input",()=>{resetRequest();renderStatus();if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
 say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, כולל תמונת גרף. בחר מניה, צרף צילום או טען נרות, ושאל כל שאלה. בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
 if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" נטענו מחדש מהלשונית הנוכחית, עד "+loaded.context.date+".");
+queueMicrotask(datasetReady);
 if(new URLSearchParams(location.search).get("tab")==="chat"){
  document.querySelector('[data-tab="chat"]').click();
 }
