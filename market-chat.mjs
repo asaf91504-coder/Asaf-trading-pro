@@ -18,8 +18,8 @@ export function stockContext(symbol,bars) {
     ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,
     dailyChangePercent:changePct===null?null:Math.round(changePct*100)/100,
     rangeLow20:rangeLow,priorHigh20:priorHigh,rangeHigh50,rangeLow50,
-    candleDirection:last.open===undefined?"לא ידוע":last.close>last.open?"עולה":last.close<last.open?"יורד":"דוג'י",
-    bodyFraction:last.open===undefined||candleRange<=0?null:body/candleRange,
+    candleDirection:last.open==null?"לא ידוע":last.close>last.open?"עולה":last.close<last.open?"יורד":"דוג'י",
+    bodyFraction:last.open==null||candleRange<=0?null:body/candleRange,
     hasVolume:typeof last.volume==="number"
   };
 }
