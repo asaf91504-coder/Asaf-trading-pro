@@ -63,11 +63,28 @@ export function initLocalChart() {
  select.addEventListener("change",draw);
  window.addEventListener("resize",draw,{passive:true});
  return {
+  snapshot(){
+    if(!bars.length||panel.hidden)throw Error("אין גרף מקורי ליצירת תמונה");
+    draw();
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const poster=document.createElement("canvas");
+    poster.width=canvas.width;poster.height=canvas.height+Math.round(90*dpr);
+    const p=poster.getContext("2d");
+    p.fillStyle=colors.background;p.fillRect(0,0,poster.width,poster.height);
+    p.fillStyle="#e8f3ff";p.font="bold "+Math.round(17*dpr)+"px system-ui";
+    p.textAlign="left";p.fillText("ASAF TRADING PRO | "+symbol,Math.round(12*dpr),Math.round(27*dpr));
+    p.fillStyle=colors.text;p.font=Math.round(12*dpr)+"px system-ui";
+    p.fillText("Data: "+bars.at(-1).date+" | Uploaded/provider candles, not TradingView screenshot",Math.round(12*dpr),Math.round(51*dpr));
+    p.drawImage(canvas,0,Math.round(62*dpr));
+    p.fillStyle=colors.text;p.font=Math.round(11*dpr)+"px system-ui";
+    p.fillText("Educational chart · Always check source/exchange timestamp",Math.round(12*dpr),poster.height-Math.round(9*dpr));
+    return poster.toDataURL("image/png");
+  },
   setData(nextSymbol,nextBars){
    symbol=String(nextSymbol||"");
    bars=Array.isArray(nextBars)?nextBars:[];
    panel.hidden=!bars.length;
-   title.textContent="גרף מקורי מנתוני CSV · "+symbol+" · עד "+(bars.at(-1)?.date||"");
+   title.textContent="גרף מקורי לניתוח · "+symbol+" · נר אחרון "+(bars.at(-1)?.date||"");
    tooltip.textContent="העבר את האצבע או הסמן על נר כדי לראות OHLC ומחזור.";
    if(bars.length)requestAnimationFrame(draw);
   },
