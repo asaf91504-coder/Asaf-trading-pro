@@ -33,14 +33,14 @@ export function parseCSV(csv) {
   if (lines.length<3) throw Error('נדרשות לפחות שתי שורות נתונים');
   const cols=csvRow(lines[0]).map(x=>x.toLowerCase().replace(/\s+/g,'').replace(/[^a-z]/g,''));
   const pick=(...names)=>cols.findIndex(x=>names.includes(x));
-  const ix={date:pick('date','datetime','time'),open:pick('open'),high:pick('high'),low:pick('low'),close:pick('close'),volume:pick('volume','vol')};
+  const ix={date:pick('date','datetime','time'),open:pick('open'),high:pick('high'),low:pick('low'),close:pick('close'),volume:pick('volume','vol'),ticker:pick('symbol','ticker')};
   if ([ix.date,ix.high,ix.low,ix.close].some(x=>x<0)) throw Error('חסרות עמודות Date, High, Low, Close');
   const rows=[];
   for(const line of lines.slice(1)) {
-    const c=csvRow(line);const date=parseDate(c[ix.date]),open=ix.open<0?null:number(c[ix.open]),high=number(c[ix.high]),low=number(c[ix.low]),close=number(c[ix.close]),volume=ix.volume<0?null:number(c[ix.volume]);
+    const c=csvRow(line);const date=parseDate(c[ix.date]),open=ix.open<0?null:number(c[ix.open]),high=number(c[ix.high]),low=number(c[ix.low]),close=number(c[ix.close]),volume=ix.volume<0?null:number(c[ix.volume]),ticker=ix.ticker<0?null:String(c[ix.ticker]||'').trim().toUpperCase().replace(/[^A-Z0-9:._-]/g,'');
     if(!date) continue;
     if(![high,low,close].every(Number.isFinite)||low<=0||high<low||close<low||close>high||open!==null&&(!Number.isFinite(open)||open<low||open>high)) continue;
-    rows.push({date,open,high,low,close,volume:Number.isFinite(volume)&&volume>=0?volume:null});
+    rows.push({date,open,high,low,close,volume:Number.isFinite(volume)&&volume>=0?volume:null,ticker});
   }
   rows.sort((a,b)=>a.date.localeCompare(b.date));
   const uniq=new Map(rows.map(x=>[x.date,x]));
