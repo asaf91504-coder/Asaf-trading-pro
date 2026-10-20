@@ -31,7 +31,7 @@ function currentContext(){
 function renderStatus(){
  const attribution=$("marketAttribution");
  if(attribution)attribution.hidden=!(loaded&&loaded.source==="Twelve Data"&&normSymbol()===loaded.symbol);
- if(!loaded){badge.textContent="לא נטען עדיין קובץ נתוני גרף. בלי CSV אני יכול להסביר מושגים בלבד.";return;}
+ if(!loaded){badge.textContent="לא נטען עדיין קובץ נתוני גרף. ניתן לשוחח על מושגים ולצרף צילום. רמות מחיר עדכניות דורשות נתונים מתאימים.";return;}
  const now=normSymbol();
  badge.textContent=now===loaded.symbol?
  "✓ "+(loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"CSV מקומי")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות":
@@ -51,7 +51,7 @@ function restore(){
 // available only after an explicit click on "local mathematical analysis".
 const freeAiAccessKey="asaf_free_ai_code_v1";
 const aiStatus=$("freeAiStatus"),imageInput=$("chatImageUpload"),imageStatus=$("chatImageStatus");
-let pendingImage=null,chatBusy=false;
+let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
 let conversation=[];
 function setAiStatus(text){if(aiStatus)aiStatus.textContent=text}
 async function shrinkImage(source){
@@ -83,6 +83,13 @@ async function ask(q,extra={}){
  const question=String(q||"").trim();
  if(!question)return;
  chatBusy=true;
+ const epoch=conversationEpoch;
+ const submitButton=form.querySelector('button');
+ submitButton.disabled=true;
+ const requestState=$('chatRequestState');
+ if(requestState)requestState.textContent='ממתין למודל החינמי…';
+ const activeController=new AbortController();requestController=activeController;
+ const requestTimeout=setTimeout(()=>activeController.abort(),26000);
  say("user",question);
  const waiting=say("bot","מנתח עם AI...");
  try{
@@ -98,7 +105,7 @@ async function ask(q,extra={}){
   const candidate=extra.image||pendingImage;
   if(candidate)image=await shrinkImage(candidate);
   const response=await fetch("/.netlify/functions/free-chat",{
-   method:"POST",
+   method:"POST",signal:activeController.signal,
    headers:{"Content-Type":"application/json","x-asaf-free-ai-code":code},
    body:JSON.stringify({
     message:question,
@@ -116,6 +123,7 @@ async function ask(q,extra={}){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
    throw Error(data.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
   }
+  if(epoch!==conversationEpoch)return;
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
   sessionStorage.setItem(freeAiAccessKey,code);
   waiting.textContent=data.answer;
@@ -123,13 +131,34 @@ async function ask(q,extra={}){
   conversation=conversation.slice(-8);
   pendingImage=null;
   if(imageInput)imageInput.value="";
-  if(imageStatus)imageStatus.textContent="התמונה נותחה. ניתן לצרף תמונה חדשה להודעה הבאה.";
+  if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"אפשר לצרף צילום גרף להודעה הבאה.";
   setAiStatus("✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך");
  }catch(e){
-  waiting.textContent="⚠️ "+e.message;
+  if(epoch!==conversationEpoch)return;
+  waiting.textContent="⚠️ "+(e.name==="AbortError"?"הבקשה ארכה יותר מדי או בוטלה. אפשר לנסות שוב.":e.message);
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
- }finally{chatBusy=false}
+ }finally{
+  clearTimeout(requestTimeout);
+  if(epoch===conversationEpoch){chatBusy=false;requestController=null;submitButton.disabled=false;if(requestState)requestState.textContent='';}
+ }
 }
+$('clearConversation')?.addEventListener('click',()=>{
+ conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;log.replaceChildren();form.querySelector('button').disabled=false;if(imageInput)imageInput.value='';if(imageStatus)imageStatus.textContent='אפשר לצרף צילום גרף חדש.';if($('chatRequestState'))$('chatRequestState').textContent='';say('bot','שיחה חדשה. נתוני הגרף שנבחרו נשארו זמינים.');
+});
+$('exportConversation')?.addEventListener('click',()=>{
+ const text=[...log.querySelectorAll('.bubble')].map(el=>(el.classList.contains('user')?'אתה: ':'ASAF AI: ')+el.textContent).join('\n\n');
+ const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='asaf-conversation.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+window.addEventListener('asaf:load-dataset',event=>{
+ const data=event.detail;if(!data||!Array.isArray(data.bars))return;
+ const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
+ try{
+ const bars=data.bars.slice(-200),context=stockContext(symbol,bars,{source:'CSV',interval:'1day'});
+ conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;form.querySelector('button').disabled=false;if($('chatRequestState'))$('chatRequestState').textContent='';chartSymbol.value=symbol;conversation=[];pendingImage=null;if(imageInput)imageInput.value='';
+ loaded={symbol,bars,context,source:'CSV',interval:'1day',receivedAt:null};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source:'CSV',interval:'1day'}))}catch{}
+ renderStatus();status.textContent='נתוני '+symbol+' הועברו מהסורק לגרף ולצ׳אט.';
+ }catch(e){status.textContent=e.message}
+});
 $("forgetFreeAiCode")?.addEventListener("click",()=>{
  sessionStorage.removeItem(freeAiAccessKey);
  conversation=[];
@@ -277,7 +306,7 @@ if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
  ask("תנתח את הגרף הנוכחי");
 });
-chartSymbol.addEventListener("input",()=>{renderStatus();if(loaded&&normSymbol()===loaded.symbol)localChart.setData(loaded.symbol,loaded.bars);else localChart.clear()});
+chartSymbol.addEventListener("input",()=>{conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;form.querySelector("button").disabled=false;if($("chatRequestState"))$("chatRequestState").textContent="";conversation=[];pendingImage=null;if(imageInput)imageInput.value="";renderStatus();if(loaded&&normSymbol()===loaded.symbol)localChart.setData(loaded.symbol,loaded.bars);else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
 say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, כולל תמונת גרף. בחר מניה, צרף צילום או טען נרות, ושאל כל שאלה. בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
@@ -285,3 +314,4 @@ if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" 
 if(new URLSearchParams(location.search).get("tab")==="chat"){
  document.querySelector('[data-tab="chat"]').click();
 }
+

@@ -8,6 +8,7 @@ const call=(method='POST',body={message:'hello'},code='test-access-code')=>handl
 test('all primary tabs and chart embed exist',()=>{for(const id of ['charts','scanner','chat','risk','watch'])assert.match(html,new RegExp('id="'+id+'"'));assert.match(html,/embed-widget-advanced-chart\.js/);assert.match(html,/viewport/);});
 test('Netlify functions are configured',()=>assert.match(cfg,/functions\s*=\s*"netlify\/functions"/));
 test('chat is disabled without an access code',async()=>{delete process.env.ASAF_CHAT_ACCESS_CODE;assert.equal((await call()).status,503)});
-test('chat blocks unauthorized visitors',async()=>{process.env.ASAF_CHAT_ACCESS_CODE='test-access-code';assert.equal((await call('POST',{message:'hello'},'wrong')).status,401);});
+test('chat blocks unauthorized visitors when explicitly enabled',async()=>{const old=process.env.ASAF_CHAT_ENABLED;process.env.ASAF_CHAT_ENABLED='true';process.env.ASAF_CHAT_ACCESS_CODE='test-access-code';try{assert.equal((await call('POST',{message:'hello'},'wrong')).status,401)}finally{if(old===undefined)delete process.env.ASAF_CHAT_ENABLED;else process.env.ASAF_CHAT_ENABLED=old}});
 test('chat blocks GET',async()=>{process.env.ASAF_CHAT_ACCESS_CODE='test-access-code';assert.equal((await call('GET')).status,405);});
 test('chat requires API key and rejects invalid input',async()=>{process.env.ASAF_CHAT_ACCESS_CODE='test-access-code';delete process.env.OPENAI_API_KEY;assert.equal((await call()).status,503)});
+
