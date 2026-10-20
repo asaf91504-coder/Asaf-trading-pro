@@ -1,0 +1,84 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import handler from "../netlify/functions/free-chat.mjs";
+
+const pass="private_test_access_code_long_4567";
+const keys=["ASAF_FREE_AI_ENABLED","OPENROUTER_API_KEY","ASAF_FREE_AI_ACCESS_CODE"];
+const source=()=>{
+ const candles=[];
+ for(let i=0;i<35;i++){
+  const close=100+i*.2;
+  candles.push({date:new Date(Date.UTC(2026,8,1+i)).toISOString().slice(0,10),open:close-.1,high:close+.6,low:close-.6,close,volume:500+i});
+ }
+ return candles;
+};
+const req=(payload,secret=pass)=>new Request("https://asaf.example/.netlify/functions/free-chat",{
+ method:"POST",headers:{"Content-Type":"application/json","x-asaf-free-ai-code":secret,"Origin":"https://asaf.example"},
+ body:JSON.stringify(payload)
+});
+async function simulate(env,runner){
+ const old=Object.fromEntries(keys.map(k=>[k,process.env[k]])),oldFetch=globalThis.fetch;
+ const calls=[];
+ try{
+  for(const key of keys)delete process.env[key];
+  Object.assign(process.env,env);
+  globalThis.fetch=async(url,opts)=>{
+   calls.push({url,body:JSON.parse(opts.body)});
+   return {ok:true,json:async()=>({choices:[{message:{content:"אני רואה מגמה עולה מהנרות שסיפקת; כדאי לבדוק גם מחזור."}}]})};
+  };
+  await runner(calls);
+ }finally{
+  globalThis.fetch=oldFetch;
+  for(const key of keys){if(old[key]===undefined)delete process.env[key];else process.env[key]=old[key]}
+ }
+}
+const enabled={ASAF_FREE_AI_ENABLED:"true",OPENROUTER_API_KEY:"test_only_not_a_real_key",ASAF_FREE_AI_ACCESS_CODE:pass};
+test("off by default: no provider calls",async()=>{
+ await simulate({},async calls=>{
+  const result=await handler(req({message:"נתח מניה"}));
+  assert.equal(result.status,503);assert.equal(calls.length,0);
+ });
+});
+test("invalid code blocks provider",async()=>{
+ await simulate(enabled,async calls=>{
+  const result=await handler(req({message:"נתח מניה"},"wrong"));
+  assert.equal(result.status,401);assert.equal(calls.length,0);
+ });
+});
+test("invalid chart bars are rejected",async()=>{
+ await simulate(enabled,async calls=>{
+  const data=source();data[4].high=0;
+  const result=await handler(req({message:"תנתח לי",bars:data,symbol:"NASDAQ:NVDA"}));
+  assert.equal(result.status,400);assert.equal(calls.length,0);
+ });
+});
+test("real context and follow-ups reach only free model",async()=>{
+ await simulate(enabled,async calls=>{
+  const result=await handler(req({message:"איך הפריצה?",symbol:"NASDAQ:NVDA",source:"CSV",interval:"1day",bars:source(),history:[{role:"user",content:"בדוק מחזור"},{role:"assistant",content:"בודק"}]}));
+  assert.equal(result.status,200);
+  const data=await result.json();assert.match(data.answer,/מגמה עולה/);
+  assert.equal(calls.length,1);assert.equal(calls[0].url,"https://openrouter.ai/api/v1/chat/completions");
+  assert.equal(calls[0].body.model,"openrouter/free");
+  assert.equal(calls[0].body.messages.at(-1).content.includes("NASDAQ:NVDA"),true);
+  assert.equal(calls[0].body.messages[1].content,"בדוק מחזור");
+  assert.equal(calls[0].body.messages[2].content,"בודק");
+  assert.ok(!JSON.stringify(data).includes("test_only_not_a_real_key"));
+ });
+});
+test("screenshot gets transmitted to free vision model only",async()=>{
+ await simulate(enabled,async calls=>{
+  const tiny="data:image/png;base64,"+Buffer.from("fakeimage").toString("base64");
+  const result=await handler(req({message:"מה רואים בתמונה?",image:tiny}));
+  assert.equal(result.status,200);
+  const sent=calls[0].body.messages.at(-1).content;
+  assert.equal(sent[1].type,"image_url");
+  assert.equal(sent[1].image_url.url,tiny);
+  assert.equal(calls[0].body.model,"openrouter/free");
+ });
+});
+test("non-image data rejected",async()=>{
+ await simulate(enabled,async calls=>{
+  const result=await handler(req({message:"תנתח",image:"https://bad.example/ssrf"}));
+  assert.equal(result.status,400);assert.equal(calls.length,0);
+ });
+});
