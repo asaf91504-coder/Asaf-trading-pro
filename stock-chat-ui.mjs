@@ -47,12 +47,109 @@ function restore(){
  }catch{}
  renderStatus();
 }
-function ask(q){
- say("user",q);
- const context=currentContext();
- const answer=answerStockQuestion(q,context);
- say("bot",answer);
+// The free AI endpoint is a real LLM. The old keyword-based responder is now
+// available only after an explicit click on "local mathematical analysis".
+const freeAiAccessKey="asaf_free_ai_code_v1";
+const aiStatus=$("freeAiStatus"),imageInput=$("chatImageUpload"),imageStatus=$("chatImageStatus");
+let pendingImage=null,chatBusy=false;
+let conversation=[];
+function setAiStatus(text){if(aiStatus)aiStatus.textContent=text}
+async function shrinkImage(source){
+ const isFile=typeof File!=="undefined"&&source instanceof File;
+ if(isFile&&source.size>4500000)throw Error("תמונה גדולה מדי (מקסימום 4.5MB)");
+ const url=isFile?URL.createObjectURL(source):source;
+ try{
+  const img=await new Promise((resolve,reject)=>{
+   const element=new Image();
+   element.onload=()=>resolve(element);
+   element.onerror=()=>reject(Error("לא הצלחתי לפתוח את התמונה"));
+   element.src=url;
+  });
+  const scale=Math.min(1,1050/Math.max(img.naturalWidth,img.naturalHeight));
+  const canvas=document.createElement("canvas");
+  canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+  canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+  const ctx=canvas.getContext("2d");ctx.fillStyle="white";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  let data=canvas.toDataURL("image/jpeg",0.72);
+  if(data.length>205000)data=canvas.toDataURL("image/jpeg",0.48);
+  if(data.length>205000)throw Error("התמונה גדולה מדי לעיבוד. נסה לחתוך את הגרף.");
+  return data;
+ }finally{if(isFile)URL.revokeObjectURL(url)}
 }
+async function ask(q,extra={}){
+ if(chatBusy)return;
+ const question=String(q||"").trim();
+ if(!question)return;
+ chatBusy=true;
+ say("user",question);
+ const waiting=say("bot","מנתח עם AI...");
+ try{
+  let code=sessionStorage.getItem(freeAiAccessKey)||"";
+  if(!code){
+   code=prompt("הכנס קוד גישה פרטי ל-AI החינמי (לא API key):")||"";
+   if(!code)throw Error("כדי לקבל תשובות AI אמיתיות, יש להפעיל חיבור OpenRouter החינמי ב-Netlify ולהכניס קוד גישה.");
+  }
+  if(code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
+  const context=currentContext();
+  const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
+  let image=null;
+  const candidate=extra.image||pendingImage;
+  if(candidate)image=await shrinkImage(candidate);
+  const response=await fetch("/.netlify/functions/free-chat",{
+   method:"POST",
+   headers:{"Content-Type":"application/json","x-asaf-free-ai-code":code},
+   body:JSON.stringify({
+    message:question,
+    symbol:activeData?.symbol||normSymbol(),
+    source:activeData?.source||"none",
+    interval:activeData?.interval||"1day",
+    receivedAt:activeData?.receivedAt||null,
+    bars:activeData?.bars||null,
+    image,
+    history:conversation.slice(-8)
+   })
+  });
+  let data;try{data=await response.json()}catch{throw Error("פונקציית AI לא נפרסה ל-Netlify. צריך לחבר את GitHub ולפרוס את האתר.")}
+  if(!response.ok){
+   if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
+   throw Error(data.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
+  }
+  if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
+  sessionStorage.setItem(freeAiAccessKey,code);
+  waiting.textContent=data.answer;
+  conversation.push({role:"user",content:question},{role:"assistant",content:data.answer});
+  conversation=conversation.slice(-8);
+  pendingImage=null;
+  if(imageInput)imageInput.value="";
+  if(imageStatus)imageStatus.textContent="התמונה נותחה. ניתן לצרף תמונה חדשה להודעה הבאה.";
+  setAiStatus("✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך");
+ }catch(e){
+  waiting.textContent="⚠️ "+e.message;
+  setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
+ }finally{chatBusy=false}
+}
+$("forgetFreeAiCode")?.addEventListener("click",()=>{
+ sessionStorage.removeItem(freeAiAccessKey);
+ conversation=[];
+ setAiStatus("קוד הגישה הפרטי נשכח; יידרש בכניסה הבאה.");
+});
+$("offlineAnalysis")?.addEventListener("click",()=>{
+ const context=currentContext();
+ say("bot","🧮 ניתוח מתמטי מקומי (ללא AI):\\n"+answerStockQuestion("תנתח את הגרף ואת המגמה",context));
+});
+imageInput?.addEventListener("change",()=>{
+ const candidate=imageInput.files?.[0];
+ if(!candidate){pendingImage=null;return}
+ if(!["image/png","image/jpeg","image/webp"].includes(candidate.type)||candidate.size>4500000){
+  pendingImage=null;imageInput.value="";
+  imageStatus.textContent="נא לבחור צילום מסך PNG, JPEG או WEBP עד 4.5MB.";
+  return;
+ }
+ pendingImage=candidate;
+ imageStatus.textContent="📎 "+candidate.name+" צורף. לחץ נתח כדי לשלוח אותו ל-AI החינמי.";
+});
 async function loadCsv(uploaded){
  if(!uploaded)return;
  const chartFileStatus=$("chartCsvStatus");
@@ -145,7 +242,7 @@ captureButton.addEventListener("click",()=>{
    preview.src=image;
    capturePanel.hidden=false;
    document.querySelector('[data-tab="chat"]').click();
-   ask("תנתח לי את הגרף המצולם, המגמה, פריצות, המחזורים והסיכון. הסתמך רק על הנרות המחוברים.");
+   ask("תנתח את התמונה ואת נתוני הגרף. זיהוי תבניות, פריצות, מחזורים, תמיכות וסיכונים — עם חוסר הוודאות והרמות המחושבות.",{image});
  }catch(error){marketStatus.textContent="אי אפשר לצלם ולנתח: "+error.message}
 });
 $("downloadChart").addEventListener("click",()=>{
@@ -183,7 +280,7 @@ if(shortcut)shortcut.addEventListener("click",()=>{
 chartSymbol.addEventListener("input",()=>{renderStatus();if(loaded&&normSymbol()===loaded.symbol)localChart.setData(loaded.symbol,loaded.bars);else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
-say("bot","אני ASAF Market Analyst — מתמחה רק בשוק ההון. טען נתוני נרות CSV כדי שאוכל לנתח את הגרף באמת. איני רואה ישירות את חלון TradingView, איני מקבל מחירים בזמן אמת, ואין כאן שימוש ב-API בתשלום.");
+say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, כולל תמונת גרף. בחר מניה, צרף צילום או טען נרות, ושאל כל שאלה. בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
 if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" נטענו מחדש מהלשונית הנוכחית, עד "+loaded.context.date+".");
 if(new URLSearchParams(location.search).get("tab")==="chat"){
  document.querySelector('[data-tab="chat"]').click();
