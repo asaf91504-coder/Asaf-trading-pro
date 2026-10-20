@@ -34,3 +34,28 @@ Market charts and screener are TradingView embeds, not direct licensed market da
 - **TradingView's embedded chart is a cross-origin widget**: the site cannot read its underlying price candles or what is on screen. Reading screenshots using a remote AI vision model or receiving licensed live candles requires a separate integration and could incur costs; neither has been enabled.
 - `netlify/functions/chat.mjs` remains disabled unless explicitly enabled via `ASAF_CHAT_ENABLED=true` (do not enable on a public site without actual server-side identity, quotas and cost protection).
 - Regression checks for the local market chat are in `tests/market-chat.test.mjs`; run `node --test tests/*.test.mjs` locally. A successful GitHub commit is not a confirmed Netlify deployment.
+
+
+## Owner-only live/near-live market chart + snapshot (October 2026)
+The app now includes an **optional**, server-side Twelve Data connector (`netlify/functions/market.mjs`) that loads 200 OHLCV bars on a **manual button click** only. Supported timeframes: 1min, 5min, 15min, 30min, 1h, 1day, 1week. The original HTML Canvas candlestick chart, snapshot PNG and stock-only chat derive from exactly the same bars (not from the cross-origin TradingView iframe). Prices are *not guaranteed real time*: verify provider plan, exchange availability and the last bar timestamp. Incomplete bars can move. The snapshot is generated locally and can be downloaded without image/AI API calls. There is no paid AI vision model.
+
+**Nothing is activated on Netlify by a GitHub commit alone. The market endpoint is OFF unless all safety gates are met.**
+
+### Market environment variables (set in Netlify dashboard only; never commit credentials)
+- `ASAF_MARKET_ENABLED=true` — opt-in. Without this, the function exits before contacting a provider.
+- `ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED=true` — opt-in *only after verifying your subscription permits displaying these quotes*. Twelve Data's FREE Basic plan is advertised as "internal non-display"; it is **not a license to display its market data in your chart or redistribute it**. Individual subscription plans do not allow commercial/public redistribution; do not enable this site for other people without data display/redistribution rights.
+- `ASAF_MARKET_ACCESS_CODE=<long random secret, 20+ characters>` — private owner passcode, entered in the browser when fetching. Do not share.
+- `TWELVE_DATA_API_KEY=<secret>` — source-specific credential with appropriate license. Never set it as public/build variable or put it in client code.
+- `ASAF_MARKET_ALLOWED_SYMBOLS=AAPL,NVDA,MSFT` — **required** comma-separated allowlist (short list), limits which symbols can consume provider requests.
+
+After redeploy, choose a symbol and timeframe and click "📡 הבא נתוני שוק" in Charts. Supply **the private market access code** (not your API key). The provider response appears in an original chart and becomes the sole source of the market chat's numerical statements. Use "📸 צלם את הגרף ונתח" to capture it and receive local analysis of the same bars, or download a PNG.
+
+### Security and cost limitations
+- Market fetch requires a long access code and ticker allowlist, and runs only on explicit clicks. The browser throttles repeat calls to the same ticker/timeframe for five minutes. The function keeps a per-instance five-minute cache. **Neither is a durable distributed quota or a hard cost cap**, and provider API credits and Netlify usage limits may apply if enabled.
+- No automatic polling, payments, purchases, subscriptions, paid OpenAI requests or live API requests are performed by the code merely being in the repository. No provider connection has been activated or tested with a real key.
+- Do **not** open this endpoint for public use until server-side authentication, distributed usage caps, data rights and hosting billing controls are in place.
+- The still-present OpenAI server endpoint is disabled by default, `ASAF_CHAT_ENABLED` unset. The client app uses free deterministic market calculations, not paid screenshot interpretation.
+- See `tests/market.test.mjs` for mocked offline backend tests. Run `node --test tests/*.test.mjs` with Node 20+ (tests do not call a real data vendor).
+- TradingView is independently embedded for visual reference. Its data and image are not accessible to the app. Only the original Canvas chart is snapshotted and analyzed.
+
+Docs: https://twelvedata.com/docs | https://twelvedata.com/pricing | https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage | https://www.tradingview.com/widget-docs/widget-formats/
