@@ -10,9 +10,9 @@ The application is an unfinished research platform. The source has features read
 - Long/short position planner bounded by risk and available capital.
 - Free-only AI, cancellation and dataset-switch protection. The model is hardcoded `openrouter/free`; no paid fallback.
 
-## Prepared but NOT activated
+## Member access and integrations
 
-1. **Invited users:** same-origin login, salted scrypt password hashes, opaque one-hour server sessions, HttpOnly/Secure/SameSite cookies, logout and member revocation. This is invitation-only; there is no self-signup, password recovery, email verification or subscription billing. Provision accounts manually before enabling. Choose an external identity provider if those flows are needed.
+1. **Invited users:** same-origin login, salted scrypt password hashes, opaque one-hour server sessions, HttpOnly/Secure/SameSite cookies, logout and member revocation. This is invitation-only; there is no public self-signup, password recovery, email verification or subscription billing. A single-use invitation can activate a new account with a user-chosen password; existing accounts cannot be overwritten. Account, membership, session and invite consumption are committed atomically. Provision an invitation before enabling and complete live login/logout/revocation checks.
 2. **Distributed quotas:** atomic global 40/day maximum, global 6/minute and member 10/day maximum. Failed provider attempts consume a slot. UTC day boundaries apply. Store failure blocks model access. These counters are request limits, not a hosting or vendor billing guarantee. Keep provider and Netlify spending controls independently configured.
 3. **News:** Marketaux adapter, safe title/source links, deduplication, shared Redis snapshot, stale labels after 30 minutes, prior-snapshot retention on failure and one provider attempt per 15-minute bucket. No full article body, translation, generated summary, or AI news research is included. Public display/storage rights must be confirmed for this exact use.
 
@@ -20,7 +20,9 @@ The application is an unfinished research platform. The source has features read
 
 The owner must write **מאושר** for a concrete charge before any purchase or paid commitment. A $700/month ceiling is not authorization to subscribe. Do not set approval/license flags based on a budget or a pending quote. No accounts, purchases, credits, licenses or new external credentials were created by these code changes.
 
-All new services default OFF. Do not set these until approval and provider configuration have actually been completed:
+All integration gates default OFF in source. On 2026-10-21, the owner approved connecting a Free Upstash Redis database to Netlify. Production-only storage secrets, external-service approval and durable owner quotas were configured and deployed; health reported durableQuotaEnabled=true. Redis CLI diagnostics confirmed per-member/global quota rejection on isolated test keys, and mocked independent function instances confirmed fail-closed quota/outage behavior. These checks do not substitute for a complete authenticated live chat test. No market/news provider was enabled.
+
+Set the remaining gates only after their prerequisites are completed:
 
 | Server variable | Purpose |
 |---|---|
@@ -64,3 +66,9 @@ This is 96 scheduled attempts per day, one page of up to 10 provider results per
 `node --test tests/*.test.mjs` runs mocked/local checks without real provider requests or credentials. No dependency installation is needed.
 
 Official integration references: https://www.marketaux.com/documentation ; https://upstash.com/docs/redis/features/restapi ; https://docs.netlify.com/build/functions/scheduled-functions/
+
+## One-time invitation activation
+
+`activate.html` reads a 32-byte random invitation token from the URL fragment, immediately removes the fragment from browser history, and submits it only to the same-origin activation function. Passwords are entered by the invited user in the browser, never in chat. The endpoint requires the public-auth gate and approved storage.
+
+An admin provisions a Redis key `asaf:production:auth:invite:<sha256-of-token>` with JSON `{"emailHash":"<sha256-of-normalized-email>","expires":<unix-milliseconds>}` and a matching Redis TTL. Use a short expiry, e.g. 24 hours. The raw token must never be stored in Redis, source, logs or chat; deliver the activation page through a private browser handoff. There is no invitation-email sender or admin web console yet. GET does not consume an invitation. POST requires same-origin JSON, validates input, applies a shared activation throttle, and cannot replace an existing account. Account creation, session creation and invite consumption use one atomic Redis script.
