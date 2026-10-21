@@ -12,7 +12,7 @@ The application is an unfinished research platform. The source has features read
 
 ## Member access and integrations
 
-1. **Invited users:** same-origin login, salted scrypt password hashes, opaque one-hour server sessions, HttpOnly/Secure/SameSite cookies, logout and member revocation. This is invitation-only; there is no public self-signup, password recovery, email verification or subscription billing. A single-use invitation can activate a new account with a user-chosen password; existing accounts cannot be overwritten. Account, membership, session and invite consumption are committed atomically. Provision an invitation before enabling and complete live login/logout/revocation checks.
+1. **Invited users:** same-origin login, salted scrypt password hashes, opaque one-hour server sessions, HttpOnly/Secure/SameSite cookies, logout and member revocation. This is invitation-only; there is no public self-signup, automatic recovery email, email verification or subscription billing. Operator-issued one-time recovery links support user-chosen replacement passwords and invalidate all prior sessions. A single-use invitation can activate a new account with a user-chosen password; existing accounts cannot be overwritten. Account, membership, session and invite consumption are committed atomically. Provision an invitation before enabling and complete live login/logout/revocation checks.
 2. **Distributed quotas:** atomic global 40/day maximum, global 6/minute and member 10/day maximum. Failed provider attempts consume a slot. UTC day boundaries apply. Store failure blocks model access. These counters are request limits, not a hosting or vendor billing guarantee. Keep provider and Netlify spending controls independently configured.
 3. **News:** Marketaux adapter, safe title/source links, deduplication, shared Redis snapshot, stale labels after 30 minutes, prior-snapshot retention on failure and one provider attempt per 15-minute bucket. No full article body, translation, generated summary, or AI news research is included. Public display/storage rights must be confirmed for this exact use.
 
@@ -50,7 +50,7 @@ This is 96 scheduled attempts per day, one page of up to 10 provider results per
 
 ### Invited-user administration — not run
 
-`node scripts/manage-member.mjs` consumes a single JSON object on stdin: action `save` with email and 12–200 character password, or action `disable` with email. Supply secrets through a protected interactive/admin workflow, never shell arguments, logs, chat, checked-in files, or client code. Environment must include the approved storage configuration and `CONTEXT=production`. Password reset uses `save`; disabling a member blocks existing sessions. This utility has not provisioned any real member. No password-recovery flow exists yet.
+`node scripts/manage-member.mjs` consumes one JSON object on stdin: `status` or `disable` with email, or `invite` / `reset` with email and a cryptographically random 64-hex token held in the approved private delivery workflow. Invite TTL is 24 hours; reset TTL is 15 minutes. Reset binds to the current account version and cannot reactivate a disabled member. The CLI prints only redacted operation status. Supply secrets through a protected interactive/admin workflow, never shell arguments, logs, chat, checked-in files, or client code. Environment must include the approved storage configuration and `CONTEXT=production`. Password recovery is completed by the user on `/activate#reset=...`; disabling a member blocks existing sessions. This utility has not provisioned any real member. The old password-provisioning CLI has been replaced: no operator chooses a member password.
 
 ### Deployment acceptance checks still required
 
@@ -69,6 +69,15 @@ Official integration references: https://www.marketaux.com/documentation ; https
 
 ## One-time invitation activation
 
-`activate.html` reads a 32-byte random invitation token from the URL fragment, immediately removes the fragment from browser history, and submits it only to the same-origin activation function. Passwords are entered by the invited user in the browser, never in chat. The endpoint requires the public-auth gate and approved storage.
+`activate.html` reads a 32-byte random invitation token from the URL fragment, immediately removes the fragment from browser history, retains it in tab-scoped session storage for at most 30 minutes to survive refresh, and submits it only to the same-origin activation function. Passwords are entered by the invited user in the browser, never in chat. The endpoint requires the public-auth gate and approved storage.
 
 An admin provisions a Redis key `asaf:production:auth:invite:<sha256-of-token>` with JSON `{"emailHash":"<sha256-of-normalized-email>","expires":<unix-milliseconds>}` and a matching Redis TTL. Use a short expiry, e.g. 24 hours. The raw token must never be stored in Redis, source, logs or chat; deliver the activation page through a private browser handoff. There is no invitation-email sender or admin web console yet. GET does not consume an invitation. POST requires same-origin JSON, validates input, applies a shared activation throttle, and cannot replace an existing account. Account creation, session creation and invite consumption use one atomic Redis script.
+
+
+## Account lifecycle update — 2026-10-21
+
+Source adds short-lived single-use password recovery, invalidation of all old sessions after reset, non-password-setting operator tools, public-interface labels, and explicit account watchlist/notes copies. Watchlist copies are isolated by the authenticated member ID and use atomic revision checks to reject concurrent stale writes. Signing in never uploads device data automatically. Users explicitly load/merge or save; local data stays local on sign-out. A shared device's local list is not a private per-account vault. Journal, research bookmarks, chart preferences, drawings and conversation history are not yet synced.
+
+Offline tests cover activation, reset/replay, old sessions, disabled users, two-member data isolation, concurrent revision conflicts, throttling, foreign origins and store outage. Production verification and owner activation are separate acceptance steps, never inferred from tests. Invitations are operator-issued; there is no admin web console, automatic email sender, verified-email state, public signup or self-service recovery request. Do not advertise these missing capabilities.
+
+Netlify production interface was made public on explicit owner approval. Invited-user AI authentication and durable quotas remain enabled; market/paid-AI/news flags remain disabled. No new subscriptions or credits were purchased.

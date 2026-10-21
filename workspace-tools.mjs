@@ -1,3 +1,4 @@
+import {authState,refreshAuth} from './auth-ui.mjs';
 import {prepareChartData} from "./chart-data.mjs";
 import {normalizeSymbol,watchRecords,parseWorkspaceBackup,crossing} from './workspace-core.mjs';
 const $=id=>document.getElementById(id),watchKey='asaf_watch_v2';let watch=[];
@@ -29,3 +30,22 @@ let newsLoaded=false,newsBusy=false;
 async function loadNews(){if(newsBusy)return;newsBusy=true;$('newsRefresh').disabled=true;const box=$('newsFeed');try{const r=await fetch('/.netlify/functions/news',{cache:'no-store',signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error('לא ניתן לטעון חדשות כרגע');const data=await r.json();box.replaceChildren();$('newsFeedStatus').textContent=!data.enabled?(data.message||'הספק טרם חובר'):data.updatedAt?('עודכן: '+new Date(data.updatedAt).toLocaleString('he-IL')+(data.stale?' · המידע לא עודכן מעל 30 דקות או שזמן העדכון אינו תקין':'')):'טרם התקבל עדכון מהספק';if(data.enabled)for(const item of (data.articles||[]).slice(0,50)){let url;try{url=new URL(item.url);if(url.protocol!=='https:'||url.username||url.password)continue}catch{continue}const card=document.createElement('article');card.className='source-card';const a=document.createElement('a');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.textContent=item.title;const meta=document.createElement('small');meta.textContent=item.source+' · '+new Date(item.publishedAt).toLocaleString('he-IL')+' · '+(item.symbols||[]).join(', ');card.append(a,meta);box.append(card)}if(data.enabled&&!box.children.length)box.textContent='אין כתבות במטמון. לא מוצגים מחירים או חדשות מדומים.';newsLoaded=true}catch(err){$('newsFeedStatus').textContent=err.message}finally{newsBusy=false;$('newsRefresh').disabled=false}}
 $('newsRefresh').onclick=loadNews;document.querySelector('[data-tab="news"]').addEventListener('click',()=>{if(!newsLoaded)loadNews()});
 if(new URL(location.href).searchParams.get('tab')==='news')loadNews();
+
+// Explicit account copies: never upload device notes automatically on sign-in.
+const syncBox=document.createElement('div');syncBox.className='panel';
+const syncTitle=document.createElement('strong');syncTitle.textContent='רשימת המעקב בחשבון';
+const syncHelp=document.createElement('p');syncHelp.className='muted';syncHelp.textContent='השמירה מעבירה לחשבון את הרשימה וההערות שבמכשיר זה. טעינה ממזגת את העותק מהחשבון, עם עדיפות לפרטים מהחשבון בכפילויות. אין העלאה אוטומטית. יומן המסחר והגרפים נשארים מקומיים.';
+const syncRow=document.createElement('div');syncRow.className='row';const cloudLoad=document.createElement('button'),cloudSave=document.createElement('button');cloudLoad.type=cloudSave.type='button';cloudLoad.textContent='טען ומזג מהחשבון';cloudSave.textContent='שמור רשימה לחשבון';syncRow.append(cloudLoad,cloudSave);
+const syncStatus=document.createElement('p');syncStatus.setAttribute('role','status');syncBox.append(syncTitle,syncHelp,syncRow,syncStatus);$('watchRows').before(syncBox);
+let revision=null,syncMember=null,syncBusy=false;
+function syncRender(){const signed=authState.authenticated&&!!authState.memberId;cloudLoad.disabled=cloudSave.disabled=syncBusy||!signed;if(!signed)syncStatus.textContent='היכנס בלשונית ASAF AI כדי לשמור בחשבון. הרשימה המקומית נשארת במכשיר.'}
+window.addEventListener('asaf:auth',()=>{if(syncMember!==authState.memberId){revision=null;syncMember=authState.memberId;syncStatus.textContent='מחובר. אפשר לטעון את הרשימה מהחשבון או לשמור עותק ראשון.'}syncRender()});
+async function cloud(action){if(syncBusy)return;syncBusy=true;syncRender();const member=authState.memberId;const unchanged=JSON.stringify(watch);try{
+ if(!member)throw Error('יש להיכנס לחשבון.');
+ if(action==='save'&&revision===null){const check=await fetch('/.netlify/functions/workspace',{cache:'no-store',signal:AbortSignal.timeout(10000)});const current=await check.json();if(!check.ok)throw Error(current.error||'לא ניתן לבדוק עותק בחשבון.');if(authState.memberId!==member)throw Error('החשבון השתנה.');if(current.revision)throw Error('כבר קיימת רשימה בחשבון. טען ומזג אותה לפני שמירה.');revision=''}
+ const response=await fetch('/.netlify/functions/workspace',action==='load'?{cache:'no-store',signal:AbortSignal.timeout(10000)}:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,watch}),signal:AbortSignal.timeout(10000)});
+ const data=await response.json();if(!response.ok){if(response.status===401)await refreshAuth();if(response.status===409)revision=null;throw Error(data.error||'לא ניתן להשלים סנכרון.')}if(authState.memberId!==member)throw Error('החשבון השתנה. הפעולה לא הוחלה במכשיר.');
+ if(action==='load'){if(JSON.stringify(watch)!==unchanged)throw Error('הרשימה השתנתה בזמן הטעינה. נסה שוב כדי למזג בבטחה.');watch=watchRecords([...data.watch,...watch]);persist()}
+ revision=data.revision;syncStatus.textContent=action==='load'?(data.updatedAt?'העותק מהחשבון מוזג לרשימה המקומית.':'אין עדיין רשימה בחשבון. אפשר לשמור את הרשימה המקומית.'):'הרשימה וההערות נשמרו לחשבון. אפשר לטעון אותן במכשיר אחר.';
+ }catch(error){syncStatus.textContent=error.message}finally{syncBusy=false;syncRender()}}
+cloudLoad.onclick=()=>cloud('load');cloudSave.onclick=()=>cloud('save');syncRender();
