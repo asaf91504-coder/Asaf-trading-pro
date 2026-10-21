@@ -81,3 +81,10 @@ Source adds short-lived single-use password recovery, invalidation of all old se
 Offline tests cover activation, reset/replay, old sessions, disabled users, two-member data isolation, concurrent revision conflicts, throttling, foreign origins and store outage. Production verification and owner activation are separate acceptance steps, never inferred from tests. Invitations are operator-issued; there is no admin web console, automatic email sender, verified-email state, public signup or self-service recovery request. Do not advertise these missing capabilities.
 
 Netlify production interface was made public on explicit owner approval. Invited-user AI authentication and durable quotas remain enabled; market/paid-AI/news flags remain disabled. No new subscriptions or credits were purchased.
+
+
+## Runtime namespace correction
+
+Netlify exposes CONTEXT during build, not as a guaranteed Functions runtime variable. `scripts/write-runtime-context.mjs` now writes a non-secret namespace module before function bundling. Production bundles use production storage even when runtime CONTEXT is absent; preview/branch bundles use preview. The tracked module defaults to preview for local checks; unknown build contexts fail the build. No automatic migration or sharing between namespaces is performed.
+
+Activation now supports same-origin `action:check` with token/email and no password. This applies the shared throttle and validates the stored invitation without consuming it, hashing a password, creating an account or issuing a session. The page offers this check explicitly before password entry. Invalid token/expiry and email mismatch have separate useful errors. A valid invitation alone does not verify account creation.
