@@ -88,3 +88,10 @@ Netlify production interface was made public on explicit owner approval. Invited
 Netlify exposes CONTEXT during build, not as a guaranteed Functions runtime variable. `scripts/write-runtime-context.mjs` now writes a non-secret namespace module before function bundling. Production bundles use production storage even when runtime CONTEXT is absent; preview/branch bundles use preview. The tracked module defaults to preview for local checks; unknown build contexts fail the build. No automatic migration or sharing between namespaces is performed.
 
 Activation now supports same-origin `action:check` with token/email and no password. This applies the shared throttle and validates the stored invitation without consuming it, hashing a password, creating an account or issuing a session. The page offers this check explicitly before password entry. Invalid token/expiry and email mismatch have separate useful errors. A valid invitation alone does not verify account creation.
+
+
+## Authenticated production QA and AI context correction
+
+Owner activation, user-completed recovery, and secure password login were verified on production. A genuine free-model concept response was received. A 160-row synthetic CSV named QA.TEST produced close 259, MA20 249.5 and MA150 184.5 at 2025-06-09; model analysis received the matching symbol/date/computed values. This was test data, not live market evidence. A follow-up exposed confusion between the summarized series and the 30 detailed candles, now addressed by explicit total/detail counts, first/last timestamps and prompt instructions. Long model responses now carry a truncation warning for provider length stops or the local safety cap, with no automatic retry and no paid fallback.
+
+Account watchlist save and load in a second tab succeeded with the existing three entries; concurrent stale saves were rejected, preserving the newer account copy. These checks do not verify another physical device, email verification, journal/settings synchronization, or real-time market/news feeds. Logout/unauthenticated rejection remain separate live checks.
