@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import handler from "../netlify/functions/free-chat.mjs";
+import handler,{marketDataContext} from "../netlify/functions/free-chat.mjs";
 
 const pass="private_test_access_code_long_4567";
 const keys=["ASAF_FREE_AI_ENABLED","OPENROUTER_API_KEY","ASAF_FREE_AI_ACCESS_CODE"];
@@ -16,7 +16,7 @@ const req=(payload,secret=pass)=>new Request("https://asaf.example/.netlify/func
  method:"POST",headers:{"Content-Type":"application/json","x-asaf-free-ai-code":secret,"Origin":"https://asaf.example"},
  body:JSON.stringify(payload)
 });
-async function simulate(env,runner){
+async function simulate(env,runner,choice={message:{content:"אני רואה מגמה עולה מהנרות שסיפקת; כדאי לבדוק גם מחזור."}}){
  const old=Object.fromEntries(keys.map(k=>[k,process.env[k]])),oldFetch=globalThis.fetch;
  const calls=[];
  try{
@@ -24,7 +24,7 @@ async function simulate(env,runner){
   Object.assign(process.env,env);
   globalThis.fetch=async(url,opts)=>{
    calls.push({url,body:JSON.parse(opts.body)});
-   return {ok:true,json:async()=>({choices:[{message:{content:"אני רואה מגמה עולה מהנרות שסיפקת; כדאי לבדוק גם מחזור."}}]})};
+   return {ok:true,json:async()=>({choices:[choice]})};
   };
   await runner(calls);
  }finally{
@@ -82,3 +82,8 @@ test("non-image data rejected",async()=>{
   assert.equal(result.status,400);assert.equal(calls.length,0);
  });
 });
+
+
+test('chart context distinguishes the full analyzed series from its detailed tail',()=>{const bars=Array.from({length:160},(_,i)=>({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),open:100+i-.5,high:102+i,low:98+i,close:100+i,volume:10000+i}));const c=marketDataContext('QA.TEST',bars,{source:'CSV',interval:'1day'});assert.equal(c.candleCount,160);assert.equal(c.detailedCandleCount,30);assert.equal(c.last30Candles.length,30);assert.equal(c.firstCandleTime,'2025-01-01');assert.equal(c.lastCandleTime,'2025-06-09');assert.equal(c.sma20,249.5);assert.equal(c.sma150,184.5)});
+test('provider length stops are clearly marked without an automatic retry or paid fallback',async()=>{await simulate(enabled,async calls=>{const r=await handler(req({message:'מהו ממוצע נע?'}));const data=await r.json();assert.equal(data.truncated,true);assert.match(data.answer,/התשובה נקטעה/);assert.equal(calls.length,1);assert.equal(calls[0].body.model,'openrouter/free')},{message:{content:'תשובה חלקית'},finish_reason:'length'})});
+test('local answer safety cap is reported, while normal completions remain unmarked',async()=>{await simulate(enabled,async calls=>{const r=await handler(req({message:'מהו ממוצע נע?'}));const data=await r.json();assert.equal(data.truncated,true);assert.ok(data.answer.length<7700);assert.equal(calls.length,1)},{message:{content:'א'.repeat(8000)},finish_reason:'stop'});await simulate(enabled,async()=>{const r=await handler(req({message:'מהו ממוצע נע?'}));const data=await r.json();assert.equal(data.truncated,false);assert.doesNotMatch(data.answer,/התשובה נקטעה/)})});
