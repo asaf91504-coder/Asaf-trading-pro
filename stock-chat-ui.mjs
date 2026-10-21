@@ -1,3 +1,4 @@
+import {prepareChartData,recentAIBars,CHART_HISTORY_LIMIT} from "./chart-data.mjs";
 import {authState,refreshAuth} from "./auth-ui.mjs";
 import {parseCSV,stockContext,answerStockQuestion} from "./market-chat.mjs";
 import {initLocalChart} from "./local-chart.mjs";
@@ -41,7 +42,8 @@ function renderStatus(){
 function restore(){
  try{
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
-  if(saved&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"){
+  if(saved&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
+    saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT);if(!new URLSearchParams(location.search).has("symbol"))chartSymbol.value=saved.symbol;
     loaded={symbol:saved.symbol,bars:saved.bars,source:saved.source||"CSV",interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,context:stockContext(saved.symbol,saved.bars,{source:saved.source,interval:saved.interval,receivedAt:saved.receivedAt,exchangeTimezone:saved.exchangeTimezone})};
     if(normSymbol()===saved.symbol)localChart.setData(saved.symbol,saved.bars);
   }
@@ -54,7 +56,8 @@ const freeAiAccessKey="asaf_free_ai_code_v1";
 const aiStatus=$("freeAiStatus"),imageInput=$("chatImageUpload"),imageStatus=$("chatImageStatus");
 let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
 let conversation=[];
-function datasetReady(){if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars}}))}
+function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
+function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars}}))}
 function resetRequest(){conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
 $('cancelChat')?.addEventListener('click',()=>requestController?.abort());
 window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
@@ -122,7 +125,7 @@ async function ask(q,extra={}){
     source:activeData?.source||"none",
     interval:activeData?.interval||"1day",
     receivedAt:activeData?.receivedAt||null,
-    bars:activeData?.bars||null,
+    bars:recentAIBars(activeData?.bars),
     image,
     history:conversation.slice(-8)
    })
@@ -161,8 +164,8 @@ $('exportConversation')?.addEventListener('click',()=>{
 window.addEventListener('asaf:load-dataset',event=>{
  const data=event.detail;if(!data||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
- try{const bars=data.bars.slice(-200),interval=data.interval==='intraday'?'intraday':'1day',context=stockContext(symbol,bars,{source:'CSV',interval});
- resetRequest();chartSymbol.value=symbol;loaded={symbol,bars,context,source:'CSV',interval,receivedAt:null};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source:'CSV',interval}))}catch{}
+ try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT),interval=data.interval==='intraday'?'intraday':'1day',context=stockContext(symbol,bars,{source:'CSV',interval});
+ resetRequest();chartSymbol.value=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,source:'CSV',interval,receivedAt:null};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source:'CSV',interval}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
@@ -193,17 +196,10 @@ async function loadCsv(uploaded){
  report("מחשב נתונים מקומית...");
  try{
    if(uploaded.size>2000000)throw Error("קובץ CSV גדול מ-2MB");
-   const data=await uploaded.text(),bars=parseCSV(data).slice(-200);
-   const symbol=normSymbol();
-   if(!symbol)throw Error("יש לבחור סימול מניה בשדה הגרף קודם");
-   const symbols=[...new Set(bars.map(b=>b.ticker).filter(Boolean))];
-   if(symbols.length>1)throw Error("בקובץ מופיעות כמה מניות; יש לבחור קובץ של מניה אחת");
-   if(symbols.length===1&&symbols[0].split(":").at(-1)!==symbol.split(":").at(-1))throw Error("הסימול בקובץ ("+symbols[0]+") שונה מהגרף ("+symbol+")");
-   const interval=bars.some(b=>b.date.includes(" "))?"intraday":"1day";
-   const context=stockContext(symbol,bars,{source:"CSV",interval});
+   const {symbol,bars,interval,context}=prepareChartData(await uploaded.text(),normSymbol());
    resetRequest();loaded={symbol,bars,source:"CSV",interval,receivedAt:null,context};
    localChart.setData(symbol,bars);
-   try{sessionStorage.setItem(key,JSON.stringify({symbol,bars:bars.slice(-200),source:"CSV",interval}))}catch{report("חושב, אך אין מספיק מקום לשמירה זמנית.")}
+   try{sessionStorage.setItem(key,JSON.stringify({symbol,bars:bars.slice(-CHART_HISTORY_LIMIT),source:"CSV",interval}))}catch{report("חושב, אך אין מספיק מקום לשמירה זמנית.")}
    renderStatus();datasetReady();
    report("✓ "+bars.length+" נרות חושבו במכשיר בלבד עבור "+symbol+". מקור CSV. ודא שהנתונים שייכים לסימול שבחרת.");
    say("bot","קיבלתי "+context.bars+" נרות עבור הסימול "+symbol+" שבחרת, עד "+context.date+". אפשר לשאול אותי: 'תנתח את הגרף', 'מה התמיכות?', 'האם יש פריצה?', 'איך המחזורים?'");
@@ -313,7 +309,7 @@ if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
  ask("תנתח את הגרף הנוכחי");
 });
-chartSymbol.addEventListener("input",()=>{resetRequest();renderStatus();if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
+chartSymbol.addEventListener("input",()=>{rememberSymbol();$("chart").replaceChildren();resetRequest();renderStatus();if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
 say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, כולל תמונת גרף. בחר מניה, צרף צילום או טען נרות, ושאל כל שאלה. בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
