@@ -4,7 +4,7 @@ The application is an unfinished research platform. The source has features read
 
 ## Available without a data subscription
 
-- Original candlestick chart: CSV upload or paste, MA20/MA150, volume, crosshair, zoom/pan, fullscreen and PNG capture. Trendlines are saved locally by symbol and candle date; only lines whose anchor candles remain available are restored.
+- Original candlestick chart: CSV upload or paste, MA20/MA150, optional SMA-seeded EMA50 and Wilder RSI14, candles/closing-line display, volume, crosshair, zoom/pan, fullscreen and PNG capture. Trendlines are saved locally by symbol and candle date; only lines whose anchor candles remain available are restored. Display style and indicator toggles persist locally. Indicators are cached on dataset load; they are chart-only and are not added to the AI payload.
 - Daily CSV screening with price, MA20, ATR and relative-volume filters. No automatic market-cap verification, pattern certainty or promised return.
 - Watchlist with research notes, local price-level checks and JSON backup/merge. A level is checked only against the last two loaded bars, not in the background.
 - Long/short position planner bounded by risk and available capital.
