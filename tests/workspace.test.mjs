@@ -9,3 +9,23 @@ test('scanner uses symbol column and daily historical indicators',()=>{const r=s
 test('scanner rejects mixed tickers and intraday screening',()=>{assert.throws(()=>scanFile('x.csv',csv().replace(',AAPL',',NVDA')),/כמה מניות/);assert.throws(()=>scanFile('x.csv',csv().replace('2025-01-01','2025-01-01 12:00')),/יומיים/)});
 test('missing volume cannot silently pass the screen',()=>{const r=scanFile('a.csv',csv('AAPL',''));assert.equal(screenResult(r).matches,false);assert.ok(screenResult(r).reasons.includes('מחזור חסר'))});
 test('unsafe article links and embedded credentials are rejected',()=>{for(const x of ['javascript:alert(1)','data:text/html,test','https://user:secret@example.com/'])assert.throws(()=>safeSourceUrl(x));assert.equal(safeSourceUrl('https://example.com/report'),'https://example.com/report')});
+
+test('scanner filters ATR and confirmed daily breakout independently',()=>{
+ const r=scanFile('AAPL.csv',csv());
+ assert.equal(screenResult(r,{minATR:r.summary.atrPercent}).matches,true);
+ assert.equal(screenResult(r,{minATR:r.summary.atrPercent+.01}).matches,false);
+ assert.equal(screenResult(r,{breakout20:true}).matches,false);
+ const bars=r.bars.map(b=>({...b}));bars.at(-1).close=270;bars.at(-1).high=271;
+ const text='Date,Open,High,Low,Close,Volume,Symbol\n'+bars.map(b=>[b.date,b.open,b.high,b.low,b.close,b.volume,'AAPL'].join(',')).join('\n');
+ assert.equal(screenResult(scanFile('AAPL.csv',text),{breakout20:true}).matches,true);
+});
+test('rising volume requires both a higher close and strictly above-average volume',()=>{
+ const base=scanFile('AAPL.csv',csv());
+ assert.equal(screenResult(base,{risingVolume:true}).matches,false);
+ const increased=scanFile('AAPL.csv',csv().replace(/100,AAPL$/, '200,AAPL'));
+ assert.equal(screenResult(increased,{risingVolume:true}).matches,true);
+ const falling={...increased,bars:increased.bars.map(b=>({...b}))};
+ falling.bars.at(-1).close=falling.bars.at(-2).close;
+ assert.equal(screenResult(falling,{risingVolume:true}).matches,false);
+ assert.equal(screenResult(scanFile('AAPL.csv',csv('AAPL','')),{risingVolume:true}).matches,false);
+});
