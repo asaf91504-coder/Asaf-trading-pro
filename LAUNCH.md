@@ -103,3 +103,20 @@ The CSV scanner adds a minimum ATR percentage, optional close above the previous
 ## Production scanner acceptance — 2026-10-23
 
 Production serves the new ATR, breakout and rising-volume filters. Browser QA used an explicitly synthetic QA.TEST dataset (30 daily bars, last close 130, MA20 120.5, ATR 2.31%, relative volume 2). The rising-volume filter accepted it; the breakout filter rejected the equal-to-prior-high close; minimum ATR 3 rejected it with both reasons visible. Opening its chart preserved the matching symbol, close, MA20 and date. The synthetic dataset was not market evidence and no provider/AI calls were made. Health reported status ok, free-only AI/auth/durable quotas enabled, and market/paid AI/news disabled. Automated checks passed 91/91 before rollout. These checks do not verify mobile hardware, live market coverage, licensed news, or authenticated AI on this deployment.
+
+## Remaining product roadmap — 2026-10-23
+
+Owner requests both Google and Apple ID sign-in for end users. Neither is implemented or enabled yet. Preserve existing member sessions, revocation and quotas; social login must not automatically grant AI access or merge accounts on an unverified email match.
+
+1. Google OIDC authorization code flow, server-side identity verification, login UI, safe account linking and console credentials/approved callback URLs.
+2. Sign in with Apple web flow, Services ID associated with a primary App ID, approved domains/return URLs, server-only signing credentials, private relay email handling and membership prerequisites. No purchase is authorized by this request.
+3. Public onboarding/account lifecycle: decide invited versus public membership, self-service recovery, transactional email, email verification, account deletion and administration.
+4. Licensed market data: active provider account/keys, public redistribution rights, current/delayed labels, exchange coverage, refresh/WebSocket limits and spending controls.
+5. Expand original chart styles, intervals, indicators and drawings to the original specification; preserve chart/data/AI synchronization and add real-device mobile verification.
+6. Automatic multi-symbol scanner: market cap, expanded technical/fundamental filters, sector/exchange metadata, pattern candidates, levels and explained risk/reward; no guaranteed pattern or 15% return claims.
+7. Background alerts: server-side price/technical checks, user notification channels and delivery/quiet-hour settings.
+8. Licensed news: enable provider/cache and production 15-minute refresh after quota/license approval; verify stale/outage behavior and attribution.
+9. AI: current-market/chart context from connected data, screenshots, requested-indicator context, earnings/news grounding, quotas, vision availability and controlled costs.
+10. Account synchronization for journal, research bookmarks, chart preferences/drawings and conversation history; current account copies cover watchlist/notes only.
+11. Public launch operations: custom domain, privacy/terms, host abuse controls, production login/logout/revocation checks, backups/monitoring and load/mobile coverage.
+12. Optional commercial plans/billing only after a separate explicit product decision and concrete charge authorization. No broker integration is requested.
