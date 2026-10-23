@@ -11,4 +11,4 @@ export function prepareChartData(text,selectedSymbol){
  const bars=all.slice(-CHART_HISTORY_LIMIT),interval=bars.some(b=>b.date.length>10)?'intraday':'1day';
  return {symbol,bars,interval,context:stockContext(symbol,bars,{source:'CSV',interval})};
 }
-export const recentAIBars=bars=>Array.isArray(bars)?bars.slice(-200):null;
+export const recentAIBars=bars=>Array.isArray(bars)?bars.slice(-CHART_HISTORY_LIMIT):null;

@@ -126,6 +126,7 @@ async function ask(q,extra={}){
     interval:activeData?.interval||"1day",
     receivedAt:activeData?.receivedAt||null,
     bars:recentAIBars(activeData?.bars),
+    chartSettings:activeData?localChart.settings():null,
     image,
     history:conversation.slice(-8)
    })

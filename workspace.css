@@ -7,3 +7,5 @@
 
 /* Chart reading tools: six statistics, persistent display options and a separate RSI pane. */
 .ema50{color:#60a5fa}.rsi14{color:#c4b5fd}.chart-tools select{font-size:12px;padding:6px 9px}.chart-metrics{grid-template-columns:repeat(6,minmax(0,1fr))}#scanSummary{grid-template-columns:repeat(4,minmax(0,1fr))}#localChartPanel h3{font-size:15px;color:#dce7f6}#localChartPanel>.muted{font-size:11px;line-height:1.8}.chart-metrics>div{padding:12px 10px}.chart-metrics strong{font-size:17px}@media(max-width:900px){.chart-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:650px){.chart-metrics,#scanSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-tools{gap:10px}.chart-tools label{min-height:40px}.chart-tools button{flex:1 1 auto}#localChartPanel{padding:10px!important}#localChartPanel h3{overflow-wrap:anywhere}.chart-tools select{min-height:40px}}
+
+.bb20{color:#f472b6}.macd{color:#60a5fa}.atr14{color:#fbbf24}#chartMetrics{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}@media(max-width:650px){#chartMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
