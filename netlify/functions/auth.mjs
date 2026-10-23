@@ -21,6 +21,6 @@ export default async function handler(request){
   // Use the same password work for unknown addresses to avoid a fast account-existence signal.
   const valid=await passwordMatches(password,user||{salt:'0'.repeat(32),hash:'0'.repeat(64)});
   if(!valid||user?.enabled!==true||typeof user?.version!=='string'||!/^[a-f0-9-]{36}$/.test(user?.id))return response({error:'האימייל או הסיסמה שגויים, או שהגישה טרם אושרה.'},401);
-  const token=await createSession(user.id,user.version);return response({authenticated:true},200,{'Set-Cookie':sessionCookie(token)});
+  await command(['SET',storageKey('auth:index:'+user.id),digest(email)]);const token=await createSession(user.id,user.version);return response({authenticated:true},200,{'Set-Cookie':sessionCookie(token)});
  }catch{return response({error:'שירות הכניסה אינו זמין. לא נפתחה גישה לצ׳אט.'},503)}
 }

@@ -30,7 +30,7 @@ export default async function handler(request){
   }
   if(check){if(!reset&&await command(['EXISTS',userKey])===1)return reply({error:'החשבון כבר הופעל. עבור לכניסה עם הסיסמה שבחרת.'},409);return reply({valid:true,mode:reset?'reset':'activate'})}
   const id=reset?previous.id:randomUUID(),version=randomUUID(),sessionToken=randomBytes(32).toString('hex');
-  const record={id,version,enabled:true,...await passwordRecord(password)};
+  const record={id,version,enabled:true,...(previous?.googleSubject?{googleSubject:previous.googleSubject}:{}),...await passwordRecord(password)};
   const result=await command(['EVAL',reset?RESET:ACTIVATE,'4',inviteKey,userKey,storageKey('auth:member:'+id),storageKey('auth:session:'+digest(sessionToken)),stored,...(reset?[previousRaw]:[]),JSON.stringify(record),JSON.stringify({id,version,enabled:true}),JSON.stringify({id,version,expires:Date.now()+3600000})]);
   if(result!==1)return reply({error:'ההזמנה כבר נוצלה או שקיים חשבון. נסה להיכנס לחשבון הקיים.'},409);
   return reply(reset?{reset:true,authenticated:true}:{created:true,authenticated:true},reset?200:201,{'Set-Cookie':sessionCookie(sessionToken)});

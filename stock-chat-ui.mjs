@@ -210,28 +210,33 @@ const chartCsv=$("chartCsv");
 chartCsv?.addEventListener("change",async()=>{await loadCsv(chartCsv.files?.[0]);chartCsv.value=""});
 
 const lastFetchBySymbol=new Map();
+const publicFeed=fetch('/.netlify/functions/public-market',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
+publicFeed.then(c=>{const option=$('marketAutoRefresh');if(option)option.disabled=!c.enabled;if(authState.enabled)$('marketForgetCode').hidden=true});
 marketButton.addEventListener("click",async()=>{
  const symbol=normSymbol();
  if(!symbol){marketStatus.textContent="נא להזין סימול מניה תחילה.";return;}
  const interval=$("marketInterval").value;
  const fetchKey=symbol+"|"+interval;
- if(Date.now()-(lastFetchBySymbol.get(fetchKey)||0)<300000){
-   marketStatus.textContent="כדי לחסוך במכסת החינם, אפשר לרענן את אותו סימול רק אחרי 5 דקות.";
+ const memberMode=authState.enabled,feed=await publicFeed;
+ if(memberMode&&!feed.enabled){marketStatus.textContent='נתוני השוק למשתמשים טרם חוברו. ממתינים לספק ולאישור רישוי.';return;}
+ if(memberMode&&!authState.authenticated){marketStatus.textContent='יש להיכנס לחשבון באזור ASAF AI לפני טעינת נתונים.';return;}
+ if(Date.now()-(lastFetchBySymbol.get(fetchKey)||0)<(memberMode?60000:300000)){
+   marketStatus.textContent="הרענון עדיין בהמתנה למכסה. בחיבור חשבון אפשר לרענן פעם בדקה; בחיבור פרטי פעם ב־5 דקות.";
    return;
  }
- let passcode=sessionStorage.getItem(privateAccessKey);
- if(!passcode){
+ let passcode=memberMode?"":sessionStorage.getItem(privateAccessKey);
+ if(!memberMode&&!passcode){
    passcode=window.prompt("קוד הגישה הפרטי לנתוני השוק (לא מפתח API):")||"";
    if(!passcode)return;
  }
- if(passcode.length<20){marketStatus.textContent="קוד הגישה חייב להכיל לפחות 20 תווים.";return;}
+ if(!memberMode&&passcode.length<20){marketStatus.textContent="קוד הגישה חייב להכיל לפחות 20 תווים.";return;}
  marketButton.disabled=true;
  marketStatus.textContent="מתחבר לספק הנתונים (לחיצה ידנית בלבד)...";
  try{
-   const response=await fetch("/.netlify/functions/market",{
+   const response=await fetch(memberMode?"/.netlify/functions/public-market":"/.netlify/functions/market",{
      method:"POST",
      credentials:"same-origin",
-     headers:{"Content-Type":"application/json","x-asaf-market-access":passcode},
+     headers:{"Content-Type":"application/json",...(!memberMode?{"x-asaf-market-access":passcode}:{})},
      body:JSON.stringify({symbol,interval})
    });
    let result;try{result=await response.json()}catch{throw Error("פונקציית Netlify לא נפרסה או החזירה תשובה לא תקינה (ייתכן 404)")};
@@ -240,18 +245,18 @@ marketButton.addEventListener("click",async()=>{
      throw Error(result.error||"קריאת נתונים נכשלה");
    }
    if(!Array.isArray(result.bars)||result.bars.length<21)throw Error("התקבלו פחות מ-21 נרות");
-   if(normSymbol()!==symbol)throw Error("הסימול בגרף השתנה בזמן הטעינה, נסה שוב");
+   if(normSymbol()!==symbol||$("marketInterval").value!==interval)throw Error("הסימול בגרף השתנה בזמן הטעינה, נסה שוב");
    if(result.symbol!==symbol.split(":").at(-1))throw Error("הספק החזיר סימול שונה מהנבחר");
    const bars=result.bars.slice(-200);
    const meta={source:"Twelve Data",interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone};
    const context=stockContext(symbol,bars,meta);
    resetRequest();loaded={symbol,bars,context,source:"Twelve Data",interval,receivedAt:result.receivedAt};
    localChart.setData(symbol,bars);
-   sessionStorage.setItem(privateAccessKey,passcode);
+   if(!memberMode)sessionStorage.setItem(privateAccessKey,passcode);
    try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
    lastFetchBySymbol.set(fetchKey,Date.now());
    renderStatus();datasetReady();
-   marketStatus.textContent="✓ נר אחרון: "+result.latestBarTime+" | "+(result.exchange||"בורסה לא ידועה")+" | אזור זמן: "+(result.exchangeTimezone||"לא ידוע")+" | מקור Twelve Data"+(result.cached?" (מטמון)":"")+"; נתונים עשויים להיות מעוכבים.";
+   marketStatus.textContent="✓ נר אחרון: "+result.latestBarTime+" | "+(result.exchange||"בורסה לא ידועה")+" | אזור זמן: "+(result.exchangeTimezone||"לא ידוע")+" | מקור Twelve Data"+(result.cached?" (מטמון)":"")+(Number.isFinite(result.delayMinutes)?" | עיכוב מוצהר: "+result.delayMinutes+" דקות":"; נתונים עשויים להיות מעוכבים.");
    status.textContent="הגרף המקורי והצ'אט מציגים כעת את אותם "+bars.length+" נרות. אפשר לצלם ולבקש ניתוח.";
    say("bot","📡 קיבלתי "+bars.length+" נרות מאושרים של "+symbol+" בטווח "+interval+". נר אחרון: "+result.latestBarTime+". כל התשובות מכאן מבוססות על נתוני הספק שנקלטו, לא על צילום חלון TradingView.");
    document.querySelector('[data-tab="charts"]').click();
@@ -261,6 +266,8 @@ marketButton.addEventListener("click",async()=>{
    marketButton.disabled=false;
  }
 });
+setInterval(()=>{if($('marketAutoRefresh')?.checked&&!document.hidden&&authState.authenticated&&!marketButton.disabled)marketButton.click()},61000);
+window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false});
 $("marketForgetCode").addEventListener("click",()=>{
  sessionStorage.removeItem(privateAccessKey);
  marketStatus.textContent="קוד הגישה הזמני נשכח מהמכשיר.";

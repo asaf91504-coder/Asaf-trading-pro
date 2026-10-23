@@ -63,7 +63,7 @@ This is 96 scheduled attempts per day, one page of up to 10 provider results per
 
 ## Development
 
-`node --test tests/*.test.mjs` runs mocked/local checks without real provider requests or credentials. No dependency installation is needed.
+`node --test tests/*.test.mjs` runs mocked/local checks without real provider requests or credentials. Run `npm ci` first; Google ID tokens use the maintained `google-auth-library`.
 
 Official integration references: https://www.marketaux.com/documentation ; https://upstash.com/docs/redis/features/restapi ; https://docs.netlify.com/build/functions/scheduled-functions/
 
@@ -106,10 +106,10 @@ Production serves the new ATR, breakout and rising-volume filters. Browser QA us
 
 ## Remaining product roadmap — 2026-10-23
 
-Owner requests both Google and Apple ID sign-in for end users. Neither is implemented or enabled yet. Preserve existing member sessions, revocation and quotas; social login must not automatically grant AI access or merge accounts on an unverified email match.
+Owner requests Google-only sign-in. Apple ID was explicitly removed from scope. Google source is implemented but remains disabled pending console configuration and live acceptance checks. Preserve existing member sessions, revocation and quotas; social login must not automatically grant AI access or merge accounts on an unverified email match.
 
-1. Google OIDC authorization code flow, server-side identity verification, login UI, safe account linking and console credentials/approved callback URLs.
-2. Sign in with Apple web flow, Services ID associated with a primary App ID, approved domains/return URLs, server-only signing credentials, private relay email handling and membership prerequisites. No purchase is authorized by this request.
+1. Google Identity Services popup ID-token flow: source implemented with signature/audience/issuer/expiry verification, browser-bound one-use nonce and explicit linking of existing password accounts. Console client ID and production verification remain required.
+2. Account management source now includes self-deletion, logout of all sessions and allowlisted administrator status/enable/disable controls. Configure the admin member ID and verify production actions before advertising them.
 3. Public onboarding/account lifecycle: decide invited versus public membership, self-service recovery, transactional email, email verification, account deletion and administration.
 4. Licensed market data: active provider account/keys, public redistribution rights, current/delayed labels, exchange coverage, refresh/WebSocket limits and spending controls.
 5. Expand original chart styles, intervals, indicators and drawings to the original specification; preserve chart/data/AI synchronization and add real-device mobile verification.
@@ -120,3 +120,24 @@ Owner requests both Google and Apple ID sign-in for end users. Neither is implem
 10. Account synchronization for journal, research bookmarks, chart preferences/drawings and conversation history; current account copies cover watchlist/notes only.
 11. Public launch operations: custom domain, privacy/terms, host abuse controls, production login/logout/revocation checks, backups/monitoring and load/mobile coverage.
 12. Optional commercial plans/billing only after a separate explicit product decision and concrete charge authorization. No broker integration is requested.
+
+
+## Google and member market integration — 2026-10-23
+
+108 offline tests passed. Google and public market access default OFF; source readiness does not establish a live connection. No subscriptions were purchased. A reply from Twelve Data dated October 20 requests product details; a follow-up is drafted, not sent.
+
+### Google activation
+
+Create a Web application OAuth client using Google Auth Platform. Add the exact JavaScript origin `https://joyful-seahorse-967889.netlify.app` (no path). Configure Branding/Audience with an accurate support email, consent information and published privacy/terms pages as required by Google. Testing mode requires approved test users. This implementation uses a JavaScript popup callback, not a redirect callback or a client secret. Never put secrets in the frontend.
+
+Set server-side `GOOGLE_CLIENT_ID`, `ASAF_GOOGLE_AUTH_ENABLED=true` and, only when public onboarding is intended, `ASAF_GOOGLE_SIGNUP_ENABLED=true`. Default new-Google-account cap: 100 (`ASAF_ACCOUNT_MAX_MEMBERS`). Existing password accounts must first sign in and explicitly link the same verified email. Provider subject, rather than email alone, is the linked identity. Missing storage/config fails closed. New Google users receive the same existing free-AI member quota, without paid AI.
+
+Set `ASAF_ADMIN_MEMBER_IDS` to comma-separated existing member UUIDs to grant the account administration UI. Never accept administrator roles from browser input or Google email alone. Existing password users must sign in again to create their management index. Account deletion removes the server watchlist/notes copy and revokes all sessions; local device data is unchanged. Automatic password recovery email remains unimplemented.
+
+### Member market activation
+
+The new `public-market` endpoint uses authenticated sessions, shared 60-second snapshots, a distributed fetch lock and provider counters. It does not implement a WebSocket or second-by-second stream. The legacy owner passcode does not grant member access.
+
+Only after written display/redistribution rights for this site and intended AI use: set `TWELVE_DATA_API_KEY`, `ASAF_MARKET_ENABLED=true`, `ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED=true`, `ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED=true`, an explicit numeric `ASAF_MARKET_DELAY_MINUTES` (0 only if contracted real-time), and comma-separated `ASAF_MARKET_ALLOWED_SYMBOLS`. Keep provider quotas within the actual contract; defaults are 8 requests/minute and 800/day, configurable by `ASAF_MARKET_REQUESTS_PER_MINUTE` and `ASAF_MARKET_REQUESTS_PER_DAY`. Failed provider attempts consume quota. These counters do not guarantee vendor or hosting costs. All fetching currently uses OHLCV `/time_series`, UTC timestamps and at most 200 bars; fundamentals, earnings and market-wide scanning are not connected.
+
+Live acceptance still required: actual Google login/link/logout/revocation/deletion with a test account; configured admin authorization; actual licensed market timestamps, entitlement, cache and quota behavior. Keep unavailable features labelled pending.

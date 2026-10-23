@@ -8,7 +8,7 @@ const parseSymbol=value=>{
   return /^[A-Z0-9][A-Z0-9._\/-]{0,19}$/.test(ticker)?ticker:null;
 };
 const allowedIntervals=new Set(["1min","5min","15min","30min","1h","1day","1week"]);
-const validateBar=item=>{
+export const validateBar=item=>{
   const open=Number(item.open),high=Number(item.high),low=Number(item.low),close=Number(item.close);
   const vol=item.volume===undefined||item.volume===null?null:Number(item.volume);
   const date=typeof item.datetime==="string"?item.datetime:"";
