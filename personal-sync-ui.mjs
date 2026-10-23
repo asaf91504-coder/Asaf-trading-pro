@@ -1,6 +1,6 @@
 import {authState,refreshAuth} from './auth-ui.mjs';
 import {personalSections,personalKeys,personalData,emptyPersonal,mergePersonal,personalBackup,parsePersonalBackup} from './personal-data.mjs';
-const labels={journal:'יומן העסקאות',research:'מקורות המחקר',chartPreferences:'העדפות הגרף',drawings:'קווי המגמה'};
+const labels={journal:'יומן העסקאות',research:'מקורות המחקר',chartPreferences:'העדפות הגרף',drawings:'קווי המגמה',conversations:'ארכיון שיחות הטקסט'};
 const defaults={style:'candles',chartMA20:true,chartMA150:true,chartEMA50:false,chartRSI14:true,chartBB20:false,chartMACD:false,chartATR14:false};
 const read=section=>{const saved=JSON.parse(localStorage.getItem(personalKeys[section])||JSON.stringify(emptyPersonal(section)));return personalData(section,section==='chartPreferences'?{...defaults,...saved}:saved)};
 function applyLocal(section,value){localStorage.setItem(personalKeys[section],JSON.stringify(value));window.dispatchEvent(new CustomEvent('asaf:personal-loaded',{detail:{section}}))}
@@ -9,7 +9,7 @@ async function remote(body){const r=await fetch('/.netlify/functions/workspace',
 export function mountPersonalSync(host,{only=null}={}){
  if(!host)return;const sectionNames=only?[only]:personalSections,revisions=new Map();let busy=false,member=undefined;
  const title=document.createElement('h3');title.textContent='עותק אישי בחשבון וגיבוי במכשיר';
- const help=document.createElement('p');help.className='muted';help.textContent='הנתונים נשארים במכשיר עד שתבחר לשמור לחשבון. טעינה ממזגת עסקאות ומקורות לפי מזהה, עם עדיפות לעותק מהחשבון. העדפות וקווים לאותה מניה מהחשבון מחליפים את המקבילים המקומיים. גבה לפני טעינה. נרות וצילומי גרף אינם נכללים.';
+ const help=document.createElement('p');help.className='muted';help.textContent='הנתונים נשארים במכשיר עד שתבחר לשמור לחשבון. טעינה ממזגת עסקאות, מקורות ושיחות לפי מזהה, עם עדיפות לעותק מהחשבון. העדפות וקווים לאותה מניה מהחשבון מחליפים את המקבילים המקומיים. גבה לפני טעינה. נרות וצילומי גרף אינם נכללים. ארכיון השיחות כולל טקסט בלבד, ועולה לחשבון רק בבחירת סוג זה ולחיצה על שמירה.';
  const row=document.createElement('div');row.className='row bar';const select=document.createElement('select');select.setAttribute('aria-label','סוג נתונים אישיים');select.id='personalSection';for(const section of sectionNames){const option=document.createElement('option');option.value=section;option.textContent=labels[section];select.append(option)}
  const load=document.createElement('button'),save=document.createElement('button'),exportButton=document.createElement('button'),importLabel=document.createElement('label'),file=document.createElement('input'),status=document.createElement('p');
  for(const b of [load,save,exportButton])b.type='button';load.textContent='טען ומזג נתונים מהחשבון';save.textContent='שמור נתונים לחשבון';exportButton.textContent='גבה נתונים לקובץ JSON';importLabel.textContent='מזג גיבוי JSON ';file.type='file';file.accept='.json,application/json';file.setAttribute('aria-label','ייבוא גיבוי נתונים אישיים');importLabel.append(file);status.setAttribute('role','status');status.id='personalSyncStatus';row.append(select,load,save,exportButton);host.append(title,help,row,importLabel,status);

@@ -53,9 +53,10 @@ test('expired or revoked sessions cannot read or save account copies',async()=>f
 }));
 test('personal section patches and legacy watch saves preserve each other atomically',async()=>fixture(async({db})=>{
  const trade={id:'t1',symbol:'NVDA',date:'2026-10-23',side:'long',entry:100,exit:110,qty:10,fees:2,setup:'פריצה',quality:'A',note:'private journal'};
- let revision='';const parts={journal:[trade],research:[{id:'r1',title:'report',symbol:'NVDA',url:'https://example.com/',note:'private source',saved:'2026-10-23T00:00:00Z'}],chartPreferences:{style:'line',chartMACD:true},drawings:{NVDA:{savedAt:1,lines:[[{date:'2026-10-01',price:100},{date:'2026-10-02',price:105}]]}}};
+ let revision='';const parts={conversations:[{id:'chat1',symbol:'NVDA',title:'private conversation',saved:'2026-10-24T00:00:00Z',messages:[{role:'user',content:'private question'},{role:'assistant',content:'private answer'}]}],journal:[trade],research:[{id:'r1',title:'report',symbol:'NVDA',url:'https://example.com/',note:'private source',saved:'2026-10-23T00:00:00Z'}],chartPreferences:{style:'line',chartMACD:true},drawings:{NVDA:{savedAt:1,lines:[[{date:'2026-10-01',price:100},{date:'2026-10-02',price:105}]]}}};
  for(const [section,data] of Object.entries(parts)){const r=await workspace(req('workspace',{revision,section,data},{method:'PUT'}));assert.equal(r.status,200);revision=(await r.json()).revision}
  const r=await workspace(req('workspace',{revision,watch:['AAPL']},{method:'PUT'}));assert.equal(r.status,200);const saved=await r.json();for(const [section,value] of Object.entries(parts))assert.deepEqual(saved[section],value);assert.equal(saved.watch[0].symbol,'AAPL');
+ assert.deepEqual((await (await workspace(req('workspace'))).json()).conversations,parts.conversations);
  const before=db.get(prefix+'workspace:member:'+id);assert.equal((await workspace(req('workspace',{revision,section:'journal',data:[]},{method:'PUT'}))).status,409);assert.equal(db.get(prefix+'workspace:member:'+id),before);
  assert.equal((await workspace(req('workspace',{revision:saved.revision,section:'journal',data:[{...trade,entry:-1}]},{method:'PUT'}))).status,400);assert.equal(db.get(prefix+'workspace:member:'+id),before);
 }));

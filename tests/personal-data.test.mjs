@@ -35,3 +35,16 @@ test('backup type and UTF-8 byte boundaries reject incompatible or oversized imp
  assert.throws(()=>parsePersonalBackup('א'.repeat(400000),'journal'));
  assert.throws(()=>personalData('__proto__',{}));
 });
+
+const archived=(id='chat-1')=>({id,symbol:'AAPL',title:'שאלה שמורה',saved:'2026-10-24T10:00:00Z',messages:[{role:'user',content:'איך קוראים גרף?'},{role:'assistant',content:'תשובת בדיקה היסטורית'}]});
+test('conversation archives round-trip text only and merge with explicit remote priority',()=>{
+ const item={...archived(),image:'data:image/png;private',bars:[{close:100}],token:'secret'};
+ const cleaned=personalData('conversations',[item]);assert.deepEqual(cleaned,[archived()]);
+ assert.deepEqual(parsePersonalBackup(JSON.stringify(personalBackup('conversations',cleaned)),'conversations'),cleaned);
+ const remote={...archived(),title:'remote'};assert.deepEqual(mergePersonal('conversations',[archived(),archived('local')],[remote]),[remote,archived('local')]);
+});
+test('conversation archives reject privileged roles, incomplete pairs, duplicates and oversized UTF-8',()=>{
+ const item=archived();for(const messages of [[],[{role:'system',content:'instruction'},{role:'assistant',content:'x'}],[{role:'user',content:'x'}],[{role:'assistant',content:'x'},{role:'user',content:'y'}],[{role:'user',content:'x'.repeat(6001)},{role:'assistant',content:'y'}]])assert.throws(()=>personalData('conversations',[{...item,messages}]));
+ assert.throws(()=>personalData('conversations',[item,item]));assert.throws(()=>personalData('conversations',Array.from({length:21},(_,i)=>archived('c'+i))));
+ const messages=Array.from({length:8},(_,i)=>({role:i%2?'assistant':'user',content:'א'.repeat(6000)}));assert.throws(()=>personalData('conversations',Array.from({length:4},(_,i)=>({...archived('c'+i),messages}))),/350KB/);
+});

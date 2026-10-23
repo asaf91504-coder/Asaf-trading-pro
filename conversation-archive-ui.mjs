@@ -1,0 +1,17 @@
+import {personalData,personalKeys,mergePersonal} from './personal-data.mjs';
+
+export function mountConversationArchive({readCurrent,isBusy}){
+ const anchor=document.getElementById('exportConversation');if(!anchor)return;
+ const host=document.createElement('details'),summary=document.createElement('summary');summary.textContent='ארכיון שיחות טקסט';host.append(summary);
+ const help=document.createElement('p');help.className='muted';help.textContent='שמירה במכשיר רק בלחיצה, עד 20 שיחות ו־8 הודעות בכל שיחה. ללא תמונות או נרות. השיחות עשויות לכלול מידע אישי. לשמירה בחשבון או לגיבוי בחר ״ארכיון שיחות הטקסט״ בלשונית מעקב. תצוגת ארכיון אינה משנה את הגרף או את השיחה הפעילה.';
+ const save=document.createElement('button');save.type='button';save.textContent='שמור עותק טקסט של השיחה במכשיר';
+ const select=document.createElement('select');select.setAttribute('aria-label','שיחה מהארכיון');
+ const preview=document.createElement('div'),status=document.createElement('p');preview.className='conversation-archive-preview';status.setAttribute('role','status');
+ host.append(help,save,select,status,preview);anchor.parentElement.insertAdjacentElement('afterend',host);
+ const read=()=>personalData('conversations',JSON.parse(localStorage.getItem(personalKeys.conversations)||'[]'));
+ function show(){preview.replaceChildren();try{const item=read().find(x=>x.id===select.value);if(!item)return;const warning=document.createElement('p');warning.textContent='ניתוח היסטורי שמור · '+item.symbol+' · '+new Date(item.saved).toLocaleString('he-IL')+' · אינו מידע שוק עדכני. תמונות ונתוני המקור אינם כלולים.';preview.append(warning);for(const m of item.messages){const el=document.createElement('p');el.className='bubble '+(m.role==='user'?'user':'bot');el.textContent=(m.role==='user'?'אתה: ':'ASAF AI: ')+m.content;preview.append(el)}}catch(e){status.textContent=e.message}}
+ function render(){select.replaceChildren();preview.replaceChildren();try{const items=read(),empty=document.createElement('option');empty.value='';empty.textContent=items.length?'בחר שיחה להצגה':'אין שיחות שמורות';select.append(empty);for(const item of items){const option=document.createElement('option');option.value=item.id;option.textContent=item.symbol+' · '+item.title+' · '+new Date(item.saved).toLocaleDateString('he-IL');select.append(option)}select.disabled=!items.length}catch(e){status.textContent=e.message;select.disabled=true}}
+ save.onclick=()=>{try{if(isBusy())throw Error('המתן לסיום התשובה לפני שמירה.');const current=readCurrent();if(!current.messages.length)throw Error('אין עדיין זוג שאלת AI ותשובה שהושלמו לשמירה.');const item={id:crypto.randomUUID(),symbol:current.symbol,title:current.messages[0].content.slice(0,120),saved:new Date().toISOString(),messages:current.messages};const next=mergePersonal('conversations',read(),[item]);localStorage.setItem(personalKeys.conversations,JSON.stringify(next));render();select.value=item.id;show();status.textContent='עותק הטקסט נשמר במכשיר בלבד. שמירה לחשבון דורשת פעולה נפרדת בלשונית מעקב.'}catch(e){status.textContent=e.message}};
+ select.onchange=show;window.addEventListener('asaf:personal-loaded',e=>{if(e.detail?.section==='conversations'){render();status.textContent='ארכיון השיחות עודכן. בחר שיחה להצגה.'}});
+ window.addEventListener('asaf:logout',()=>{select.value='';preview.replaceChildren();status.textContent='יצאת מהחשבון. העותקים המקומיים נשארו במכשיר.'});render();
+}
