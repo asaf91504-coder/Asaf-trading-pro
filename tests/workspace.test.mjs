@@ -45,3 +45,11 @@ test('MACD filters reject insufficient warmup, equality and zero, while acceptin
  assert.ok(screenResult(make(35),{above20:false,macdPositive:true}).reasons.includes('MACD אינו חיובי'));
  assert.equal(screenResult(make(35,10),{macdAboveSignal:true,macdPositive:true,rsiEnabled:true,minRSI:50,maxRSI:100}).matches,true);
 });
+
+test('scanner Stochastic and OBV filters use shared source data and reject equality or missing volume history',()=>{
+ const make=({impulse=10,gap=false,volume=100,count=40}={})=>scanFile('QA.TEST.csv','Date,Open,High,Low,Close,Volume\n'+Array.from({length:count},(_,i)=>{const c=100+(i===count-1?impulse:0);return [new Date(Date.UTC(2025,0,i+1)).toISOString().slice(0,10),100,c+1,99,c,gap&&i===10?'':i===count-1?volume:100].join(',')}).join('\n'));
+ const up=make(),snapshot=indicatorSnapshot(up.bars);assert.equal(up.summary.stochasticK,snapshot.stochastic1433.k);assert.equal(up.summary.obv,snapshot.obv);assert.equal(screenResult(up,{stochasticAboveSignal:true,obvRising:true}).matches,true);
+ assert.ok(screenResult(make({impulse:0}),{above20:false,stochasticAboveSignal:true}).reasons.includes('Stochastic %K אינו מעל %D'));
+ assert.ok(screenResult(make({volume:0}),{minVolume:0,obvRising:true}).reasons.includes('OBV אינו עולה בנר האחרון'));
+ assert.ok(screenResult(make({gap:true}),{obvRising:true}).reasons.includes('אין רצף מחזורים מלא לחישוב OBV'));
+});

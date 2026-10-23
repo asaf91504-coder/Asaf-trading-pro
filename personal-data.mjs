@@ -31,7 +31,7 @@ export function personalData(section,value){
  if(section==='chartPreferences'){
   if(!object(value))throw Error('העדפות הגרף אינן תקינות');const result={};
   if(value.style!==undefined){if(!chartStyles.includes(value.style))throw Error('סגנון גרף אינו תקין');result.style=value.style}
-  for(const key of ['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14'])if(value[key]!==undefined){if(typeof value[key]!=='boolean')throw Error('העדפת אינדיקטור אינה תקינה');result[key]=value[key]}
+  for(const key of ['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV'])if(value[key]!==undefined){if(typeof value[key]!=='boolean')throw Error('העדפת אינדיקטור אינה תקינה');result[key]=value[key]}
   return result;
  }
  if(section==='drawings'){

@@ -21,7 +21,7 @@ test('research only stores bounded links with safe protocols and no embedded cre
  assert.deepEqual(personalData('research',[item]),[item]);for(const url of ['javascript:alert(1)','https://secret:key@example.com/','data:text/html,test'])assert.throws(()=>personalData('research',[{...item,url}]));
 });
 test('preferences only admit implemented styles and boolean indicator switches',()=>{
- assert.deepEqual(personalData('chartPreferences',{style:'line',chartMACD:true,admin:true}),{style:'line',chartMACD:true});
+ assert.deepEqual(personalData('chartPreferences',{style:'line',chartMACD:true,chartMA200:true,chartStochastic:false,chartOBV:true,admin:true}),{style:'line',chartMACD:true,chartMA200:true,chartStochastic:false,chartOBV:true});
  assert.throws(()=>personalData('chartPreferences',{chartMACD:'false'}));assert.throws(()=>personalData('chartPreferences',{style:'fake'}));
 });
 test('drawings retain date anchors, merge per symbol and reject bad prices and excessive symbols',()=>{

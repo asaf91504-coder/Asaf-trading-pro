@@ -17,7 +17,16 @@ export function chartIndicators(bars){
  const atr14=Array(length).fill(null);let total=0,valid=true,value=null;
  // Seed from 14 changes, matching the scanner's Wilder ATR convention.
  for(let i=1;i<length;i++){const b=bars[i],tr=Math.max(b.high-b.low,Math.abs(b.high-closes[i-1]),Math.abs(b.low-closes[i-1]));if(!Number.isFinite(tr)){valid=false;continue}if(!valid)continue;if(i<=14){total+=tr;if(i===14)value=total/14}else value=(value*13+tr)/14;atr14[i]=value}
- return {ma20,ma150:sma(150),ema50:ema(50),rsi14,bbUpper,bbLower,macd,macdSignal,macdHistogram,atr14};
+ // Slow Stochastic 14/3/3: fast %K over high/low, then SMA3 %K and SMA3 %D.
+ // A zero range or missing OHLC has no defined ratio and stays null.
+ const fastK=Array(length).fill(null);
+ for(let i=13;i<length;i++){const window=bars.slice(i-13,i+1);if(window.some(b=>!Number.isFinite(b.high)||!Number.isFinite(b.low)||b.high<b.low))continue;const high=Math.max(...window.map(b=>b.high)),low=Math.min(...window.map(b=>b.low));if(high>low)fastK[i]=100*(closes[i]-low)/(high-low)}
+ const smooth3=values=>values.map((_,i)=>{const window=values.slice(Math.max(0,i-2),i+1);return window.length===3&&window.every(Number.isFinite)?window.reduce((a,b)=>a+b,0)/3:null});
+ const stochasticK=smooth3(fastK),stochasticD=smooth3(stochasticK);
+ // OBV starts at zero for the loaded history; missing volume breaks continuity.
+ const obv=Array(length).fill(null);let cumulative=0,volumeValid=true;
+ for(let i=0;i<length;i++){const volume=bars[i].volume;if(!Number.isFinite(volume)||volume<0)volumeValid=false;if(!volumeValid)continue;if(i)cumulative+=Math.sign(closes[i]-closes[i-1])*volume;obv[i]=cumulative}
+ return {ma20,ma50:sma(50),ma100:sma(100),ma150:sma(150),ma200:sma(200),ema50:ema(50),rsi14,bbUpper,bbLower,macd,macdSignal,macdHistogram,atr14,stochasticK,stochasticD,obv};
 }
 
-export function indicatorSnapshot(bars){const all=chartIndicators(bars),last=key=>all[key].at(-1)??null;return {ema50:last('ema50'),rsi14:last('rsi14'),atr14:last('atr14'),bollinger20:{middle:last('ma20'),upper:last('bbUpper'),lower:last('bbLower'),deviations:2},macd12269:{line:last('macd'),signal:last('macdSignal'),histogram:last('macdHistogram')},methods:'EMA uses an SMA seed; RSI/ATR use Wilder smoothing; ATR seed excludes the first bar; Bollinger uses population standard deviation.'}}
+export function indicatorSnapshot(bars){const all=chartIndicators(bars),last=key=>all[key].at(-1)??null;return {ma50:last('ma50'),ma100:last('ma100'),ma200:last('ma200'),ema50:last('ema50'),rsi14:last('rsi14'),atr14:last('atr14'),stochastic1433:{k:last('stochasticK'),d:last('stochasticD')},obv:last('obv'),obvPrevious:all.obv.at(-2)??null,bollinger20:{middle:last('ma20'),upper:last('bbUpper'),lower:last('bbLower'),deviations:2},macd12269:{line:last('macd'),signal:last('macdSignal'),histogram:last('macdHistogram')},methods:'EMA uses an SMA seed; RSI/ATR use Wilder smoothing; ATR seed excludes the first bar; Bollinger uses population standard deviation; Slow Stochastic is 14/3/3 with null for zero range; OBV starts at zero at the first loaded bar and becomes unavailable after missing volume.'}}
