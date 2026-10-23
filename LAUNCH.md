@@ -195,3 +195,7 @@ Supplier reply (October 23): Venture $149/month or $1,490/year; independent oper
 - Actual signed-in alert save/load, provider fetches, scheduled invocations, source-grounded LLM responses and physical-mobile UI still require live acceptance. Google setup remains outstanding.
 
 140 automated tests passed, including delay boundaries, shared cache/quota behavior, HA formulas, drawing schemas, cached-provider AI context through the authenticated route, news filtering, batch scanning, rule revision/identity checks, quiet hours, deduplication, account deletion and revocation during inbox append.
+
+### Production UI acceptance for 4–9
+
+Production health reports the new version; licensed market, background and news flags remain OFF. Scanner configuration reports disabled and anonymous alerts return 401. A synthetic 200-bar QA.TEST dataset verified the seven-style selector including Heikin Ashi, Area, OHLC bars, hollow candles and Baseline, unchanged raw close/indicator values, and the five drawing choices. Screenshot captured with the actual rendered Heikin Ashi chart. UI inspection found the legacy tab handler hiding nested sections; it now limits visibility toggles to top-level main panels so the account alerts section stays visible within Watch. Provider scanner auto-refresh remains unchecked. No provider or LLM requests were made. Real authenticated alert writes, scheduled execution and paid-data integration remain unverified.
