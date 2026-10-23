@@ -1,4 +1,5 @@
 import {parseCSV,analyze} from './analyzer.mjs';
+import {indicatorSnapshot} from './chart-indicators.mjs';
 export function scanFile(name,text){
  const all=parseCSV(text),bars=all.slice(-200);
  const tickers=[...new Set(all.map(b=>b.ticker).filter(Boolean))];
@@ -7,9 +8,10 @@ export function scanFile(name,text){
  const inferred=String(name).replace(/\.csv$/i,'').toUpperCase();
  const symbol=tickers[0]||(/^[A-Z0-9:._-]{1,30}$/.test(inferred)?inferred:null);
  if(!symbol)throw Error('אין סימול בקובץ. הוסף עמודת Symbol או שם קובץ כמו AAPL.csv');
- return {symbol,bars,summary:analyze(bars),symbolFrom:tickers.length?'column':'filename'};
+ const indicators=indicatorSnapshot(bars);
+ return {symbol,bars,summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram},symbolFrom:tickers.length?'column':'filename'};
 }
-export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false}={}){
+export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false}={}){
  const a=record.summary,reasons=[];
  if(a.close<=minPrice)reasons.push('מחיר אינו מעל '+minPrice);
  if(above20&&!a.aboveMA20)reasons.push('מתחת ל-MA20 או שווה לו');
@@ -17,6 +19,9 @@ export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=
  else if(a.volumeRatio<minVolume)reasons.push('מחזור יחסי נמוך');
  if(minATR>0&&(a.atrPercent==null||a.atrPercent<minATR))reasons.push('ATR% מתחת לסף או חסר');
  if(breakout20&&!a.breakout20)reasons.push('אין סגירה מעל שיא 20 הימים הקודמים');
+ if(rsiEnabled){if(![minRSI,maxRSI].every(v=>Number.isFinite(v)&&v>=0&&v<=100)||minRSI>maxRSI)reasons.push('טווח RSI אינו תקין');else if(!Number.isFinite(a.rsi14))reasons.push('אין מספיק נרות ל-RSI14');else if(a.rsi14<minRSI||a.rsi14>maxRSI)reasons.push('RSI14 מחוץ לטווח שנבחר')}
+ if(macdAboveSignal){if(!Number.isFinite(a.macd)||!Number.isFinite(a.macdSignal))reasons.push('אין מספיק נרות לקו איתות MACD');else if(a.macd<=a.macdSignal)reasons.push('MACD אינו מעל קו האיתות')}
+ if(macdPositive){if(!Number.isFinite(a.macd))reasons.push('אין מספיק נרות ל-MACD');else if(a.macd<=0)reasons.push('MACD אינו חיובי')}
  if(risingVolume){
   const last=record.bars.at(-1),prior=record.bars.at(-2);
   if(!prior||last.close<=prior.close)reasons.push('הסגירה אינה מעל הסגירה הקודמת');
