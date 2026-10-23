@@ -150,3 +150,8 @@ Added optional Bollinger bands (20 closing prices, population deviation ×2), MA
 The frontend now sends at most 2,000 loaded bars to the authenticated free-chat function (700 KB request cap, existing image bounds and quotas preserved). The server validates and recomputes indicators with the same shared formulas as the chart. The LLM receives a bounded summary, enabled-indicator names, display style and only the final 30 detailed candles, not 2,000 raw candles. Browser-supplied indicator numbers are ignored. Zoom does not change the indicator seed or calculation history. Data provenance/freshness remains unverified for browser-supplied CSV. Existing provider adapter remains capped at 200 bars, so extending local history does not expand its coverage.
 
 Historical documentation referring to a 200-bar AI request cap or indicators being chart-only is superseded by this update. Google and licensed market integrations remain disabled pending external configuration.
+
+
+### Production indicator acceptance
+
+114 automated tests passed before deployment (commit 962eb2f). On production, a synthetic 200-bar QA.TEST dataset ending 2025-07-19 displayed close 128.5755, RSI14 77.7757, ATR14 2, MACD 0.5275, signal -0.0303 and Bollinger bounds 127.8928/121.4202. Browser QA verified the three toggles, candle/line display, zoom, fullscreen drawing and separate RSI/MACD/ATR panes. The three toggles and line style survived reload. Synthetic bars and test conversation were cleared afterward. No AI or market-provider calls were made by this browser check. Actual authenticated model interpretation and physical-phone touch remain separate checks.
