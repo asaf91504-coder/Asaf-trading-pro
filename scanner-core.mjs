@@ -8,8 +8,11 @@ export function scanFile(name,text){
  const inferred=String(name).replace(/\.csv$/i,'').toUpperCase();
  const symbol=tickers[0]||(/^[A-Z0-9:._-]{1,30}$/.test(inferred)?inferred:null);
  if(!symbol)throw Error('אין סימול בקובץ. הוסף עמודת Symbol או שם קובץ כמו AAPL.csv');
+ return {...scanBars(symbol,bars),symbolFrom:tickers.length?'column':'filename'};
+}
+export function scanBars(symbol,bars){
  const indicators=indicatorSnapshot(bars);
- return {symbol,bars,summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram},symbolFrom:tickers.length?'column':'filename'};
+ return {symbol,bars,summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram},symbolFrom:'provider'};
 }
 export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false}={}){
  const a=record.summary,reasons=[];

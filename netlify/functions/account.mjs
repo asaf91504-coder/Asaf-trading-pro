@@ -10,7 +10,7 @@ redis.call('SET',KEYS[1],ARGV[3]);redis.call('SET',KEYS[2],ARGV[4]);return 1`;
 const DELETE=`-- account-self-delete
 if redis.call('GET',KEYS[1])~=ARGV[1] or redis.call('GET',KEYS[2])~=ARGV[2] then return 0 end
 if ARGV[3]=='1' and redis.call('GET',KEYS[5])==ARGV[4] then redis.call('DEL',KEYS[5]) end
-redis.call('DEL',KEYS[1],KEYS[2],KEYS[3],KEYS[4],KEYS[6]);redis.call('SREM',KEYS[7],ARGV[5]);return 1`;
+redis.call('DEL',KEYS[1],KEYS[2],KEYS[3],KEYS[4],KEYS[6],KEYS[8],KEYS[9],KEYS[10]);redis.call('SREM',KEYS[11],ARGV[5]);redis.call('SREM',KEYS[7],ARGV[5]);return 1`;
 export function createAccountHandler({env=process.env,run=command}={}){return async request=>{
  if(!['GET','POST'].includes(request.method))return reply({error:'Method not allowed'},405);
  if(!publicAuthConfigured(env))return reply({error:'ניהול חשבונות אינו זמין.'},503);
@@ -44,7 +44,7 @@ export function createAccountHandler({env=process.env,run=command}={}){return as
   if(!member||member.version!==user.version||member.enabled!==user.enabled)throw Error('Account changed');
   if(body.action==='delete'){
    if(body.confirmation!=='DELETE')return reply({error:'נדרש אישור מחיקה.'},400);
-   const result=await run(['EVAL',DELETE,'7',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id],{env});
+   const result=await run(['EVAL',DELETE,'11',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),storageKey('alerts:rules:'+user.id,env),storageKey('alerts:state:'+user.id,env),storageKey('alerts:inbox:'+user.id,env),storageKey('alerts:members',env),userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id],{env});
    if(result!==1)return reply({error:'החשבון עודכן. נסה שוב.'},409);
    return reply({deleted:true,authenticated:false},200,{'Set-Cookie':expiredCookie});
   }

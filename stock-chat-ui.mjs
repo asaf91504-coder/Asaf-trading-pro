@@ -32,6 +32,7 @@ function currentContext(){
 }
 function renderStatus(){
  const attribution=$("marketAttribution");
+ if($('marketCoverage'))$('marketCoverage').textContent=['1day','1week'].includes(loaded?.interval)?'נתוני יום/EOD מאוחדים לפי הספק':'פיד תוך־יומי מזירות נבחרות, כ־5% ממחזור ארה״ב לפי הספק; המחזורים אינם מחזור כלל השוק';
  if(attribution)attribution.hidden=!(loaded&&loaded.source==="Twelve Data"&&normSymbol()===loaded.symbol);
  if(!loaded){badge.textContent="לא נטען עדיין קובץ נתוני גרף. ניתן לשוחח על מושגים ולצרף צילום. רמות מחיר עדכניות דורשות נתונים מתאימים.";return;}
  const now=normSymbol();
@@ -125,6 +126,8 @@ async function ask(q,extra={}){
     source:activeData?.source||"none",
     interval:activeData?.interval||"1day",
     receivedAt:activeData?.receivedAt||null,
+    useServerMarket:activeData?.source==="Twelve Data",
+    includeNews:$("chatIncludeNews")?.checked===true,
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
@@ -165,8 +168,8 @@ $('exportConversation')?.addEventListener('click',()=>{
 window.addEventListener('asaf:load-dataset',event=>{
  const data=event.detail;if(!data||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
- try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT),interval=data.interval==='intraday'?'intraday':'1day',context=stockContext(symbol,bars,{source:'CSV',interval});
- resetRequest();chartSymbol.value=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,source:'CSV',interval,receivedAt:null};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source:'CSV',interval}))}catch{}
+ try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT),interval=data.interval==='intraday'?'intraday':'1day',source=data.source==='Twelve Data'?'Twelve Data':'CSV',receivedAt=data.receivedAt||null,context=stockContext(symbol,bars,{source,interval,receivedAt});
+ resetRequest();chartSymbol.value=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,source,interval,receivedAt};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source,interval,receivedAt}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
@@ -257,7 +260,7 @@ marketButton.addEventListener("click",async()=>{
    try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
    lastFetchBySymbol.set(fetchKey,Date.now());
    renderStatus();datasetReady();
-   marketStatus.textContent="✓ נר אחרון: "+result.latestBarTime+" | "+(result.exchange||"בורסה לא ידועה")+" | אזור זמן: "+(result.exchangeTimezone||"לא ידוע")+" | מקור Twelve Data"+(result.cached?" (מטמון)":"")+(Number.isFinite(result.delayMinutes)?" | עיכוב מוצהר: "+result.delayMinutes+" דקות":"; נתונים עשויים להיות מעוכבים.");
+   marketStatus.textContent="✓ נר אחרון: "+result.latestBarTime+" | "+(result.exchange||"בורסה לא ידועה")+" | אזור זמן: "+(result.exchangeTimezone||"לא ידוע")+" | מקור Twelve Data"+(result.cached?" (מטמון)":"")+' | '+(result.coverage||'כיסוי לא הוצהר')+(Number.isFinite(result.delayMinutes)?" | עיכוב מוצהר: "+result.delayMinutes+" דקות":"; נתונים עשויים להיות מעוכבים.");
    status.textContent="הגרף המקורי והצ'אט מציגים כעת את אותם "+bars.length+" נרות. אפשר לצלם ולבקש ניתוח.";
    say("bot","📡 קיבלתי "+bars.length+" נרות מאושרים של "+symbol+" בטווח "+interval+". נר אחרון: "+result.latestBarTime+". כל התשובות מכאן מבוססות על נתוני הספק שנקלטו, לא על צילום חלון TradingView.");
    document.querySelector('[data-tab="charts"]').click();

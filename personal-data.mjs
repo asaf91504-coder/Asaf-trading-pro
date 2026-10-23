@@ -1,3 +1,4 @@
+import {chartStyles,drawingTools} from './chart-styles.mjs';
 import {safeSourceUrl} from './scanner-core.mjs';
 export const personalSections=['journal','research','chartPreferences','drawings'];
 export const personalKeys={journal:'asaf_trades_v1',research:'asaf_research_sources_v1',chartPreferences:'asaf_chart_preferences_v1',drawings:'asaf_chart_drawings_v1'};
@@ -22,13 +23,13 @@ export function personalData(section,value){
  }
  if(section==='chartPreferences'){
   if(!object(value))throw Error('העדפות הגרף אינן תקינות');const result={};
-  if(value.style!==undefined){if(!['candles','line'].includes(value.style))throw Error('סגנון גרף אינו תקין');result.style=value.style}
+  if(value.style!==undefined){if(!chartStyles.includes(value.style))throw Error('סגנון גרף אינו תקין');result.style=value.style}
   for(const key of ['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14'])if(value[key]!==undefined){if(typeof value[key]!=='boolean')throw Error('העדפת אינדיקטור אינה תקינה');result[key]=value[key]}
   return result;
  }
  if(section==='drawings'){
   if(!object(value)||Object.keys(value).length>30)throw Error('מקסימום 30 מניות עם קווים');const result={};
-  for(const [key,item] of Object.entries(value)){if(!symbol(key)||!object(item)||!Number.isFinite(item.savedAt)||item.savedAt<0)throw Error('נתוני קווים אינם תקינים');result[key]={savedAt:item.savedAt,lines:array(item.lines,30).map(line=>{if(!Array.isArray(line)||line.length!==2||!line.every(p=>object(p)&&stamp(p.date)&&positive(p.price)))throw Error('נקודת ציור אינה תקינה');return line.map(p=>({date:p.date,price:p.price}))})}}
+  for(const [key,item] of Object.entries(value)){if(!symbol(key)||!object(item)||!Number.isFinite(item.savedAt)||item.savedAt<0)throw Error('נתוני קווים אינם תקינים');result[key]={savedAt:item.savedAt,lines:array(item.lines,30).map(line=>{if(!Array.isArray(line)||line.length!==2||!line.every(p=>object(p)&&stamp(p.date)&&positive(p.price)&&(p.tool===undefined||drawingTools.includes(p.tool))))throw Error('נקודת ציור אינה תקינה');return line.map(p=>({date:p.date,price:p.price,...(p.tool?{tool:p.tool}:{})}))})}}
   return result;
  }
  throw Error('סוג נתונים לא מוכר');

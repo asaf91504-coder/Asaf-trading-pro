@@ -2,7 +2,7 @@
 import {command,storeConfigured,storageKey} from '../../server/storage.mjs';
 import {newsConfigured,normalizeNews} from '../../server/news-core.mjs';
 export default async function handler(){
- if(process.env.CONTEXT!=='production'||!newsConfigured()||!storeConfigured())return new Response(null,{status:204});
+ if(!storageKey('news:snapshot').startsWith('asaf:production:')||!newsConfigured()||!storeConfigured())return new Response(null,{status:204});
  const bucket=Math.floor(Date.now()/900000),lock=storageKey('news:slot:'+bucket);
  try{
   // One attempt per quarter-hour across instances, including failures. No retry storm.
