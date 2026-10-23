@@ -99,3 +99,7 @@ Account watchlist save and load in a second tab succeeded with the existing thre
 ## Scanner filter update — 2026-10-23
 
 The CSV scanner adds a minimum ATR percentage, optional close above the previous 20 daily highs, and optional higher close with volume strictly above the previous 20-day mean. Higher close plus elevated volume is an observable daily-bar proxy, not measured buy-side volume. CSV export includes rejection reasons. These filters do not establish market cap, pattern targets, a 15% return, or real-time market coverage. GitHub write access was verified on 2026-10-23. This source update passed 91 offline tests; the production deployment must be verified separately.
+
+## Production scanner acceptance — 2026-10-23
+
+Production serves the new ATR, breakout and rising-volume filters. Browser QA used an explicitly synthetic QA.TEST dataset (30 daily bars, last close 130, MA20 120.5, ATR 2.31%, relative volume 2). The rising-volume filter accepted it; the breakout filter rejected the equal-to-prior-high close; minimum ATR 3 rejected it with both reasons visible. Opening its chart preserved the matching symbol, close, MA20 and date. The synthetic dataset was not market evidence and no provider/AI calls were made. Health reported status ok, free-only AI/auth/durable quotas enabled, and market/paid AI/news disabled. Automated checks passed 91/91 before rollout. These checks do not verify mobile hardware, live market coverage, licensed news, or authenticated AI on this deployment.
