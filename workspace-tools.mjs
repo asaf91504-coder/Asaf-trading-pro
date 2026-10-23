@@ -34,7 +34,7 @@ if(new URL(location.href).searchParams.get('tab')==='news')loadNews();
 // Explicit account copies: never upload device notes automatically on sign-in.
 const syncBox=document.createElement('div');syncBox.className='panel';
 const syncTitle=document.createElement('strong');syncTitle.textContent='רשימת המעקב בחשבון';
-const syncHelp=document.createElement('p');syncHelp.className='muted';syncHelp.textContent='השמירה מעבירה לחשבון את הרשימה וההערות שבמכשיר זה. טעינה ממזגת את העותק מהחשבון, עם עדיפות לפרטים מהחשבון בכפילויות. אין העלאה אוטומטית. יומן המסחר והגרפים נשארים מקומיים.';
+const syncHelp=document.createElement('p');syncHelp.className='muted';syncHelp.textContent='השמירה מעבירה לחשבון את הרשימה וההערות שבמכשיר זה. טעינה ממזגת את העותק מהחשבון, עם עדיפות לפרטים מהחשבון בכפילויות. אין העלאה אוטומטית. ליומן, למחקר ולהעדפות יש כפתורי שמירה נפרדים בהמשך. נרות הגרף אינם נשמרים בחשבון.';
 const syncRow=document.createElement('div');syncRow.className='row';const cloudLoad=document.createElement('button'),cloudSave=document.createElement('button');cloudLoad.type=cloudSave.type='button';cloudLoad.textContent='טען ומזג מהחשבון';cloudSave.textContent='שמור רשימה לחשבון';syncRow.append(cloudLoad,cloudSave);
 const syncStatus=document.createElement('p');syncStatus.setAttribute('role','status');syncBox.append(syncTitle,syncHelp,syncRow,syncStatus);$('watchRows').before(syncBox);
 let revision=null,syncMember=null,syncBusy=false;
@@ -43,7 +43,7 @@ window.addEventListener('asaf:auth',()=>{if(syncMember!==authState.memberId){rev
 async function cloud(action){if(syncBusy)return;syncBusy=true;syncRender();const member=authState.memberId;const unchanged=JSON.stringify(watch);try{
  if(!member)throw Error('יש להיכנס לחשבון.');
  if(action==='save'&&revision===null){const check=await fetch('/.netlify/functions/workspace',{cache:'no-store',signal:AbortSignal.timeout(10000)});const current=await check.json();if(!check.ok)throw Error(current.error||'לא ניתן לבדוק עותק בחשבון.');if(authState.memberId!==member)throw Error('החשבון השתנה.');if(current.revision)throw Error('כבר קיימת רשימה בחשבון. טען ומזג אותה לפני שמירה.');revision=''}
- const response=await fetch('/.netlify/functions/workspace',action==='load'?{cache:'no-store',signal:AbortSignal.timeout(10000)}:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,watch}),signal:AbortSignal.timeout(10000)});
+ const response=await fetch('/.netlify/functions/workspace',action==='load'?{cache:'no-store',signal:AbortSignal.timeout(10000)}:{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,watch,memberId:member}),signal:AbortSignal.timeout(10000)});
  const data=await response.json();if(!response.ok){if(response.status===401)await refreshAuth();if(response.status===409)revision=null;throw Error(data.error||'לא ניתן להשלים סנכרון.')}if(authState.memberId!==member)throw Error('החשבון השתנה. הפעולה לא הוחלה במכשיר.');
  if(action==='load'){if(JSON.stringify(watch)!==unchanged)throw Error('הרשימה השתנתה בזמן הטעינה. נסה שוב כדי למזג בבטחה.');watch=watchRecords([...data.watch,...watch]);persist()}
  revision=data.revision;syncStatus.textContent=action==='load'?(data.updatedAt?'העותק מהחשבון מוזג לרשימה המקומית.':'אין עדיין רשימה בחשבון. אפשר לשמור את הרשימה המקומית.'):'הרשימה וההערות נשמרו לחשבון. אפשר לטעון אותן במכשיר אחר.';

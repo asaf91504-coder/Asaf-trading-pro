@@ -34,3 +34,7 @@ $('researchForm').onsubmit=e=>{e.preventDefault();try{if(notes.length>=100)throw
 $('researchFilter').oninput=renderNotes;$('researchExport').onclick=()=>download('asaf-research-backup.json','application/json',JSON.stringify({version:1,exportedAt:new Date().toISOString(),sources:notes},null,2));renderNotes();
 
 $('scanPasteForm').onsubmit=e=>{e.preventDefault();try{const name=$('scanPasteSymbol').value.trim().toUpperCase();if(!/^[A-Z0-9:._-]{1,30}$/.test(name))throw Error('יש להזין סימול תקין');const text=$('scanPasteText').value;if(text.length>2000000)throw Error('נתונים גדולים מ-2MB');const r=scanFile(name+'.csv',text);if(records.size>=50&&!records.has(r.symbol))throw Error('מקסימום 50 מניות בסריקה');records.set(r.symbol,r);renderScan();$('scanPasteText').value='';$('scanPasteDetails').open=false;$('scanStatus').textContent='נתוני '+r.symbol+' נוספו לסריקה. נתונים שהודבקו; אינם פיד חי.'}catch(err){$('scanPasteStatus').textContent=err.message}};
+
+function reloadResearch(){try{notes=JSON.parse(localStorage.getItem(researchKey)||'[]');renderNotes()}catch{$('researchStatus').textContent='לא ניתן לטעון את מקורות המחקר שנשמרו.'}}
+window.addEventListener('asaf:personal-loaded',e=>{if(e.detail?.section==='research')reloadResearch()});
+window.addEventListener('storage',e=>{if(e.key===researchKey)reloadResearch()});

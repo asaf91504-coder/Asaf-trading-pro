@@ -9,13 +9,13 @@ export async function passwordMatches(password,record){if(typeof password!=='str
 export function publicAuthConfigured(env=process.env){return env.ASAF_PUBLIC_AUTH_ENABLED==='true'&&storeConfigured(env)}
 export const sessionCookie=token=>'asaf_session='+token+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600';
 export function cookieToken(request){const value=(request.headers.get('cookie')||'').split(';').map(s=>s.trim()).find(s=>s.startsWith('asaf_session='))?.slice(13);return /^[a-f0-9]{64}$/.test(value||'')?value:null}
-export async function currentUser(request,{env=process.env,run=command}={}){
+export async function currentUser(request,{env=process.env,run=command,includeRecords=false}={}){
  if(!publicAuthConfigured(env))return null;const token=cookieToken(request);if(!token)return null;
  const raw=await run(['GET',storageKey('auth:session:'+digest(token),env)],{env});if(!raw)return null;
  let session;try{session=JSON.parse(raw)}catch{return null}
  if(!/^[a-f0-9-]{36}$/.test(session?.id)||!Number.isFinite(session.expires)||session.expires<=Date.now())return null;
  const userRaw=await run(['GET',storageKey('auth:member:'+session.id,env)],{env});if(!userRaw)return null;
  let user;try{user=JSON.parse(userRaw)}catch{return null}
- return user.enabled===true&&user.id===session.id&&typeof session.version==='string'&&session.version===user.version?{id:user.id}:null;
+ return user.enabled===true&&user.id===session.id&&typeof session.version==='string'&&session.version===user.version?{id:user.id,...(includeRecords?{sessionRaw:raw,memberRaw:userRaw}:{})}:null;
 }
 export async function createSession(id,version,{env=process.env,run=command}={}){const token=randomBytes(32).toString('hex');await run(['SET',storageKey('auth:session:'+digest(token),env),JSON.stringify({id,version,expires:Date.now()+3600000}),'EX','3600'],{env});return token}
