@@ -1,3 +1,4 @@
+import {chartAttachment} from './chart-attachment.mjs';
 import {mountConversationArchive} from './conversation-archive-ui.mjs';
 import {prepareChartData,recentAIBars,CHART_HISTORY_LIMIT} from "./chart-data.mjs";
 import {authState,refreshAuth} from "./auth-ui.mjs";
@@ -35,7 +36,7 @@ function renderStatus(){
  const attribution=$("marketAttribution");
  if($('marketCoverage'))$('marketCoverage').textContent=['1day','1week'].includes(loaded?.interval)?'נתוני יום/EOD מאוחדים לפי הספק':'פיד תוך־יומי מזירות נבחרות, כ־5% ממחזור ארה״ב לפי הספק; המחזורים אינם מחזור כלל השוק';
  if(attribution)attribution.hidden=!(loaded&&loaded.source==="Twelve Data"&&normSymbol()===loaded.symbol);
- if(!loaded){badge.textContent="לא נטען עדיין קובץ נתוני גרף. ניתן לשוחח על מושגים ולצרף צילום. רמות מחיר עדכניות דורשות נתונים מתאימים.";return;}
+ if(!loaded){badge.textContent="אין נתוני גרף מחוברים. כשהפיד יחובר, הנרות יוצגו בגרף וישמשו לניתוח אוטומטי בעת שליחת שאלה.";return;}
  const now=normSymbol();
  badge.textContent=now===loaded.symbol?
  "✓ "+(loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"CSV מקומי")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות":
@@ -60,7 +61,7 @@ let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
 let conversation=[];
 mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
-function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars}}))}
+function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt}}))}
 function resetRequest(){conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
 $('cancelChat')?.addEventListener('click',()=>requestController?.abort());
 window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
@@ -116,7 +117,7 @@ async function ask(q,extra={}){
   const context=currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let image=null;
-  const candidate=extra.image||pendingImage;
+  const candidate=chartAttachment({manual:extra.image||pendingImage,auto:$('chatAutoChart')?.checked===true,hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch||activeController.signal.aborted)return;
   const response=await fetch("/.netlify/functions/free-chat",{
@@ -149,7 +150,7 @@ async function ask(q,extra={}){
   conversation=conversation.slice(-8);
   pendingImage=null;
   if(imageInput)imageInput.value="";
-  if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"אפשר לצרף צילום גרף להודעה הבאה.";
+  if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";
   setAiStatus("✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך");
  }catch(e){
   if(epoch!==conversationEpoch)return;
@@ -170,7 +171,7 @@ $('exportConversation')?.addEventListener('click',()=>{
 window.addEventListener('asaf:load-dataset',event=>{
  const data=event.detail;if(!data||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
- try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT),interval=data.interval==='intraday'?'intraday':'1day',source=data.source==='Twelve Data'?'Twelve Data':'CSV',receivedAt=data.receivedAt||null,context=stockContext(symbol,bars,{source,interval,receivedAt});
+ try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT),interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',source=data.source==='Twelve Data'?'Twelve Data':'CSV',receivedAt=data.receivedAt||null,context=stockContext(symbol,bars,{source,interval,receivedAt});
  resetRequest();chartSymbol.value=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,source,interval,receivedAt};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source,interval,receivedAt}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
@@ -308,7 +309,7 @@ form.addEventListener("submit",event=>{
  ask(q);
 });
 $("chatClearData").addEventListener("click",()=>{
- resetRequest();loaded=null;
+ resetRequest();loaded=null;window.dispatchEvent(new Event("asaf:dataset-cleared"));
  localChart.clear();
  try{sessionStorage.removeItem(key)}catch{}
  renderStatus();
@@ -322,11 +323,13 @@ if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
  ask("תנתח את הגרף הנוכחי");
 });
-chartSymbol.addEventListener("input",()=>{rememberSymbol();$("chart").replaceChildren();resetRequest();renderStatus();if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
+chartSymbol.addEventListener("input",()=>{rememberSymbol();$("chart").replaceChildren();resetRequest();renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
+window.addEventListener('asaf:layout',()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
-say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, כולל תמונת גרף. בחר מניה, צרף צילום או טען נרות, ושאל כל שאלה. בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
+say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, הגרף הפתוח נשלח עם השאלה כשיש נתונים תואמים. בחר מניה ושאל על מגמה, תבניות או סיכונים. אין צורך להעלות צילום.  בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
 if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" נטענו מחדש מהלשונית הנוכחית, עד "+loaded.context.date+".");
+window.addEventListener('asaf:request-dataset',datasetReady);
 queueMicrotask(datasetReady);
 if(new URLSearchParams(location.search).get("tab")==="chat"){
  document.querySelector('[data-tab="chat"]').click();

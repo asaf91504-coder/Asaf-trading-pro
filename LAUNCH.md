@@ -8,7 +8,7 @@ This table supersedes historical capability and pending-quote summaries later in
 
 | Item | Current implementation | Outstanding |
 | --- | --- | --- |
-| 1 Google | Verified-token flow, nonce, explicit linking | Client configuration and real sign-in; OFF |
+| 1 Google | Verified-token flow, nonce, explicit linking; configured in production; owner confirmed sign-in | Google console testing/public audience publication not verified |
 | 2 Accounts | Sessions, revocation, deletion, allowlisted admin controls | Full live management acceptance |
 | 3 Onboarding | Invitations and one-use recovery links | Automatic verified transactional email/public onboarding |
 | 4 Market | Shared gated cache, quotas, declared-delay enforcement | Licensed subscription/key and actual coverage acceptance; OFF |
@@ -308,3 +308,18 @@ Live acceptance completed for version 2026-10-24-data-validation-1: all ten anon
 Configured the three approved Google variables in Netlify and published deploy 6adccd222a8ae8984f214b05. Live config reported enabled/signupEnabled true; the official Google button rendered and all ten deployment checks passed. Owner subsequently confirmed successful Google sign-in. Google console was last observed in testing mode; public OAuth production publication is not verified. No service purchase or plan upgrade.
 
 New Google signup now shows “Welcome, <first name>!” after successful session verification; returning Google sign-in shows “Welcome back, <first name>!”. Names come only from verified Google ID-token given_name, with full-name and unnamed fallbacks. Display-only names are bounded, stripped of control/directional override characters, rendered through textContent with automatic direction, and not retained in account storage. Greeting clears on logout and is shown after sign-in rather than every reload. 178 local automated tests passed, including trusted-name source, Unicode handling, fallbacks and existing identity/security boundaries. Visual acceptance of a new personalized sign-in remains separate from the owner's earlier successful sign-in.
+
+
+## Terminal layout and chart-grounded AI — 2026-10-24
+
+Owner requested a TradingView-like work surface with a live feed and no manual image upload. Rebuilt the existing Netlify/GitHub app in place: compact symbol command bar, left watchlist, original chart in the center, and existing Google/account/AI flow on the right. Desktop keeps chart and AI together; narrow screens use the existing accessible tabs. Reused existing controls/data/state rather than creating parallel account or watchlist stores. Indicator settings, statistics, data imports and optional AI file tools collapse to leave room for the chart. Watch prices are only loaded-bar prices, never invented quotes. Feed remains OFF pending supplier licensing/key; no WebSocket feed or seconds updates are claimed. A once-per-minute gated provider refresh option remains distinct from a live feed.
+
+On a user-submitted AI question, matching raw OHLC and shared server-calculated indicators are already attached. Added optional default-on automatic image capture of the visible original chart, with explicit alternative-file precedence. No capture/model call on chart load. Disabled option, symbol mismatch, hidden or unavailable chart yields no automatic image; structured matching candles still support analysis. Vision availability remains model-dependent. Selecting another symbol clears the analysis context. Source, interval and last loaded bar remain shown. This does not turn unauthenticated browser candles into verified live data.
+
+Added shared ADX14/+DI14/−DI14 and Supertrend10/3 calculations across chart, scanner, CSV export, saved preferences and server AI context. ADX seeds from 14 directional changes and first appears at bar index 27; zero TR and zero directional sums produce zero. ADX measures strength independently of direction. DMI direction uses strict comparisons; ADX filter is inclusive. Supertrend uses Wilder ATR10 seeded by the first ten true ranges including high-low for the first bar, multiplier 3, initial down direction, strict close crossings, and separate colored up/down segments. Missing OHLC breaks continuity; history start affects results. Existing ATR14 convention remains unchanged. These are research indicators, never orders or guaranteed stop execution.
+
+Concept references:
+- https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/DMI
+- https://www.tradingview.com/support/solutions/43000634738-supertrend/
+
+190 local automated tests pass, including trend seeds, equal directional moves, flat series, known Supertrend reversal arithmetic, no future dependence, broken OHLC continuity, cross-surface identity, directional/filter boundaries, preferences and automatic-image gates. HTML IDs remain unique. Production browser acceptance follows separately. Email check of both sent conversations plus incoming Massive/Intrinio/Polygon mail found no reply at the time of this update; no email sent, purchase, plan upgrade or provider activation.

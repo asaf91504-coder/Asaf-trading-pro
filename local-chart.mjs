@@ -7,7 +7,7 @@ export function initLocalChart(){
  const $=id=>document.getElementById(id),panel=$('localChartPanel'),canvas=$('localChartCanvas'),select=$('localChartRange'),title=$('localChartTitle'),tooltip=$('localChartTooltip'),ctx=canvas.getContext('2d');
  let bars=[],symbol='',count=60,offset=0,geometry=null,hover=null,drag=null,drawing=false,firstPoint=null,lines=[];
  let indicators=chartIndicators([]),heikin=null;
- const indicatorIds=['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV'];
+ const indicatorIds=['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV','chartADX14','chartSupertrend'];
  const preferenceKey='asaf_chart_preferences_v1';
  try{const saved=JSON.parse(localStorage.getItem(preferenceKey)||'{}');for(const id of indicatorIds)if(typeof saved[id]==='boolean')$(id).checked=saved[id];if(chartStyles.includes(saved.style))$('chartStyle').value=saved.style}catch{}
  function savePreferences(){try{localStorage.setItem(preferenceKey,JSON.stringify({style:$('chartStyle').value,...Object.fromEntries(indicatorIds.map(id=>[id,$(id).checked]))}))}catch{$('chartDrawingStatus').textContent='לא ניתן לשמור העדפות במכשיר; השינוי זמין בלשונית הנוכחית.'}}
@@ -21,19 +21,19 @@ export function initLocalChart(){
  function metrics(){
   const host=$('chartMetrics');if(!host)return;host.replaceChildren();if(!bars.length)return;
   const last=bars.at(-1),prior=bars.at(-2),change=prior?(last.close/prior.close-1)*100:null;
-  const values=[['סגירה אחרונה','$'+label(last.close)],['שינוי מהנר הקודם',change===null?'—':change.toFixed(2)+'%'],['MA20',average(bars.length-1,20)],['MA150',average(bars.length-1,150)],['MA50',average(bars.length-1,50)],['MA100',average(bars.length-1,100)],['MA200',average(bars.length-1,200)],['Stoch %K',indicators.stochasticK.at(-1)],['Stoch %D',indicators.stochasticD.at(-1)],['OBV',indicators.obv.at(-1)],['EMA50',indicators.ema50.at(-1)],['RSI14',indicators.rsi14.at(-1)],['ATR14',indicators.atr14.at(-1)],['MACD',indicators.macd.at(-1)],['MACD Signal',indicators.macdSignal.at(-1)],['BB עליון',indicators.bbUpper.at(-1)],['BB תחתון',indicators.bbLower.at(-1)]];
+  const values=[['סגירה אחרונה','$'+label(last.close)],['שינוי מהנר הקודם',change===null?'—':change.toFixed(2)+'%'],['MA20',average(bars.length-1,20)],['MA150',average(bars.length-1,150)],['MA50',average(bars.length-1,50)],['MA100',average(bars.length-1,100)],['MA200',average(bars.length-1,200)],['Stoch %K',indicators.stochasticK.at(-1)],['Stoch %D',indicators.stochasticD.at(-1)],['OBV',indicators.obv.at(-1)],['ADX14',indicators.adx14.at(-1)],['+DI14',indicators.plusDI14.at(-1)],['−DI14',indicators.minusDI14.at(-1)],['Supertrend 10/3',indicators.supertrend.at(-1)],['כיוון Supertrend',indicators.supertrendDirection.at(-1)==='up'?'עולה':indicators.supertrendDirection.at(-1)==='down'?'יורד':null],['EMA50',indicators.ema50.at(-1)],['RSI14',indicators.rsi14.at(-1)],['ATR14',indicators.atr14.at(-1)],['MACD',indicators.macd.at(-1)],['MACD Signal',indicators.macdSignal.at(-1)],['BB עליון',indicators.bbUpper.at(-1)],['BB תחתון',indicators.bbLower.at(-1)]];
   for(const [name,value] of values){const box=document.createElement('div'),small=document.createElement('small'),strong=document.createElement('strong');small.textContent=name;strong.textContent=value==null?(name==='OBV'?'מחזור חסר':name.startsWith('Stoch')?'חסרים נרות או טווח מחיר':'אין מספיק נרות'):typeof value==='number'?label(value):value;box.append(small,strong);host.append(box)}
  }
  function draw(includeHover=true){
   if(!bars.length||panel.hidden||canvas.getBoundingClientRect().width<1)return;
-  const width=Math.max(180,Math.floor(canvas.getBoundingClientRect().width)),paneNames=[['rsi','chartRSI14'],['macd','chartMACD'],['atr','chartATR14'],['stochastic','chartStochastic'],['obv','chartOBV']].filter(([,id])=>$(id).checked).map(([name])=>name);
+  const width=Math.max(180,Math.floor(canvas.getBoundingClientRect().width)),paneNames=[['rsi','chartRSI14'],['macd','chartMACD'],['atr','chartATR14'],['stochastic','chartStochastic'],['obv','chartOBV'],['adx','chartADX14']].filter(([,id])=>$(id).checked).map(([name])=>name);
   const layout=chartLayout(width,paneNames,panel.classList.contains('chart-expanded')?Math.max(220,window.innerHeight-380):270),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.style.height=height+'px';canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);
   const style=$('chartStyle').value,displayBars=style==='heikin'&&heikin?heikin:bars;
   const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,step=plotWidth/view.count;
   let min=Math.min(...visible.map(b=>b.low)),max=Math.max(...visible.map(b=>b.high));
   if(style==='baseline'){min=Math.min(min,bars[0].close);max=Math.max(max,bars[0].close)}
-  const overlays=[['ma20','chartMA20','#fbbf24'],['ma150','chartMA150','#a78bfa'],['ma50','chartMA50','#fb923c'],['ma100','chartMA100','#22d3ee'],['ma200','chartMA200','#f472b6'],['ema50','chartEMA50','#60a5fa'],['bbUpper','chartBB20','#f472b6'],['bbLower','chartBB20','#f472b6'],['ma20','chartBB20','#f472b6']];
+  const overlays=[['ma20','chartMA20','#fbbf24'],['ma150','chartMA150','#a78bfa'],['ma50','chartMA50','#fb923c'],['ma100','chartMA100','#22d3ee'],['ma200','chartMA200','#f472b6'],['ema50','chartEMA50','#60a5fa'],['bbUpper','chartBB20','#f472b6'],['bbLower','chartBB20','#f472b6'],['ma20','chartBB20','#f472b6'],['supertrendUp','chartSupertrend',colors.up],['supertrendDown','chartSupertrend',colors.down]];
   for(let i=view.start;i<view.end;i++)for(const [key,id] of overlays){const value=$(id).checked?indicators[key][i]:null;if(value!==null){min=Math.min(min,value);max=Math.max(max,value)}}
   const margin=Math.max((max-min)*.08,max*.002,.01);min-=margin;max+=margin;
   const x=i=>left+(i-view.start+.5)*step,y=v=>top+(max-v)/(max-min)*(bottom-top);
@@ -62,19 +62,20 @@ export function initLocalChart(){
   function series(values,color,scale,lineWidth=1.5){ctx.strokeStyle=color;ctx.lineWidth=lineWidth;ctx.beginPath();let started=false;for(let i=view.start;i<view.end;i++){const value=values[i];if(!Number.isFinite(value)){started=false;continue}if(started)ctx.lineTo(x(i),scale(value));else{ctx.moveTo(x(i),scale(value));started=true}}ctx.stroke()}
   for(const [key,id,color] of overlays)if($(id).checked)series(indicators[key],color,y);
   for(const [name,pane] of Object.entries(panes)){
-   const keys=name==='rsi'?['rsi14']:name==='macd'?['macd','macdSignal','macdHistogram']:name==='stochastic'?['stochasticK','stochasticD']:name==='obv'?['obv']:['atr14'];
-   const bounded=['rsi','stochastic'].includes(name);
+   const keys=name==='rsi'?['rsi14']:name==='macd'?['macd','macdSignal','macdHistogram']:name==='stochastic'?['stochasticK','stochasticD']:name==='obv'?['obv']:name==='adx'?['adx14','plusDI14','minusDI14']:['atr14'];
+   const bounded=['rsi','stochastic','adx'].includes(name);
    const values=keys.flatMap(key=>indicators[key].slice(view.start,view.end)).filter(Number.isFinite);
    let low=bounded?0:Math.min(0,...values),high=bounded?100:Math.max(0,...values);if(high===low)high=low+1;
    if(!bounded){const pad=(high-low)*.1;low-=pad;high+=pad}
    const scale=v=>pane.bottom-(v-low)/(high-low)*(pane.bottom-pane.top);
    ctx.font='10px system-ui';ctx.textAlign='left';
-   const ticks=bounded?(name==='rsi'?[30,70]:[20,80]):name==='macd'?[low,0,high]:[0,high];
+   const ticks=bounded?(name==='rsi'?[30,70]:name==='adx'?[20,25,50]:[20,80]):name==='macd'?[low,0,high]:[0,high];
    if(name==='rsi'){ctx.fillStyle='#11293a66';ctx.fillRect(left,scale(70),plotWidth,scale(30)-scale(70))}
    for(const v of ticks){ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(left,scale(v));ctx.lineTo(width-right,scale(v));ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText(label(v),width-right+5,scale(v))}ctx.setLineDash([]);
    if(name==='macd'){for(let i=view.start;i<view.end;i++){const v=indicators.macdHistogram[i];if(!Number.isFinite(v))continue;const w=Math.max(1,Math.min(12,step*.6));ctx.fillStyle=v>=0?colors.up:colors.down;ctx.globalAlpha=.55;ctx.fillRect(x(i)-w/2,Math.min(scale(v),scale(0)),w,Math.max(1,Math.abs(scale(v)-scale(0))));ctx.globalAlpha=1}series(indicators.macd,'#60a5fa',scale);series(indicators.macdSignal,'#fb923c',scale)}
+   else if(name==='adx'){series(indicators.adx14,'#fbbf24',scale,2);series(indicators.plusDI14,colors.up,scale);series(indicators.minusDI14,colors.down,scale)}
    else if(name==='stochastic'){series(indicators.stochasticK,'#60a5fa',scale);series(indicators.stochasticD,'#fb923c',scale)}else series(indicators[keys[0]],name==='rsi'?'#c4b5fd':'#fbbf24',scale);
-   ctx.fillStyle=colors.text;const current=indicators[keys[0]][view.end-1];ctx.fillText((name==='rsi'?'RSI14':name==='macd'?'MACD 12/26/9 · blue MACD / orange signal':name==='stochastic'?'Slow Stochastic 14/3/3 · blue %K / orange %D':name==='obv'?'OBV · zero at first loaded bar':'ATR14 Wilder')+'  '+(current===null?'—':label(current)),left,pane.top-12);
+   ctx.fillStyle=colors.text;const current=indicators[keys[0]][view.end-1];ctx.fillText((name==='rsi'?'RSI14':name==='macd'?'MACD 12/26/9 · blue MACD / orange signal':name==='stochastic'?'Slow Stochastic 14/3/3 · blue %K / orange %D':name==='obv'?'OBV · zero at first loaded bar':name==='adx'?'ADX14 gold · +DI green / -DI red':'ATR14 Wilder')+'  '+(current===null?'—':label(current)),left,pane.top-12);
    if(!values.length)ctx.fillText(name==='obv'?'Missing volume':name==='stochastic'?'Insufficient OHLC history or zero range':'Insufficient history',left,pane.top+30);
   }
   // Drawings are anchored to bar indices/prices, so panning preserves their coordinates.
@@ -94,7 +95,7 @@ export function initLocalChart(){
   ctx.fillStyle=colors.text;ctx.font='10px system-ui';ctx.textAlign='left';ctx.fillText(visible[0].date.slice(0,16),left,height-12);ctx.textAlign='right';ctx.fillText(last.date.slice(0,16),width-right,height-12);
   ctx.textAlign='left';ctx.font='11px system-ui';ctx.fillText(symbol+(style==='heikin'?' · HEIKIN ASHI: averaged prices; indicators use raw OHLC':style==='baseline'?' · BASELINE: first loaded close':'')+'  ·  '+view.count+' bars  ·  '+(offset?'HISTORICAL VIEW':'LATEST LOADED BAR'),left,13);
   if(!hover)tooltip.textContent='גרור לגלילה · גלגלת לזום · נתונים עד '+bars.at(-1).date;
-  if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){const px=x(hover.index),py=hover.y;ctx.save();ctx.strokeStyle='#91a7bd';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,height-22);ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.restore();const b=bars[hover.index];tooltip.textContent=b.date+' | O '+(b.open==null?'—':label(b.open))+' H '+label(b.high)+' L '+label(b.low)+' C '+label(b.close)+' | Vol '+(b.volume==null?'—':label(b.volume))+' | '+[['RSI14','rsi14'],['ATR14','atr14'],['MACD','macd'],['Signal','macdSignal'],['Histogram','macdHistogram'],['BB upper','bbUpper'],['BB lower','bbLower'],['Stoch %K','stochasticK'],['Stoch %D','stochasticD'],['OBV','obv']].map(([name,key])=>name+' '+(indicators[key][hover.index]===null?'—':label(indicators[key][hover.index]))).join(' | ')}
+  if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){const px=x(hover.index),py=hover.y;ctx.save();ctx.strokeStyle='#91a7bd';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,height-22);ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.restore();const b=bars[hover.index];tooltip.textContent=b.date+' | O '+(b.open==null?'—':label(b.open))+' H '+label(b.high)+' L '+label(b.low)+' C '+label(b.close)+' | Vol '+(b.volume==null?'—':label(b.volume))+' | '+[['RSI14','rsi14'],['ATR14','atr14'],['MACD','macd'],['Signal','macdSignal'],['Histogram','macdHistogram'],['BB upper','bbUpper'],['BB lower','bbLower'],['Stoch %K','stochasticK'],['Stoch %D','stochasticD'],['OBV','obv'],['ADX14','adx14'],['+DI','plusDI14'],['-DI','minusDI14'],['Supertrend 10/3','supertrend']].map(([name,key])=>name+' '+(indicators[key][hover.index]===null?'—':label(indicators[key][hover.index]))).join(' | ')}
   let custom=select.querySelector('[data-custom]');if(![...select.options].some(o=>!o.dataset.custom&&+o.value===view.count)){if(!custom){custom=document.createElement('option');custom.dataset.custom='true';select.append(custom)}custom.value=String(view.count);custom.textContent=String(view.count)}else custom?.remove();select.value=String(view.count);
   $('chartPrev').disabled=view.start===0;$('chartNext').disabled=offset===0;
  }

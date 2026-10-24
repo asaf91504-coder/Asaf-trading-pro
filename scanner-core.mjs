@@ -13,9 +13,9 @@ export function scanFile(name,text){
 }
 export function scanBars(symbol,bars){
  const indicators=indicatorSnapshot(bars);
- return {symbol,bars,research:patternResearch(bars),summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram,stochasticK:indicators.stochastic1433.k,stochasticD:indicators.stochastic1433.d,obv:indicators.obv,obvPrevious:indicators.obvPrevious},symbolFrom:'provider'};
+ return {symbol,bars,research:patternResearch(bars),summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram,stochasticK:indicators.stochastic1433.k,stochasticD:indicators.stochastic1433.d,obv:indicators.obv,obvPrevious:indicators.obvPrevious,adx14:indicators.dmi14.adx,plusDI14:indicators.dmi14.plusDI,minusDI14:indicators.dmi14.minusDI,supertrend:indicators.supertrend103.value,supertrendDirection:indicators.supertrend103.direction},symbolFrom:'provider'};
 }
-export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,pattern='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
+export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,adxEnabled=false,minADX=25,diDirection='any',supertrendDirection='any',pattern='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
  const a=record.summary,reasons=[];
  if(a.close<=minPrice)reasons.push('מחיר אינו מעל '+minPrice);
  if(above20&&!a.aboveMA20)reasons.push('מתחת ל-MA20 או שווה לו');
@@ -28,6 +28,11 @@ export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=
  if(macdPositive){if(!Number.isFinite(a.macd))reasons.push('אין מספיק נרות ל-MACD');else if(a.macd<=0)reasons.push('MACD אינו חיובי')}
  if(stochasticAboveSignal){if(!Number.isFinite(a.stochasticK)||!Number.isFinite(a.stochasticD))reasons.push('אין Stochastic מוגדר: היסטוריה או טווח מחיר חסרים');else if(a.stochasticK<=a.stochasticD)reasons.push('Stochastic %K אינו מעל %D')}
  if(obvRising){if(!Number.isFinite(a.obv)||!Number.isFinite(a.obvPrevious))reasons.push('אין רצף מחזורים מלא לחישוב OBV');else if(a.obv<=a.obvPrevious)reasons.push('OBV אינו עולה בנר האחרון')}
+ if(adxEnabled){if(!Number.isFinite(minADX)||minADX<0||minADX>100)reasons.push('סף ADX אינו תקין');else if(!Number.isFinite(a.adx14))reasons.push('אין מספיק נרות תקינים ל-ADX14 (נדרשים 28)');else if(a.adx14<minADX)reasons.push('ADX14 מתחת לסף שנבחר')}
+ if(!['any','up','down'].includes(diDirection))reasons.push('כיוון DMI אינו תקין');
+ else if(diDirection!=='any'){if(!Number.isFinite(a.plusDI14)||!Number.isFinite(a.minusDI14))reasons.push('אין מספיק נרות ל-DMI14');else if(diDirection==='up'?a.plusDI14<=a.minusDI14:a.minusDI14<=a.plusDI14)reasons.push('כיוון DMI אינו מתאים או שהקווים שווים')}
+ if(!['any','up','down'].includes(supertrendDirection))reasons.push('כיוון Supertrend אינו תקין');
+ else if(supertrendDirection!=='any'&&(!Number.isFinite(a.supertrend)||a.supertrendDirection!==supertrendDirection))reasons.push('Supertrend אינו בכיוון שנבחר או חסר');
  if(risingVolume){
   const last=record.bars.at(-1),prior=record.bars.at(-2);
   if(!prior||last.close<=prior.close)reasons.push('הסגירה אינה מעל הסגירה הקודמת');
