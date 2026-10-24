@@ -2,13 +2,32 @@
 
 The application is an unfinished research platform. The source has features ready for deployment; a commit or a passing offline test does not verify the live deployment. Never call the site complete until the deployed flows are checked.
 
+## Current work-order summary — 2026-10-24
+
+This table supersedes historical capability and pending-quote summaries later in this document. The system remains a beta, and implemented source is not equivalent to licensed/activated/live-accepted service.
+
+| Item | Current implementation | Outstanding |
+| --- | --- | --- |
+| 1 Google | Verified-token flow, nonce, explicit linking | Client configuration and real sign-in; OFF |
+| 2 Accounts | Sessions, revocation, deletion, allowlisted admin controls | Full live management acceptance |
+| 3 Onboarding | Invitations and one-use recovery links | Automatic verified transactional email/public onboarding |
+| 4 Market | Shared gated cache, quotas, declared-delay enforcement | Licensed subscription/key and actual coverage acceptance; OFF |
+| 5 Charts | Seven styles, seven drawing tools, precise anchors, MA20/50/100/150/200, EMA50, RSI, ATR, Bollinger, MACD, Stochastic, OBV | Remaining original indicators/timeframes/tools and physical-phone acceptance |
+| 6 Scanner | Daily CSV/provider batch adapter, technical filters, seven pattern-candidate rules, measured scenarios and risk-planner handoff | Market cap/fundamentals, whole-market universe, remaining pattern families, licensed provider activation |
+| 7 Alerts | Account daily closed-bar rules/inbox, quiet hours/dedup, prepared background worker | Schedule activation, real delivery acceptance, email/Push channels; background OFF |
+| 8 News | Gated title/link cache, symbol filtering, prepared refresh | Commercial rights/key and scheduled production acceptance; OFF |
+| 9 AI | Fixed free-model router, shared server indicators/patterns, provider-cache binding, gated news context | Actual licensed live data/vision tests, earnings integration |
+| 10 Personal copies | Explicit save/load and JSON backup of journal, research, preferences, drawings, text archives; pasted restore fallback verified with synthetic research | Actual signed-in second-device acceptance; native file chooser restore remains unverified |
+| 11 Launch | Anonymous health/security/privacy checks, data-use explanation and current setup guide | Domain/DNS, legal contact/terms, host spending/backups/load/mobile acceptance |
+| 12 Billing | Disabled | Optional product/pricing decision and concrete charge approval |
+
 ## Available without a data subscription
 
-- Original candlestick chart: CSV upload or paste, MA20/MA150, optional SMA-seeded EMA50 and Wilder RSI14, candles/closing-line display, volume, crosshair, zoom/pan, fullscreen and PNG capture. Trendlines are saved locally by symbol and candle date; only lines whose anchor candles remain available are restored. Display style and indicator toggles persist locally. Indicators are cached on dataset load; they are chart-only and are not added to the AI payload.
-- Daily CSV screening with price, MA20, ATR and relative-volume filters. No automatic market-cap verification, pattern certainty or promised return.
-- Watchlist with research notes, local price-level checks and JSON backup/merge. A level is checked only against the last two loaded bars, not in the background.
-- Long/short position planner bounded by risk and available capital.
-- Free-only AI, cancellation and dataset-switch protection. The model is hardcoded `openrouter/free`; no paid fallback.
+- Original CSV/paste chart and scanner; all prices remain labelled with loaded source/date. Current chart/indicator/drawing scope is in the table above. Same calculations are used for scanner results and server AI context; no fabricated live prices.
+- Heuristic daily pattern research is bounded at 200 loaded candles. Each candidate carries rules/levels/date; measured moves are not return promises. Market capitalization remains unverified.
+- Watchlist, notes, journal, local backups, explicitly saved text conversations, and optional explicit account copies with revision/identity guards. No sign-in-triggered upload or automatic cross-device merge.
+- Long/short position planner bounded by user risk and capital; no broker integration or order submission.
+- Authenticated, quota-limited free-model chat with cancellation and dataset-switch protection; no paid-model fallback.
 
 ## Member access and integrations
 
@@ -256,3 +275,18 @@ Added pasted-JSON restore to the existing personal sync controls on the main pag
 This provides a usable alternative to the previously timed-out file-chooser restore test, without retrying that file-upload path. Original file import remains available. Source tests pass 159 cases including duplicate re-import idempotence, backup priority, preserved local-only rows, changed-data/text/section guards, incompatible/oversize/malformed backup rejection and object-section merge boundaries. Production browser paste-restore acceptance remains required before calling that earlier verification gap resolved. Authenticated second-device cloud save/load is a separate outstanding check.
 
 Production browser acceptance for pasted restore: restored one explicitly synthetic research source from an empty local set; changed its title and re-imported the same ID, preview reported one overlap/one final row and exactly one updated source was rendered. Deleting that synthetic source through the app while a preview was pending caused apply to reject stale local data, without resurrecting the source. The source was confirmed absent afterward. No user data, signed-in account writes, provider/model requests or file uploads were involved. This verifies the pasted-JSON fallback; native file-chooser import remains unverified and actual cross-device account acceptance is still open. Cleared old status messages when starting a new preview to avoid displaying a prior success alongside an unapplied preview.
+
+
+## Scanner pattern research continuation — 2026-10-24
+
+Implemented daily candidate research over at most 200 loaded candles: latest-close breakout/breakdown of prior 20-bar extremes; range compression at no more than 8% of close; opening gaps of at least 2%; Bollinger 20/2 width rank at or below the tenth percentile of 60 prior defined widths; and a double-bottom heuristic with two confirmed sharp pivots. Double-bottom rules: two bars on each side before the latest bar, trough separation 5–40 bars, low-price difference within 3% of their mean, intervening peak at least 5% above the lower low, a prior eight-bar close at least 8% above that low, second low no older than 20 bars, and invalidation if a later low falls more than 3% below support. Latest-close stage distinguishes waiting, current-bar crossing and already above the neckline. The latest bar is not guaranteed closed.
+
+For valid breakouts/breakdowns/double bottoms, measured targets use range height from the trigger, with a reference stop 1% beyond the range. Reference entry is at current close or the trigger as appropriate; a target already behind entry or nonpositive/invalid reward produces no scenario. Numeric targets, moves and reward/risk are illustrative geometry with no probability estimate. A candidate is never assigned a 15% move merely to satisfy a filter. Selected-pattern filters require that SAME candidate to meet any crossing/move/RR thresholds. Missing market cap remains explicitly unverified, so technical matches do not claim to satisfy the owner's full rules.
+
+Added a details panel with levels, timestamps, source and method explanations; optional handoff fills only direction/entry/stop/target in the existing risk calculator, preserving the owner's account/risk/capital fields. Manual price/direction edits clear imported provenance. CSV export includes derived candidate/scenario information. Free AI independently computes the same bounded daily research server-side and never accepts browser-supplied pattern claims. Intraday/weekly AI context does not silently get daily-pattern labels. No new provider requests, schedules, email or paid services.
+
+Concept references (thresholds are our explicit engineering choices, not thresholds endorsed by Fidelity):
+- https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/bollinger-band-width
+- https://www.fidelity.com/bin-public/060_www_fidelity_com/documents/learning-center/Deck_Chart%20patterns.pdf (double-bottom geometry, pages 19–20)
+
+169 automated tests pass, covering known candidate geometry, prior-window boundaries, absent targets, pivot confirmation without future bars, invalidation, Bollinger warmup/ranking, unavailable opens, invalid dates/order, selected-candidate filtering, unchanged capital/risk limits and the mocked authenticated AI route's server research. A local 50-symbol × 200-bar research batch completed in approximately 99ms on this container; this is not a production load test. Live scanner/filter/details/risk handoff and deployment acceptance remain required before marking this rollout checked.
