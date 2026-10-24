@@ -327,7 +327,7 @@ chartSymbol.addEventListener("input",()=>{rememberSymbol();$("chart").replaceChi
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 window.addEventListener('asaf:layout',()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
-say("bot","שלום! אני ASAF MARKET AI. אם חיברת את מסלול ה-AI החינמי, אפשר לדבר איתי בחופשיות על כל מה שקשור לשוק ההון, הגרף הפתוח נשלח עם השאלה כשיש נתונים תואמים. בחר מניה ושאל על מגמה, תבניות או סיכונים. אין צורך להעלות צילום.  בלי חיבור פעיל אציג שגיאת הגדרה, לא תשובה מוכנה.");
+say("bot","אני ASAF AI. שאל אותי על המניה והגרף הפתוחים — מגמה, מחזורים, רמות מחיר וסיכונים. כשיש נתונים תואמים הם יצורפו אוטומטית לשאלה, ללא העלאת צילום ידנית. עדכניות הניתוח תלויה במקור ובזמן הנתונים שמוצגים לצד הגרף.");
 if(loaded&&normSymbol()===loaded.symbol)say("bot","נתוני "+loaded.symbol+" נטענו מחדש מהלשונית הנוכחית, עד "+loaded.context.date+".");
 window.addEventListener('asaf:request-dataset',datasetReady);
 queueMicrotask(datasetReady);
