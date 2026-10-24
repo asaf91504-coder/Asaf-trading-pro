@@ -27,3 +27,10 @@ test('Google does not bypass revocation, closed signup, registration caps, throt
  const revoked=setup(),u=seed(revoked.state),d=await revoked.begin();revoked.state.db.set(prefix+'auth:user:'+digest('member@example.test'),JSON.stringify({...u.record,enabled:false}));assert.equal((await revoked.handler(request('google-auth',{action:'signin',credential:'mock',nonce:d.nonce},d.cookie))).status,403);
  const limited=setup();limited.state.allowed=false;assert.equal((await limited.handler(request('google-auth',{action:'begin'}))).status,429);limited.state.online=false;assert.equal((await limited.handler(request('google-auth',{action:'begin'}))).status,503);
 });
+
+test('welcome name comes only from verified Google claims and is not stored in account records',async()=>{
+ const s=setup(),b=await s.begin();s.claims={iss:'https://accounts.google.com',aud:env.GOOGLE_CLIENT_ID,exp:Date.now()/1000+300,nonce:b.nonce,sub:'123',email:'member@example.test',email_verified:true,given_name:'  אסף  ',name:'אסף כהן'};
+ const r=await s.handler(request('google-auth',{action:'signin',credential:'mock',nonce:b.nonce,displayName:'forged'},b.cookie));
+ assert.equal(r.status,201);assert.deepEqual(await r.json(),{authenticated:true,created:true,displayName:'אסף'});
+ assert.equal(JSON.stringify([...s.state.db]).includes('אסף'),false);
+});

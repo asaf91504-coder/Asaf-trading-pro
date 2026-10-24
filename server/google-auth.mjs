@@ -1,4 +1,5 @@
 import {OAuth2Client} from 'google-auth-library';
+import {googleDisplayName} from '../welcome-message.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
 import {publicAuthConfigured,digest,normalizeEmail,currentUser,sessionCookie} from './auth-core.mjs';
@@ -66,7 +67,7 @@ export function createGoogleHandler({env=process.env,run=command,verify=async to
    const saved=await run(['EVAL',COMMIT,'7',nonceKey,identityKey,userKey,memberKey,storageKey('auth:session:'+digest(session),env),storageKey('auth:index:'+id,env),storageKey('auth:members',env),nonceRaw,identity||'',previousRaw||'',memberRaw||'',emailHash,JSON.stringify(user),JSON.stringify({id,version,enabled:true}),JSON.stringify({id,version,expires:now()+3600000}),String(max),id],{env});
    if(saved===-1)return reply({error:'ההרשמה מלאה כרגע. פנה למנהל האתר.'},403);
    if(saved!==1)return reply({error:'הבקשה כבר נוצלה או שהחשבון עודכן. התחל שוב.'},409);
-   return reply({authenticated:true,created:!previous},previous?200:201,{'Set-Cookie':sessionCookie(session)});
+   return reply({authenticated:true,created:!previous,displayName:googleDisplayName(claims)},previous?200:201,{'Set-Cookie':sessionCookie(session)});
   }catch{return reply({error:'שירות הכניסה אינו זמין. לא נפתחה גישה.'},503)}
  };
 }
