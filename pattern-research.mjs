@@ -1,8 +1,8 @@
 import {validCandleTime} from './candle-time.mjs';
 import {chartIndicators} from './chart-indicators.mjs';
 
-export const patternLabels={breakout20:'סגירה מעל שיא 20 נרות',breakdown20:'סגירה מתחת לשפל 20 נרות',consolidation:'טווח צר של 20 נרות',squeeze:'רוחב בולינגר באחוזון נמוך',doubleBottom:'מועמד לדאבל בוטום',gapUp:'פער פתיחה מעלה ≥2%',gapDown:'פער פתיחה מטה ≥2%'};
-export const patternStages={crossed:'חצייה בנר האחרון',waiting:'ממתין לחצייה',above:'כבר מעל הרמה',observed:'נצפה בנתונים'};
+export const patternLabels={breakout20:'סגירה מעל שיא 20 נרות',breakdown20:'סגירה מתחת לשפל 20 נרות',consolidation:'טווח צר של 20 נרות',squeeze:'רוחב בולינגר באחוזון נמוך',doubleBottom:'מועמד לדאבל בוטום',gapUp:'פער פתיחה מעלה ≥2%',gapDown:'פער פתיחה מטה ≥2%',doubleTop:'מועמד לדאבל טופ',downtrendBreak:'חציית קו שיאים יורדים'};
+export const patternStages={crossed:'חצייה בנר האחרון',waiting:'ממתין לחצייה',above:'כבר מעל הרמה',below:'כבר מתחת לרמה',observed:'נצפה בנתונים'};
 export function measuredScenario(side,close,trigger,support,target){
  if(!['long','short'].includes(side)||![close,trigger,support,target].every(v=>Number.isFinite(v)&&v>0))return null;
  const entry=side==='long'?Math.max(close,trigger):Math.min(close,trigger),stop=side==='long'?support*.99:support*1.01;
@@ -39,6 +39,24 @@ export function patternResearch(input){
   if(neckline/low<1.05||Math.max(...bars.slice(a-8,a).map(x=>x.close))/low<1.08||bars.slice(b+1).some(x=>x.low<low*.97))continue;
   const stage=last.close>neckline?(prior.close<=neckline?'crossed':'above'):'waiting';
   add('doubleBottom',stage,{firstLowDate:bars[a].date,secondLowDate:bars[b].date,firstLow:bars[a].low,secondLow:bars[b].low,support:low,trigger:neckline,targetFromHeight:neckline+(neckline-low),scenario:measuredScenario('long',last.close,neckline,low,neckline+(neckline-low))});found=true;break;
+ }
+ // Symmetric double-top: confirmed sharp highs, prior rise, neckline decline.
+ const highs=[];for(let i=Math.max(2,bars.length-80);i<bars.length-3;i++)if([i-2,i-1,i+1,i+2].every(j=>bars[i].high>bars[j].high))highs.push(i);
+ found=false;
+ for(let q=highs.length-1;q>=1&&!found;q--)for(let p=q-1;p>=0;p--){
+  const a=highs[p],b=highs[q],high=Math.max(bars[a].high,bars[b].high),similarity=Math.abs(bars[a].high-bars[b].high)/((bars[a].high+bars[b].high)/2);
+  if(a<8||b-a<5||b-a>40||bars.length-1-b>20||similarity>.03)continue;
+  const neckline=Math.min(...bars.slice(a+1,b).map(x=>x.low));
+  if((high-neckline)/high<.05||(high-Math.min(...bars.slice(a-8,a).map(x=>x.close)))/high<.08||bars.slice(b+1).some(x=>x.high>high*1.03))continue;
+  const stage=last.close<neckline?(prior.close>=neckline?'crossed':'below'):'waiting',target=neckline-(high-neckline);
+  add('doubleTop',stage,{firstHighDate:bars[a].date,secondHighDate:bars[b].date,firstHigh:bars[a].high,secondHigh:bars[b].high,resistance:high,trigger:neckline,targetFromHeight:target,scenario:measuredScenario('short',last.close,neckline,high,target)});found=true;break;
+ }
+ // Three descending confirmed highs define a checkable line, never a fitted forecast.
+ if(highs.length>=3){const [a,b,c]=highs.slice(-3),slope=(bars[c].high-bars[a].high)/(c-a),at=i=>bars[a].high+slope*(i-a),trigger=at(bars.length-1),before=at(bars.length-2);
+  if(b-a>=3&&c-b>=3&&c-a>=10&&bars.length-1-c<=20&&bars[a].high>bars[b].high&&bars[b].high>bars[c].high&&Math.abs(bars[b].high-at(b))/at(b)<=.02&&trigger>0&&last.close>trigger&&prior.close<=before&&!bars.slice(c+1,-1).some((x,j)=>x.close>at(c+1+j))){
+   const support=Math.min(...bars.slice(a,-1).map(x=>x.low)),height=bars[a].high-support;
+   add('downtrendBreak','crossed',{trigger,support,slopePerBar:slope,pivotDates:[a,b,c].map(i=>bars[i].date),scenario:measuredScenario('long',last.close,trigger,support,trigger+height)});
+  }
  }
  return {available:true,asOf:last.date,bars:bars.length,support20:support,resistance20:resistance,rangePercent20:rangePercent,gapOpenPercent:gapPercent,bollingerWidthPercent:width,bollingerWidthPercentile:widthPercentile,candidates,
   limitations:['Heuristics on at most 200 loaded daily bars; latest bar may be incomplete.','Market cap, corporate actions, earnings and live prices are not verified.','Measured targets and stop references are scenarios, not predictions, orders or guaranteed returns.'],

@@ -1,8 +1,8 @@
 import {validCandleTime} from './candle-time.mjs';
-import {chartStyles,drawingTools} from './chart-styles.mjs';
+import {chartStyles,drawingTools,drawingText,drawingRR,drawingTradePlan} from './chart-styles.mjs';
 import {safeSourceUrl} from './scanner-core.mjs';
-export const personalSections=['journal','research','chartPreferences','drawings','conversations'];
-export const personalKeys={journal:'asaf_trades_v1',research:'asaf_research_sources_v1',chartPreferences:'asaf_chart_preferences_v1',drawings:'asaf_chart_drawings_v1',conversations:'asaf_conversation_archive_v1'};
+export const personalSections=['journal','research','chartPreferences','drawings','conversations','layouts'];
+export const personalKeys={journal:'asaf_trades_v1',research:'asaf_research_sources_v1',chartPreferences:'asaf_chart_preferences_v1',drawings:'asaf_chart_drawings_v1',conversations:'asaf_conversation_archive_v1',layouts:'asaf_layouts_v1'};
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const text=(v,n)=>typeof v==='string'&&v.length<=n;
 const id=v=>typeof v==='string'&&/^[a-zA-Z0-9._:-]{1,100}$/.test(v);
@@ -29,24 +29,27 @@ export function personalData(section,value){
    return {id:t.id,symbol:t.symbol,title:t.title,saved:t.saved,messages:messages.map((m,i)=>{if(!object(m)||m.role!==(i%2?'assistant':'user')||!text(m.content,6000)||!m.content.trim())throw Error('הודעת שיחה אינה תקינה או ארוכה מדי');return {role:m.role,content:m.content}})};
   });if(new TextEncoder().encode(JSON.stringify(result)).length>350000)throw Error('ארכיון השיחות גדול מ־350KB. גבה וצמצם שיחות לפני שמירה.');return result;
  }
+ if(section==='layouts'){
+  const seen=new Set();return array(value,10).map(t=>{if(!object(t)||!id(t.id)||seen.has(t.id)||!text(t.name,60)||!t.name.trim()||!symbol(t.symbol)||!['1min','5min','15min','30min','1h','1day','1week','1month'].includes(t.interval)||![30,60,120,200,500,2000].includes(t.range)||!text(t.saved,40)||!Number.isFinite(Date.parse(t.saved)))throw Error('פריסת עבודה אינה תקינה או שנשמרו יותר מ-10 פריסות');seen.add(t.id);return {id:t.id,name:t.name.trim(),symbol:t.symbol,interval:t.interval,range:t.range,preferences:personalData('chartPreferences',t.preferences),saved:t.saved}});
+ }
  if(section==='chartPreferences'){
   if(!object(value))throw Error('העדפות הגרף אינן תקינות');const result={};
   if(value.style!==undefined){if(!chartStyles.includes(value.style))throw Error('סגנון גרף אינו תקין');result.style=value.style}
-  for(const key of ['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV','chartADX14','chartSupertrend'])if(value[key]!==undefined){if(typeof value[key]!=='boolean')throw Error('העדפת אינדיקטור אינה תקינה');result[key]=value[key]}
+  for(const key of ['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV','chartADX14','chartSupertrend','chartVWAP','chartIchimoku'])if(value[key]!==undefined){if(typeof value[key]!=='boolean')throw Error('העדפת אינדיקטור אינה תקינה');result[key]=value[key]}
   return result;
  }
  if(section==='drawings'){
   if(!object(value)||Object.keys(value).length>30)throw Error('מקסימום 30 מניות עם קווים');const result={};
-  for(const [key,item] of Object.entries(value)){if(!symbol(key)||!object(item)||!Number.isFinite(item.savedAt)||item.savedAt<0)throw Error('נתוני קווים אינם תקינים');result[key]={savedAt:item.savedAt,lines:array(item.lines,30).map(line=>{if(!Array.isArray(line)||line.length!==2||!line.every(p=>object(p)&&stamp(p.date)&&positive(p.price)&&(p.tool===undefined||drawingTools.includes(p.tool))))throw Error('נקודת ציור אינה תקינה');return line.map(p=>({date:p.date,price:p.price,...(p.tool?{tool:p.tool}:{})}))})}}
+  for(const [key,item] of Object.entries(value)){if(!symbol(key)||!object(item)||!Number.isFinite(item.savedAt)||item.savedAt<0)throw Error('נתוני קווים אינם תקינים');result[key]={savedAt:item.savedAt,lines:array(item.lines,30).map(line=>{if(!Array.isArray(line)||line.length!==2||!line.every(p=>object(p)&&stamp(p.date)&&positive(p.price)&&(p.tool===undefined||drawingTools.includes(p.tool))))throw Error('נקודת ציור אינה תקינה');const points=line.map(p=>({date:p.date,price:p.price,...(p.tool?{tool:p.tool}:{}),...(p.tool==='text'?{text:drawingText(p.text)}:{}),...(['long','short'].includes(p.tool)?{rr:drawingRR(p.rr??2)}:{})}));if(['long','short'].includes(points[0].tool))drawingTradePlan(points[0],points[1]);return points})}}
   return result;
  }
  throw Error('סוג נתונים לא מוכר');
 }
-export const emptyPersonal=section=>['journal','research','conversations'].includes(section)?[]:{};
+export const emptyPersonal=section=>['journal','research','conversations','layouts'].includes(section)?[]:{};
 // Cloud wins equal IDs. Import never silently drops records at the section limit.
 export function mergePersonal(section,local,remote){
  const a=personalData(section,local),b=personalData(section,remote);
- if(['journal','research','conversations'].includes(section)){const ids=new Set(b.map(x=>x.id));return personalData(section,[...b,...a.filter(x=>!ids.has(x.id))])}
+ if(['journal','research','conversations','layouts'].includes(section)){const ids=new Set(b.map(x=>x.id));return personalData(section,[...b,...a.filter(x=>!ids.has(x.id))])}
  return personalData(section,{...a,...b});
 }
 export function personalBackup(section,value){return {kind:'asaf-personal',version:1,section,exportedAt:new Date().toISOString(),data:personalData(section,value)}}

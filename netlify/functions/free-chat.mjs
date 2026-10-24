@@ -95,7 +95,7 @@ export default async function handler(request){
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  const symbol=String(payload?.symbol||"").trim().toUpperCase().slice(0,30).replace(/[^A-Z0-9:._-]/g,"");
- const allowedIndicators=new Set(['MA20','MA150','EMA50','RSI14','BB20','MACD','ATR14','MA50','MA100','MA200','Stochastic','OBV','ADX14','Supertrend']);
+ const allowedIndicators=new Set(['MA20','MA150','EMA50','RSI14','BB20','MACD','ATR14','MA50','MA100','MA200','Stochastic','OBV','ADX14','Supertrend','VWAP','Ichimoku']);
  const settings=payload?.chartSettings;
  const chartSettings=settings&&chartStyles.includes(settings.style)&&Array.isArray(settings.indicators)?{style:settings.style,indicators:[...new Set(settings.indicators.filter(id=>allowedIndicators.has(id)))]}:null;
  let meta={source:payload?.source==="Twelve Data"?"Twelve Data":"CSV",interval:typeof payload?.interval==="string"?payload.interval.slice(0,20):"1day",receivedAt:typeof payload?.receivedAt==="string"?payload.receivedAt.slice(0,40):null,chartSettings};
