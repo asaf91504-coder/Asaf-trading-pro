@@ -47,10 +47,21 @@ function renderWatch(){
 }
 window.addEventListener('asaf:watch-changed',renderWatch);window.addEventListener('storage',renderWatch);$('symbol').addEventListener('input',()=>{context.textContent='אין נתוני גרף תואמים לסימול שנבחר.';renderWatch()});
 window.addEventListener('asaf:dataset-ready',e=>{const d=e.detail,last=d?.bars?.at(-1);if(!last)return;quotes.set(d.symbol,{close:last.close,date:last.date,source:d.source||'CSV'});context.textContent=d.symbol+' · '+(d.interval||'1day')+' · '+(d.source==='Twelve Data'?'נתוני ספק':'נתונים מקומיים')+' · נר '+last.date+' · '+d.bars.length+' נרות. יישלחו עם השאלה; אין צורך להעלות צילום.';renderWatch()});
-window.addEventListener('asaf:dataset-cleared',()=>{context.textContent='אין נתוני גרף מחוברים. לא ניתן לנתח מחיר עדכני בלי נתונים.'});
+window.addEventListener('asaf:dataset-cleared',()=>{quotes.clear();renderWatch();context.textContent='אין נתוני גרף מחוברים. לא ניתן לנתח מחיר עדכני בלי נתונים.'});
 renderWatch();
 const wide=matchMedia('(min-width: 901px)');
 function view(){const selected=document.querySelector('[data-tab].active')?.dataset.tab||'charts';document.body.dataset.view=selected;if(wide.matches){chat.setAttribute('role','region');chat.setAttribute('aria-label','ASAF AI');chat.removeAttribute('aria-labelledby')}else{chat.setAttribute('role','tabpanel');chat.setAttribute('aria-labelledby','tab-chat')}window.dispatchEvent(new Event('asaf:layout'))}
 for(const tab of document.querySelectorAll('[data-tab]'))tab.addEventListener('click',view);wide.addEventListener('change',view);view();
 
 window.dispatchEvent(new Event('asaf:request-dataset'));
+
+// Keep navigation and drawing actions close to the chart, independent of indicator settings.
+const drawingToolbar=document.createElement('div');drawingToolbar.className='terminal-drawing-toolbar';drawingToolbar.setAttribute('role','group');drawingToolbar.setAttribute('aria-label','כלי ציור ופרשנות לגרף');
+for(const id of ['chartDrawingTool','drawingText','drawingRR','drawingChannelWidth']){const input=$(id);drawingToolbar.append(input.closest('label'))}
+for(const id of ['chartTrend','chartUndo','chartClearLines'])drawingToolbar.append($(id));
+toolDetails.after(drawingToolbar);
+const focusButton=document.createElement('button');focusButton.type='button';focusButton.className='terminal-focus-button';focusButton.textContent='הסתר AI · הרחב גרף';focusButton.setAttribute('aria-pressed','false');header.append(focusButton);
+function chartFocus(enabled){document.body.classList.toggle('terminal-chart-focus',enabled);focusButton.setAttribute('aria-pressed',String(enabled));focusButton.textContent=enabled?'הצג AI לצד הגרף':'הסתר AI · הרחב גרף';window.dispatchEvent(new Event('asaf:layout'))}
+focusButton.onclick=()=>chartFocus(!document.body.classList.contains('terminal-chart-focus'));
+// Opening the AI explicitly always brings its panel back.
+for(const button of [accountButton,$('chartChat')])button.addEventListener('click',()=>chartFocus(false));

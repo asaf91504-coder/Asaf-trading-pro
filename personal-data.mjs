@@ -1,5 +1,5 @@
 import {validCandleTime} from './candle-time.mjs';
-import {chartStyles,drawingTools,drawingText,drawingRR,drawingTradePlan} from './chart-styles.mjs';
+import {chartStyles,drawingTools,drawingText,drawingRR,drawingTradePlan,channelOffset} from './chart-styles.mjs';
 import {safeSourceUrl} from './scanner-core.mjs';
 export const personalSections=['journal','research','chartPreferences','drawings','conversations','layouts'];
 export const personalKeys={journal:'asaf_trades_v1',research:'asaf_research_sources_v1',chartPreferences:'asaf_chart_preferences_v1',drawings:'asaf_chart_drawings_v1',conversations:'asaf_conversation_archive_v1',layouts:'asaf_layouts_v1'};
@@ -30,7 +30,7 @@ export function personalData(section,value){
   });if(new TextEncoder().encode(JSON.stringify(result)).length>350000)throw Error('ארכיון השיחות גדול מ־350KB. גבה וצמצם שיחות לפני שמירה.');return result;
  }
  if(section==='layouts'){
-  const seen=new Set();return array(value,10).map(t=>{if(!object(t)||!id(t.id)||seen.has(t.id)||!text(t.name,60)||!t.name.trim()||!symbol(t.symbol)||!['1min','5min','15min','30min','1h','1day','1week','1month'].includes(t.interval)||![30,60,120,200,500,2000].includes(t.range)||!text(t.saved,40)||!Number.isFinite(Date.parse(t.saved)))throw Error('פריסת עבודה אינה תקינה או שנשמרו יותר מ-10 פריסות');seen.add(t.id);return {id:t.id,name:t.name.trim(),symbol:t.symbol,interval:t.interval,range:t.range,preferences:personalData('chartPreferences',t.preferences),saved:t.saved}});
+  const seen=new Set();return array(value,10).map(t=>{if(!object(t)||!id(t.id)||seen.has(t.id)||!text(t.name,60)||!t.name.trim()||!symbol(t.symbol)||!['1min','5min','15min','30min','1h','1day','1week','1month'].includes(t.interval)||!(Number.isInteger(t.range)&&t.range>=1&&t.range<=2000)||!text(t.saved,40)||!Number.isFinite(Date.parse(t.saved)))throw Error('פריסת עבודה אינה תקינה או שנשמרו יותר מ-10 פריסות');seen.add(t.id);return {id:t.id,name:t.name.trim(),symbol:t.symbol,interval:t.interval,range:t.range,preferences:personalData('chartPreferences',t.preferences),saved:t.saved}});
  }
  if(section==='chartPreferences'){
   if(!object(value))throw Error('העדפות הגרף אינן תקינות');const result={};
@@ -40,7 +40,7 @@ export function personalData(section,value){
  }
  if(section==='drawings'){
   if(!object(value)||Object.keys(value).length>30)throw Error('מקסימום 30 מניות עם קווים');const result={};
-  for(const [key,item] of Object.entries(value)){if(!symbol(key)||!object(item)||!Number.isFinite(item.savedAt)||item.savedAt<0)throw Error('נתוני קווים אינם תקינים');result[key]={savedAt:item.savedAt,lines:array(item.lines,30).map(line=>{if(!Array.isArray(line)||line.length!==2||!line.every(p=>object(p)&&stamp(p.date)&&positive(p.price)&&(p.tool===undefined||drawingTools.includes(p.tool))))throw Error('נקודת ציור אינה תקינה');const points=line.map(p=>({date:p.date,price:p.price,...(p.tool?{tool:p.tool}:{}),...(p.tool==='text'?{text:drawingText(p.text)}:{}),...(['long','short'].includes(p.tool)?{rr:drawingRR(p.rr??2)}:{})}));if(['long','short'].includes(points[0].tool))drawingTradePlan(points[0],points[1]);return points})}}
+  for(const [key,item] of Object.entries(value)){if(!symbol(key)||!object(item)||!Number.isFinite(item.savedAt)||item.savedAt<0)throw Error('נתוני קווים אינם תקינים');result[key]={savedAt:item.savedAt,lines:array(item.lines,30).map(line=>{if(!Array.isArray(line)||line.length!==2||!line.every(p=>object(p)&&stamp(p.date)&&positive(p.price)&&(p.tool===undefined||drawingTools.includes(p.tool))))throw Error('נקודת ציור אינה תקינה');if((line[0].tool||'trend')!==(line[1].tool||'trend'))throw Error('נקודות ציור חייבות להשתמש באותו כלי');if(line[0].tool==='channel'&&(line[0].date===line[1].date||line.some(p=>p.price+channelOffset(line[0].offset)>1e12)))throw Error('תעלה אינה תקינה');const points=line.map(p=>({date:p.date,price:p.price,...(p.tool?{tool:p.tool}:{}),...(p.tool==='text'?{text:drawingText(p.text)}:{}),...(p.tool==='channel'?{offset:channelOffset(line[0].offset)}:{}),...(['long','short'].includes(p.tool)?{rr:drawingRR(p.rr??2)}:{})}));if(['long','short'].includes(points[0].tool))drawingTradePlan(points[0],points[1]);return points})}}
   return result;
  }
  throw Error('סוג נתונים לא מוכר');

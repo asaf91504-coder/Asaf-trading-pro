@@ -334,3 +334,11 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Added MACD, Supertrend, ADX and reverse MA alerts, pause/resume and optional browser notifications while the site is open. Draft rules can be saved before market data is configured. Closed-site delivery and scheduled evaluation remain blocked on licensed data and deployment configuration.
 - Added up to ten named layouts with symbol, interval, chart range and indicator preferences. Local saving and existing explicit account backup/restore include layouts; market candles are not included.
 - Validation: 202 automated tests pass. Actual cross-device signed-in restoration and device notification permission still require user acceptance. No paid services activated.
+
+## Further acceptance pass — 2026-10-25
+
+- Added 35 behavioral regression checks across chart import, indicators, drawings, account backups, access revocation, alert evaluation, AI attachments, screening, risk planning and news safeguards. Full suite: 237 tests.
+- Fixed arbitrary chart-window layout saving (1–2000 bars), missing alert price levels, inconsistent imported drawing types, invalid OHLC VWAP sessions and stale watchrail quotes after clearing data.
+- Added parallel-channel drawings with exact two-date anchors and explicit price width, included in personal backups. Drawing controls now remain visible independently of collapsed indicator settings. Added desktop chart-focus toggle to expand the chart and restore AI on explicit opening.
+- No live market or model calls are made by this regression suite. Real signed-in cross-device restoration and device notifications still require actual-device acceptance.
+- Provider inbox check: no messages from Massive, Intrinio or Polygon after October 22 as of this pass. No follow-up email sent. Market-wide licensed data, intraday streams, fundamentals/earnings, server-scheduled alerts and licensed news remain pending external supply/configuration.
