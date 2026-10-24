@@ -1,3 +1,4 @@
+import {validCandleTime} from './candle-time.mjs';
 // Local calculations only; no market data requests or paid services.
 const number = value => {
   const text = String(value ?? '').replace(/,/g, '').trim();
@@ -19,10 +20,11 @@ function csvRow(line) {
 const parseDate = raw => {
   const value=String(raw??"").trim();
   // Preserve individual intraday candles; collapsing to YYYY-MM-DD drops all but one bar per day.
-  if(/^\d{4}-\d{2}-\d{2}$/.test(value))return value;
-  if(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?$/.test(value))return value.replace("T"," ");
-  if(/^\d{4}\/\d{2}\/\d{2}$/.test(value))return value.replaceAll("/","-");
+  if(/^\d{4}-\d{2}-\d{2}$/.test(value))return validCandleTime(value)?value:null;
+  if(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?$/.test(value))return validCandleTime(value)?value.replace("T"," "):null;
+  if(/^\d{4}\/\d{2}\/\d{2}$/.test(value)){const normalized=value.replaceAll("/","-");return validCandleTime(normalized)?normalized:null;}
   if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) {
+    if(!validCandleTime(value.slice(0,19)))return null;
     const parsed=new Date(value);
     if(!Number.isFinite(parsed.getTime()))return null;
     return parsed.toISOString().slice(0,19).replace("T"," ");

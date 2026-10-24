@@ -53,6 +53,13 @@ test("invalid chart bars are rejected",async()=>{
   assert.equal(result.status,400);assert.equal(calls.length,0);
  });
 });
+test('impossible candle dates are rejected before any model request',async()=>{
+ await simulate(enabled,async calls=>{
+  const bars=source();bars[4].date='2026-02-30';
+  const result=await handler(req({message:'בדוק',bars,symbol:'QA.TEST'}));
+  assert.equal(result.status,400);assert.equal(calls.length,0);
+ });
+});
 test("real context and follow-ups reach only free model",async()=>{
  await simulate(enabled,async calls=>{
   const result=await handler(req({message:"איך הפריצה?",symbol:"NASDAQ:NVDA",source:"CSV",interval:"1day",bars:source(),history:[{role:"user",content:"בדוק מחזור"},{role:"assistant",content:"בודק"}]}));

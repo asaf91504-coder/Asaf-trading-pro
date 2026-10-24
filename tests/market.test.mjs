@@ -16,7 +16,7 @@ const request=(symbol="AAPL",interval="1day",password=access)=>new Request("http
  headers:{"Content-Type":"application/json","x-asaf-market-access":password},
  body:JSON.stringify({symbol,interval})
 });
-const envKeys=["ASAF_MARKET_ENABLED","ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED","ASAF_MARKET_ACCESS_CODE","TWELVE_DATA_API_KEY","ASAF_MARKET_ALLOWED_SYMBOLS"];
+const envKeys=["ASAF_PUBLIC_AUTH_ENABLED","ASAF_MARKET_ENABLED","ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED","ASAF_MARKET_ACCESS_CODE","TWELVE_DATA_API_KEY","ASAF_MARKET_ALLOWED_SYMBOLS"];
 async function harness(values,run){
  const oldEnv=Object.fromEntries(envKeys.map(k=>[k,process.env[k]]));
  const originalFetch=globalThis.fetch;
@@ -92,4 +92,8 @@ test("repeated request uses cache without another provider call",async()=>{
   assert.equal((await second.json()).cached,true);
   assert.equal(called(),1);
  });
+});
+
+test("legacy owner connector cannot bypass member-mode quotas even with its old passcode",async()=>{
+ await harness({...enabled,ASAF_PUBLIC_AUTH_ENABLED:'true'},async called=>{const r=await handler(request());assert.equal(r.status,410);assert.equal(called(),0)});
 });

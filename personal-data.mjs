@@ -1,3 +1,4 @@
+import {validCandleTime} from './candle-time.mjs';
 import {chartStyles,drawingTools} from './chart-styles.mjs';
 import {safeSourceUrl} from './scanner-core.mjs';
 export const personalSections=['journal','research','chartPreferences','drawings','conversations'];
@@ -7,7 +8,7 @@ const text=(v,n)=>typeof v==='string'&&v.length<=n;
 const id=v=>typeof v==='string'&&/^[a-zA-Z0-9._:-]{1,100}$/.test(v);
 const symbol=v=>typeof v==='string'&&/^[A-Z0-9:._-]{1,30}$/.test(v);
 const positive=v=>typeof v==='number'&&Number.isFinite(v)&&v>0&&v<=1e12;
-const stamp=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}(?::\d{2})?)?$/.test(v);
+const stamp=validCandleTime;
 const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
 function array(v,max){if(!Array.isArray(v)||v.length>max)throw Error('מספר הרשומות גדול מדי או שהנתונים אינם תקינים');return v}
 export const tradeProfit=t=>(t.side==='short'?t.entry-t.exit:t.exit-t.entry)*t.qty-t.fees;

@@ -1,3 +1,4 @@
+import {validCandleTime} from './candle-time.mjs';
 import {chartIndicators} from './chart-indicators.mjs';
 
 export const patternLabels={breakout20:'סגירה מעל שיא 20 נרות',breakdown20:'סגירה מתחת לשפל 20 נרות',consolidation:'טווח צר של 20 נרות',squeeze:'רוחב בולינגר באחוזון נמוך',doubleBottom:'מועמד לדאבל בוטום',gapUp:'פער פתיחה מעלה ≥2%',gapDown:'פער פתיחה מטה ≥2%'};
@@ -15,7 +16,7 @@ export function measuredScenario(side,close,trigger,support,target){
 export function patternResearch(input){
  const unavailable=reason=>({available:false,reason,candidates:[]});
  if(!Array.isArray(input)||input.length<21)return unavailable('נדרשים לפחות 21 נרות יומיים.');
- const bars=input.slice(-200),validDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
+ const bars=input.slice(-200),validDate=value=>typeof value==='string'&&value.length===10&&validCandleTime(value);
  if(bars.some((b,i)=>!validDate(b?.date)||![b.high,b.low,b.close].every(v=>Number.isFinite(v)&&v>0&&v<=1e12)||b.high<b.low||b.close<b.low||b.close>b.high||(i&&b.date<=bars[i-1].date)))return unavailable('נדרשת סדרת OHLC יומית תקינה ומסודרת.');
  const last=bars.at(-1),prior=bars.at(-2),window=bars.slice(-21,-1),resistance=Math.max(...window.map(b=>b.high)),support=Math.min(...window.map(b=>b.low)),height=resistance-support;
  const finite=v=>Number.isFinite(v)?v:null;

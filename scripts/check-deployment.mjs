@@ -23,6 +23,7 @@ export async function checkDeployment(value,{fetcher=fetch}={}){
   ['anonymous alerts rejected','/.netlify/functions/alerts',r=>r.status===401],
   ['anonymous account rejected','/.netlify/functions/account',r=>r.status===401],
   ['model route rejects GET','/.netlify/functions/free-chat',r=>r.status===405],
+  ['legacy private market route retired in account mode','/.netlify/functions/market',r=>r.status===410,{method:'POST',headers:{'content-type':'application/json'},body:'{}'}],
   ['admin job route rejects GET','/.netlify/functions/run-market-jobs',r=>r.status===405],
   ['foreign-origin workspace write rejected','/.netlify/functions/workspace',r=>r.status===403,{method:'PUT',headers:{origin:'https://foreign-origin.invalid','content-type':'application/json'},body:'{}'}]
  ];

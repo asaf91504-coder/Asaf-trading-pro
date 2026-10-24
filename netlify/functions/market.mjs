@@ -1,5 +1,6 @@
 // Twelve Data owner-only connector. Disabled by default. No OpenAI calls.
 // Never put a provider API key in frontend code or the repository.
+import {validCandleTime} from '../../candle-time.mjs';
 const respond=(value,status=200)=>Response.json(value,{status,headers:{"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
 const cache=new Map(); // Best-effort per-instance cache, NOT a distributed hard quota.
 const parseSymbol=value=>{
@@ -9,15 +10,17 @@ const parseSymbol=value=>{
 };
 const allowedIntervals=new Set(["1min","5min","15min","30min","1h","1day","1week"]);
 export const validateBar=item=>{
+  if(!item||typeof item!=='object')return null;
   const open=Number(item.open),high=Number(item.high),low=Number(item.low),close=Number(item.close);
   const vol=item.volume===undefined||item.volume===null?null:Number(item.volume);
   const date=typeof item.datetime==="string"?item.datetime:"";
-  if(!/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/.test(date))return null;
+  if(!/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/.test(date)||!validCandleTime(date))return null;
   if(![open,high,low,close].every(Number.isFinite)||low<=0||high<low||open<low||open>high||close<low||close>high)return null;
   return {date,open,high,low,close,volume:vol!==null&&Number.isFinite(vol)&&vol>=0?vol:null};
 };
 export default async function handler(request) {
  if(request.method!=="POST")return respond({error:"Only POST is supported"},405);
+ if(process.env.ASAF_PUBLIC_AUTH_ENABLED==='true')return respond({error:'החיבור הפרטי הישן אינו פעיל במצב חשבונות. השתמש בחיבור הנתונים המוגן של האתר.'},410);
  if(process.env.ASAF_MARKET_ENABLED!=="true")return respond({error:"חיבור נתוני השוק עדיין לא הופעל — לא מתבצעות קריאות לספק"},503);
  if(process.env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED!=="true")return respond({error:"נדרש אישור שהרישיון שלך מתיר הצגת נתוני שוק בגרף. מסלול Basic החינמי מוגדר non-display."},503);
  const expected=process.env.ASAF_MARKET_ACCESS_CODE;
