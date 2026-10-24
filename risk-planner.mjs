@@ -15,12 +15,12 @@ if (typeof document!=='undefined') {
       const read=id=>{const v=$(id).value.trim();return v===''?NaN:Number(v)};
       const r=planPosition({account:read('account'),riskPercent:read('pct'),entry:read('entry'),stop:read('stop'),target:read('target'),budget:read('positionBudget'),side:$('riskSide').value});
       $('riskError').textContent='';
-      const values=[money(r.actualRisk),number(r.shares),'1:'+number(r.ratio),money(r.positionValue),money(r.targetProfit),number(r.actualRiskPercent)+'%'];
+      const values=[money(r.actualRisk),number(r.shares),number(r.ratio)+':1',money(r.positionValue),money(r.targetProfit),number(r.actualRiskPercent)+'%'];
       outputs.forEach((id,i)=>$(id).textContent=values[i]);
       $('riskLimit').textContent=!r.shares?'התקציב אינו מספיק למניה שלמה אחת במסגרת הסיכון שנבחר.':r.capitalLimited?'הכמות הוגבלה לפי ההון הזמין לעסקה. תקציב הסיכון המרבי: '+money(r.riskBudget)+'.':'הכמות הוגבלה לפי תקציב הסיכון: '+money(r.riskBudget)+'.';
     } catch(err){outputs.forEach(id=>$(id).textContent='—');$('riskLimit').textContent='';$('riskError').textContent=err.message}
   }
-  $('calc').onclick=calculate;
+  $('rr').dir='ltr';$('calc').onclick=calculate;
   for(const id of ['account','pct','entry','stop','target','positionBudget','riskSide'])$(id).addEventListener('input',calculate);
   calculate();
 }

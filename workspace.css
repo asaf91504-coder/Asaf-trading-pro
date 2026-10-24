@@ -14,3 +14,5 @@
 .conversation-archive-preview{max-height:420px;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap}.conversation-archive-preview .bubble{margin:10px 0}details select[aria-label="שיחה מהארכיון"]{max-width:100%;margin:12px 0}#dailyAlerts label{max-width:100%}#dailyAlerts input{max-width:100%}
 
 #chartPreciseDrawingDetails{margin:14px 0 18px}#chartPreciseDrawingDetails summary{cursor:pointer;padding:8px 0}#chartAnchorForm label{display:flex;flex-direction:column;gap:6px;max-width:100%}#chartAnchorForm input{width:180px;max-width:100%}
+
+#scanResearchDetails{scroll-margin-top:90px}.scenario-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:16px 0}.scenario-grid div{background:#10283b;border:1px solid #2b4057;border-radius:10px;padding:12px}.scenario-grid dt{font-size:12px;color:#a9bfd3}.scenario-grid dd{font-size:21px;color:#e9f4ff;font-variant-numeric:tabular-nums;margin:9px 0 0;text-align:right}#scanResearchDetails h4{margin:6px 0 16px}
