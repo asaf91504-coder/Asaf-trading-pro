@@ -350,3 +350,10 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Fixed layout restoration of custom ranges missing from the select options, and avoided resetting same-symbol context on layout loading.
 - Prevented pointer drawing at the 30-shape limit from silently evicting an earlier drawing.
 - Full automated suite: 242 passing tests. Licensed market streams and actual-device acceptance remain pending.
+
+## Scanner templates — 2026-10-25
+
+- Added ten validated named scanner templates, default reset and Asaf's chart-data criteria (price > $5, above MA20, rising close with increased volume, measured scenario >=15%, ATR sorting). Market capitalization remains explicitly unverified.
+- Applying templates recalculates only already-loaded records, without provider or model calls. Template save, remove and session-only undo removal are local.
+- Added scannerPresets to explicit personal account backup/restore and JSON preview/merge, with existing CAS and account isolation. Actual signed-in cross-device acceptance still pending.
+- Eight new behavioral tests cover schema, bounds, defaults, owner criteria, backup round trips, merge limits and stale restore previews. All 250 automated tests pass.

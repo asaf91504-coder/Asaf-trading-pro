@@ -1,7 +1,7 @@
 import {authState,refreshAuth} from './auth-ui.mjs';
 import {personalSections,personalKeys,personalData,emptyPersonal,mergePersonal,personalBackup,parsePersonalBackup} from './personal-data.mjs';
 import {preparePersonalRestore,completePersonalRestore} from './personal-restore.mjs';
-const labels={journal:'יומן העסקאות',research:'מקורות המחקר',chartPreferences:'העדפות הגרף',drawings:'קווי המגמה',conversations:'ארכיון שיחות הטקסט',layouts:'פריסות העבודה'};
+const labels={journal:'יומן העסקאות',research:'מקורות המחקר',chartPreferences:'העדפות הגרף',drawings:'קווי המגמה',conversations:'ארכיון שיחות הטקסט',layouts:'פריסות העבודה',scannerPresets:'תבניות הסריקה'};
 const defaults={style:'candles',chartMA20:true,chartMA150:true,chartEMA50:false,chartRSI14:true,chartBB20:false,chartMACD:false,chartATR14:false,chartMA50:false,chartMA100:false,chartMA200:false,chartStochastic:false,chartOBV:false,chartADX14:false,chartSupertrend:false,chartVWAP:false,chartIchimoku:false};
 const read=section=>{const saved=JSON.parse(localStorage.getItem(personalKeys[section])||JSON.stringify(emptyPersonal(section)));return personalData(section,section==='chartPreferences'?{...defaults,...saved}:saved)};
 function applyLocal(section,value){localStorage.setItem(personalKeys[section],JSON.stringify(value));window.dispatchEvent(new CustomEvent('asaf:personal-loaded',{detail:{section}}))}
