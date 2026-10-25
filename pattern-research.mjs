@@ -37,7 +37,7 @@ export function patternResearch(input){
   const a=lows[p],b=lows[q],low=Math.min(bars[a].low,bars[b].low),similarity=Math.abs(bars[a].low-bars[b].low)/((bars[a].low+bars[b].low)/2);
   if(a<8||b-a<5||b-a>40||bars.length-1-b>20||similarity>.03)continue;
   const neckline=Math.max(...bars.slice(a+1,b).map(x=>x.high));
-  if(neckline/low<1.05||Math.max(...bars.slice(a-8,a).map(x=>x.close))/low<1.08||bars.slice(b+1).some(x=>x.low<low*.97))continue;
+  if(bars.slice(a+1,b).some(x=>x.low<low*.97)||neckline/low<1.05||Math.max(...bars.slice(a-8,a).map(x=>x.close))/low<1.08||bars.slice(b+1).some(x=>x.low<low*.97))continue;
   const stage=last.close>neckline?(prior.close<=neckline?'crossed':'above'):'waiting';
   add('doubleBottom',stage,{firstLowDate:bars[a].date,secondLowDate:bars[b].date,firstLow:bars[a].low,secondLow:bars[b].low,support:low,trigger:neckline,targetFromHeight:neckline+(neckline-low),scenario:measuredScenario('long',last.close,neckline,low,neckline+(neckline-low))});found=true;break;
  }
@@ -48,7 +48,7 @@ export function patternResearch(input){
   const a=highs[p],b=highs[q],high=Math.max(bars[a].high,bars[b].high),similarity=Math.abs(bars[a].high-bars[b].high)/((bars[a].high+bars[b].high)/2);
   if(a<8||b-a<5||b-a>40||bars.length-1-b>20||similarity>.03)continue;
   const neckline=Math.min(...bars.slice(a+1,b).map(x=>x.low));
-  if((high-neckline)/high<.05||(high-Math.min(...bars.slice(a-8,a).map(x=>x.close)))/high<.08||bars.slice(b+1).some(x=>x.high>high*1.03))continue;
+  if(bars.slice(a+1,b).some(x=>x.high>high*1.03)||(high-neckline)/high<.05||(high-Math.min(...bars.slice(a-8,a).map(x=>x.close)))/high<.08||bars.slice(b+1).some(x=>x.high>high*1.03))continue;
   const stage=last.close<neckline?(prior.close>=neckline?'crossed':'below'):'waiting',target=neckline-(high-neckline);
   add('doubleTop',stage,{firstHighDate:bars[a].date,secondHighDate:bars[b].date,firstHigh:bars[a].high,secondHigh:bars[b].high,resistance:high,trigger:neckline,targetFromHeight:target,scenario:measuredScenario('short',last.close,neckline,high,target)});found=true;break;
  }

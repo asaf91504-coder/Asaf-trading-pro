@@ -364,3 +364,4 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Added waiting/crossed/already-beyond states, invalidation after a new head extreme, measured-height target and right-shoulder stop reference. No probability, forecast or executable order.
 - Scanner filters, saved scanner settings and shared pattern research accept the new candidates. Research UI explains exact thresholds and shows neckline dates/head price.
 - Seven behavioral tests cover both directions, known geometric prices, stage transitions, invalidation, flat/short series and scanner configuration. Full suite: 257 passing.
+- Browser acceptance identified an overlapping double-top label across the taller head. Fixed double-top/bottom candidates to reject an intervening head extreme beyond the 3% bound. Added symmetric regression test; full suite now 258 passing.
