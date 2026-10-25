@@ -58,7 +58,7 @@ window.dispatchEvent(new Event('asaf:request-dataset'));
 // Keep navigation and drawing actions close to the chart, independent of indicator settings.
 const drawingToolbar=document.createElement('div');drawingToolbar.className='terminal-drawing-toolbar';drawingToolbar.setAttribute('role','group');drawingToolbar.setAttribute('aria-label','כלי ציור ופרשנות לגרף');
 for(const id of ['chartDrawingTool','drawingText','drawingRR','drawingChannelWidth']){const input=$(id);drawingToolbar.append(input.closest('label'))}
-for(const id of ['chartTrend','chartUndo','chartClearLines'])drawingToolbar.append($(id));
+for(const id of ['chartTrend','chartUndo','chartRedo','chartClearLines'])drawingToolbar.append($(id));
 toolDetails.after(drawingToolbar);
 const focusButton=document.createElement('button');focusButton.type='button';focusButton.className='terminal-focus-button';focusButton.textContent='הסתר AI · הרחב גרף';focusButton.setAttribute('aria-pressed','false');header.append(focusButton);
 function chartFocus(enabled){document.body.classList.toggle('terminal-chart-focus',enabled);focusButton.setAttribute('aria-pressed',String(enabled));focusButton.textContent=enabled?'הצג AI לצד הגרף':'הסתר AI · הרחב גרף';window.dispatchEvent(new Event('asaf:layout'))}

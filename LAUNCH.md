@@ -342,3 +342,11 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Added parallel-channel drawings with exact two-date anchors and explicit price width, included in personal backups. Drawing controls now remain visible independently of collapsed indicator settings. Added desktop chart-focus toggle to expand the chart and restore AI on explicit opening.
 - No live market or model calls are made by this regression suite. Real signed-in cross-device restoration and device notifications still require actual-device acceptance.
 - Provider inbox check: no messages from Massive, Intrinio or Polygon after October 22 as of this pass. No follow-up email sent. Market-wide licensed data, intraday streams, fundamentals/earnings, server-scheduled alerts and licensed news remain pending external supply/configuration.
+
+## Drawing workflow refinement — 2026-10-25
+
+- Added session-only bounded undo/redo snapshots, including reversible clear-all, keyboard Ctrl/Cmd-Z and Ctrl/Cmd-Shift-Z or Ctrl-Y on the focused chart. Switching or clearing datasets resets history; backup restore also resets it.
+- Contextual drawing inputs reduce mobile toolbar clutter. Enlarged mobile drawing targets and layout input font.
+- Fixed layout restoration of custom ranges missing from the select options, and avoided resetting same-symbol context on layout loading.
+- Prevented pointer drawing at the 30-shape limit from silently evicting an earlier drawing.
+- Full automated suite: 242 passing tests. Licensed market streams and actual-device acceptance remain pending.
