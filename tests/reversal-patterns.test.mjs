@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {shoulderCandidates} from '../reversal-patterns.mjs';
+import {patternResearch} from '../pattern-research.mjs';
+import {scannerSettings} from '../scanner-presets.mjs';
+function fixture(){const knots=[[0,80],[10,100],[17,90],[25,115],[32,90],[40,101],[45,96],[46,87]];return Array.from({length:47},(_,i)=>{let k=knots.findIndex(([j])=>j>=i);const c=k===0?80:knots[k-1][1]+(knots[k][1]-knots[k-1][1])*(i-knots[k-1][0])/(knots[k][0]-knots[k-1][0]);return {date:new Date(Date.UTC(2026,5,i+1)).toISOString().slice(0,10),open:c,high:c+1,low:c-1,close:c,volume:1000}})}
+test('head and shoulders requires confirmed shoulders, a taller head and a new neckline cross',()=>{const b=fixture(),c=shoulderCandidates(b).find(c=>c.kind==='headShoulders');assert.ok(c);assert.equal(c.stage,'crossed');assert.equal(c.trigger,89);assert.equal(c.headPrice,116);assert.equal(c.target,62);assert.equal(c.stopReference,102);assert.equal(c.pivotDates.length,3)});
+test('inverse geometry is symmetric and feeds a valid long scenario',()=>{const b=fixture().map(b=>({...b,open:220-b.open,close:220-b.close,high:220-b.low,low:220-b.high})),c=patternResearch(b).candidates.find(c=>c.kind==='inverseHeadShoulders');assert.ok(c);assert.equal(c.stage,'crossed');assert.equal(c.trigger,131);assert.equal(c.scenario.side,'long');assert.equal(c.scenario.target,158)});
+test('unbroken neckline is labelled waiting and confirmed older break below',()=>{const b=fixture();b.at(-1).close=95;b.at(-1).high=96;b.at(-1).low=94;assert.equal(shoulderCandidates(b)[0].stage,'waiting');b.at(-1).close=87;b.at(-1).low=86;b.at(-2).close=88;b.at(-2).low=87;assert.equal(shoulderCandidates(b)[0].stage,'below')});
+test('a new high past the head invalidates the bearish structure',()=>{const b=fixture();b.at(-1).high=120;assert.equal(shoulderCandidates(b).some(c=>c.kind==='headShoulders'),false)});
+test('insufficient series and flat prices cannot create shoulder candidates',()=>{assert.deepEqual(shoulderCandidates(fixture().slice(0,25)),[]);assert.deepEqual(shoulderCandidates(fixture().map(b=>({...b,open:100,high:101,low:99,close:100}))),[])});
+test('scenario uses right shoulder stop reference and exposes no success probability',()=>{const c=patternResearch(fixture()).candidates.find(c=>c.kind==='headShoulders');assert.equal(c.scenario.side,'short');assert.equal(c.scenario.stop,103.02);assert.equal(c.scenario.entry,87);assert.equal(c.probability,undefined)});
+test('saved scanner settings admit both new pattern filters',()=>{for(const p of ['headShoulders','inverseHeadShoulders'])assert.equal(scannerSettings({scanPattern:p}).scanPattern,p)});

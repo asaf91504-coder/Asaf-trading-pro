@@ -1,7 +1,8 @@
+import {shoulderCandidates} from './reversal-patterns.mjs';
 import {validCandleTime} from './candle-time.mjs';
 import {chartIndicators} from './chart-indicators.mjs';
 
-export const patternLabels={breakout20:'סגירה מעל שיא 20 נרות',breakdown20:'סגירה מתחת לשפל 20 נרות',consolidation:'טווח צר של 20 נרות',squeeze:'רוחב בולינגר באחוזון נמוך',doubleBottom:'מועמד לדאבל בוטום',gapUp:'פער פתיחה מעלה ≥2%',gapDown:'פער פתיחה מטה ≥2%',doubleTop:'מועמד לדאבל טופ',downtrendBreak:'חציית קו שיאים יורדים'};
+export const patternLabels={breakout20:'סגירה מעל שיא 20 נרות',breakdown20:'סגירה מתחת לשפל 20 נרות',consolidation:'טווח צר של 20 נרות',squeeze:'רוחב בולינגר באחוזון נמוך',doubleBottom:'מועמד לדאבל בוטום',gapUp:'פער פתיחה מעלה ≥2%',gapDown:'פער פתיחה מטה ≥2%',doubleTop:'מועמד לדאבל טופ',downtrendBreak:'חציית קו שיאים יורדים',headShoulders:'מועמד לראש וכתפיים',inverseHeadShoulders:'מועמד לראש וכתפיים הפוך'};
 export const patternStages={crossed:'חצייה בנר האחרון',waiting:'ממתין לחצייה',above:'כבר מעל הרמה',below:'כבר מתחת לרמה',observed:'נצפה בנתונים'};
 export function measuredScenario(side,close,trigger,support,target){
  if(!['long','short'].includes(side)||![close,trigger,support,target].every(v=>Number.isFinite(v)&&v>0))return null;
@@ -58,6 +59,7 @@ export function patternResearch(input){
    add('downtrendBreak','crossed',{trigger,support,slopePerBar:slope,pivotDates:[a,b,c].map(i=>bars[i].date),scenario:measuredScenario('long',last.close,trigger,support,trigger+height)});
   }
  }
+ for(const candidate of shoulderCandidates(bars)){const {kind,stage,side,target,stopReference,...details}=candidate;add(kind,stage,{...details,targetFromHeight:target,scenario:measuredScenario(side,last.close,candidate.trigger,stopReference,target)})}
  return {available:true,asOf:last.date,bars:bars.length,support20:support,resistance20:resistance,rangePercent20:rangePercent,gapOpenPercent:gapPercent,bollingerWidthPercent:width,bollingerWidthPercentile:widthPercentile,candidates,
   limitations:['Heuristics on at most 200 loaded daily bars; latest bar may be incomplete.','Market cap, corporate actions, earnings and live prices are not verified.','Measured targets and stop references are scenarios, not predictions, orders or guaranteed returns.'],
   rules:{rangeBars:20,consolidationMaxPercent:8,gapOpenMinPercent:2,squeezeBaselineBars:60,squeezeMaxPercentile:10,pivotSideBars:2,doubleBottomLowTolerancePercent:3,doubleBottomSeparationBars:[5,40],doubleBottomMinHeightPercent:5,doubleBottomPriorPeakAboveLowPercent:8,doubleBottomMaxAgeBars:20}};

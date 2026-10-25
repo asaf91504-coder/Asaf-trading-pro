@@ -357,3 +357,10 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Applying templates recalculates only already-loaded records, without provider or model calls. Template save, remove and session-only undo removal are local.
 - Added scannerPresets to explicit personal account backup/restore and JSON preview/merge, with existing CAS and account isolation. Actual signed-in cross-device acceptance still pending.
 - Eight new behavioral tests cover schema, bounds, defaults, owner criteria, backup round trips, merge limits and stale restore previews. All 250 automated tests pass.
+
+## Reversal pattern research — 2026-10-25
+
+- Added explicit rule-based head-and-shoulders and inverse candidates on loaded daily bars, with confirmed pivots, prior movement, shoulder symmetry, head prominence, neckline anchors and current/previous line values.
+- Added waiting/crossed/already-beyond states, invalidation after a new head extreme, measured-height target and right-shoulder stop reference. No probability, forecast or executable order.
+- Scanner filters, saved scanner settings and shared pattern research accept the new candidates. Research UI explains exact thresholds and shows neckline dates/head price.
+- Seven behavioral tests cover both directions, known geometric prices, stage transitions, invalidation, flat/short series and scanner configuration. Full suite: 257 passing.
