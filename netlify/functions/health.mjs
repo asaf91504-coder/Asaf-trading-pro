@@ -5,7 +5,7 @@ import {googleConfigured} from "../../server/google-auth.mjs";
 import {publicMarketConfigured} from "./public-market.mjs";
 import {newsConfigured} from "../../server/news-core.mjs";
 // No network access, provider request, billing, or secrets are involved in this health check.
-const VERSION="2026-10-26-public-news-chat-1";
+const VERSION="2026-10-26-news-chat-context-1";
 const headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
 export default async function handler(request) {
   if(request.method!=="GET")return Response.json({error:"Method not allowed"},{status:405,headers});
@@ -15,7 +15,7 @@ export default async function handler(request) {
     googleAuthEnabled:googleConfigured(),
     marketAnalysisEnabled:publicMarketConfigured()&&process.env.ASAF_MARKET_AI_LICENSE_CONFIRMED==='true',
     backgroundMarketRefreshConfigured:publicMarketConfigured()&&process.env.ASAF_BACKGROUND_REFRESH_ENABLED==='true',
-    newsAnalysisEnabled:newsConfigured()&&process.env.ASAF_NEWS_AI_LICENSE_CONFIRMED==='true',
+    newsAnalysisEnabled:(newsConfigured()&&process.env.ASAF_NEWS_AI_LICENSE_CONFIRMED==='true'||publicNewsEnabled()&&!newsConfigured())&&storeConfigured(),
     googleSignupEnabled:googleConfigured()&&process.env.ASAF_GOOGLE_SIGNUP_ENABLED==="true",
     publicMarketDataEnabled:publicMarketConfigured(),
     status:"ok",

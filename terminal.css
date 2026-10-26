@@ -29,3 +29,5 @@
 
 .terminal-app #chatInput{resize:vertical;min-height:48px;max-height:180px;line-height:1.6;white-space:pre-wrap}.terminal-app #cancelChat{align-self:flex-start;font-size:11px;padding:5px 10px}.terminal-app #cancelChat:disabled{display:none}
 @media(min-width:901px){.terminal-app[data-view=chat] .terminal-stage{display:block;max-width:1000px;margin:0 auto}.terminal-app[data-view=chat] .terminal-watch,.terminal-app[data-view=chat] .terminal-center{display:none}.terminal-app[data-view=chat] .terminal-ai{position:static;display:block!important}.terminal-app[data-view=chat] #chatLog{height:58vh;min-height:360px}.terminal-app[data-view=chat] .bubble{font-size:15px;line-height:1.8;max-width:88%}.terminal-app[data-view=chat] #chatInput{font-size:16px}.terminal-app[data-view=chat] .bubble.user{margin-inline-start:auto;width:fit-content}}
+
+.terminal-news-context{font-size:11px;display:flex;align-items:center;gap:7px;line-height:1.6;color:#b8c4d2}.terminal-app #newsFeed .source-card{display:flex;flex-direction:column;gap:12px}.terminal-app #newsFeed .source-card button{align-self:flex-start;font-size:11px;padding:8px 10px}

@@ -378,3 +378,9 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Added a production-only scheduled function every 15 minutes and one atomic attempt per quarter-hour, with bounded upstream sizes/timeouts, source status and previous cache retention on total failure. GET can bootstrap/refresh stale cache under the same shared lock. Existing approved Netlify/Redis infrastructure is used; no new plan or subscription purchased. Existing host usage quotas apply.
 - Made AI tab a full conversation area, multiline textarea, Enter send/Shift+Enter newline, visible cancel while requesting, simple Send action and clean user messages. Existing authentication, cancellation, shared AI limits and free-only model restrictions remain.
 - Added ten public-news behavioral tests; all 276 tests pass. Actual signed-in model response and real iPhone acceptance remain separate. Public RSS is not silently forwarded under the existing licensed-news AI path.
+
+## News-to-conversation verification — 2026-10-26
+
+- Added explicit Ask AI on each headline, selecting a server-cached headline ID rather than trusting client-provided article text. Optional latest public-headline context is visible in chat.
+- Public RSS AI context contains bounded titles/links only, excludes stale/future content and labels indexed social content unverified. No full-article reading, live search or news-provider purchase is claimed.
+- Added six cache-context tests plus an authenticated mocked route test confirming only the selected server headline reaches openrouter/free. Full suite: 283 passing. Actual user-account model acceptance still pending sign-in; scheduled run observation remains pending at this checkpoint.

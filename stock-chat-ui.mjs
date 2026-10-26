@@ -130,7 +130,8 @@ async function ask(q,extra={}){
     interval:activeData?.interval||"1day",
     receivedAt:activeData?.receivedAt||null,
     useServerMarket:activeData?.source==="Twelve Data",
-    includeNews:$("chatIncludeNews")?.checked===true,
+    includeNews:extra.newsArticleId?true:$("chatIncludeNews")?.checked===true,
+    newsArticleId:extra.newsArticleId||null,
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
@@ -341,3 +342,5 @@ message.addEventListener('input',()=>{message.style.height='auto';message.style.
 
 // Preserve only the chart the user actually saw before opening full-page chat.
 document.querySelector('[data-tab="chat"]').addEventListener('click',()=>{if(!loaded||loaded.symbol!==normSymbol()||!$('chatAutoChart').checked||$('localChartCanvas').getBoundingClientRect().width<1)return;try{lastVisibleChart={symbol:loaded.symbol,bars:loaded.bars,image:localChart.snapshot()}}catch{lastVisibleChart=null}},{capture:true});
+
+window.addEventListener('asaf:ask-news',event=>{const id=event.detail?.id;if(typeof id!=='string'||id.length>1000)return;if(chatBusy){status.textContent='עצור או המתן לתשובה הקיימת לפני פתיחת שאלה על כותרת.';return}document.querySelector('[data-tab="chat"]').click();ask('הסבר בעברית את משמעות הכותרת המצורפת, מה עשוי להיות רלוונטי למשקיע ומה עדיין צריך לאמת. אל תטען שקראת את הכתבה המלאה.',{newsArticleId:id})});

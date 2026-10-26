@@ -68,3 +68,5 @@ for(const button of [accountButton,$('chartChat')])button.addEventListener('clic
 
 $('chatForm').querySelector('button').textContent='שלח';$('chatInput').placeholder='כתוב הודעה… Enter לשליחה, Shift+Enter לשורה חדשה';
 $('chatForm').before($('cancelChat'));
+
+$('chatIncludeNews').closest('label').classList.add('terminal-news-context');$('chatIncludeNews').closest('label').lastChild.textContent=' צרף כותרות אחרונות מהמטמון — ללא קריאת כתבות מלאות';auto.after($('chatIncludeNews').closest('label'));

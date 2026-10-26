@@ -14,3 +14,10 @@ test('authenticated AI route takes provider prices from server cache and rejects
   assert.equal((await handler(request('free-chat',{...body,receivedAt:'changed'},u.cookie))).status,409);assert.equal(calls.length,1);
  }finally{process.env=previous;global.fetch=original}
 });
+
+test('authenticated news chat sends the selected server headline to the free model and ignores forged article text',async()=>{
+ const previous={...process.env},original=global.fetch,s=fixture(),u=seed(s),now=Date.now();Object.assign(process.env,{...authEnv,CONTEXT:'production',ASAF_FREE_AI_ENABLED:'true',OPENROUTER_API_KEY:'mock-only',ASAF_NEWS_ENABLED:'false'});let sent=null;
+ s.db.set('asaf:production:news:public:snapshot',JSON.stringify({updatedAt:new Date(now).toISOString(),articles:[{id:'selected',title:'Server headline',url:'https://example.test/source',source:'QA',publishedAt:new Date(now-1000).toISOString(),symbols:[]}]}));
+ global.fetch=async(url,options)=>{if(String(url)==='https://test.upstash.io')return Response.json({result:await s.run(JSON.parse(options.body))});assert.equal(String(url),'https://openrouter.ai/api/v1/chat/completions');sent=JSON.parse(options.body);return Response.json({choices:[{message:{content:'בדיקת כותרת'},finish_reason:'stop'}]})};
+ try{const r=await handler(request('free-chat',{message:'הסבר את הכותרת',symbol:'AAPL',includeNews:true,newsArticleId:'selected',headline:'Forged text'},u.cookie));assert.equal(r.status,200);assert.equal(sent.model,'openrouter/free');const text=sent.messages.at(-1).content;assert.match(text,/Server headline/);assert.doesNotMatch(text,/Forged text/);assert.match(text,/No full article/)}finally{process.env=previous;global.fetch=original}
+});

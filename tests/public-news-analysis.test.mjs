@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {analysisNews} from '../server/analysis-sources.mjs';
+import {storageKey} from '../server/storage.mjs';
+const now=Date.parse('2026-10-26T12:00:00Z'),env={CONTEXT:'production',ASAF_EXTERNAL_SERVICES_APPROVED:'true',ASAF_REDIS_REST_URL:'https://test.upstash.io',ASAF_REDIS_REST_TOKEN:'mock'};
+const article=(id,source='Example')=>({id,title:'News '+id,url:'https://example.test/'+id,source,publishedAt:'2026-10-26T11:00:00Z',symbols:[]});
+const run=snapshot=>async args=>{assert.equal(args[0],'GET');assert.equal(args[1],storageKey('news:public:snapshot',env));return JSON.stringify(snapshot)};
+test('public news context uses existing cache without provider or full article access',async()=>{const r=await analysisNews('AAPL',{env,now,run:run({articles:[article('a')],updatedAt:'2026-10-26T11:50:00Z'})});assert.equal(r.mode,'public-rss');assert.equal(r.articles.length,1);assert.match(r.note,/No full article/);assert.equal(r.articles[0].body,undefined)});
+test('selected headline ID is matched against server cache rather than user-supplied title',async()=>{const r=await analysisNews('AAPL',{env,now,articleId:'b',run:run({articles:[article('a'),article('b')],updatedAt:'2026-10-26T11:50:00Z'})});assert.equal(r.articles.length,1);assert.equal(r.articles[0].id,'b')});
+test('unknown headline IDs do not fall back to another article',async()=>{const r=await analysisNews('AAPL',{env,now,articleId:'unknown',run:run({articles:[article('a')],updatedAt:'2026-10-26T11:50:00Z'})});assert.equal(r.status,'no-matching-headlines');assert.deepEqual(r.articles,[])});
+test('stale news remains unavailable for current AI claims',async()=>{const r=await analysisNews('AAPL',{env,now,run:run({articles:[article('a')],updatedAt:'2026-10-25T11:00:00Z'})});assert.equal(r.status,'stale');assert.deepEqual(r.articles,[])});
+test('future stories are excluded from model context',async()=>{const r=await analysisNews('AAPL',{env,now,run:run({articles:[{...article('a'),publishedAt:'2026-10-26T13:00:00Z'}],updatedAt:'2026-10-26T11:50:00Z'})});assert.equal(r.status,'no-matching-headlines')});
+test('public mode can be disabled without any cache or upstream request',async()=>{let calls=0;const r=await analysisNews('AAPL',{env:{...env,ASAF_PUBLIC_NEWS_ENABLED:'false'},now,run:async()=>{calls++}});assert.equal(r.status,'unavailable');assert.equal(calls,0)});
