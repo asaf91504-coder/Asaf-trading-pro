@@ -13,7 +13,7 @@ const privateAccessKey="asaf_market_access_v1";
 const marketStatus=$("marketFetchStatus");
 const marketButton=$("marketFetch");
 const localChart=initLocalChart();
-let loaded=null;
+let loaded=null,lastVisibleChart=null;
 const normSymbol=()=>String(chartSymbol.value||"").trim().toUpperCase().replace(/[^A-Z0-9:._-]/g,"").slice(0,30);
 function say(role,content){
  const item=document.createElement("div");
@@ -62,7 +62,7 @@ let conversation=[];
 mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
 function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt}}))}
-function resetRequest(){conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
+function resetRequest(){lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
 $('cancelChat')?.addEventListener('click',()=>requestController?.abort());
 window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
 function setAiStatus(text){if(aiStatus)aiStatus.textContent=text}
@@ -117,7 +117,7 @@ async function ask(q,extra={}){
   const context=currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let image=null;
-  const candidate=chartAttachment({manual:extra.image||pendingImage,auto:$('chatAutoChart')?.checked===true,hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return null;return localChart.snapshot()}});
+  const candidate=chartAttachment({manual:extra.image||pendingImage,auto:$('chatAutoChart')?.checked===true,hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch||activeController.signal.aborted)return;
   const response=await fetch("/.netlify/functions/free-chat",{
@@ -338,3 +338,6 @@ if(new URLSearchParams(location.search).get("tab")==="chat"){
 
 message.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();if(message.value.trim()&&!chatBusy)form.requestSubmit()}});
 message.addEventListener('input',()=>{message.style.height='auto';message.style.height=Math.min(180,message.scrollHeight)+'px'});
+
+// Preserve only the chart the user actually saw before opening full-page chat.
+document.querySelector('[data-tab="chat"]').addEventListener('click',()=>{if(!loaded||loaded.symbol!==normSymbol()||!$('chatAutoChart').checked||$('localChartCanvas').getBoundingClientRect().width<1)return;try{lastVisibleChart={symbol:loaded.symbol,bars:loaded.bars,image:localChart.snapshot()}}catch{lastVisibleChart=null}},{capture:true});
