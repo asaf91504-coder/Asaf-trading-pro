@@ -65,3 +65,6 @@ function chartFocus(enabled){document.body.classList.toggle('terminal-chart-focu
 focusButton.onclick=()=>chartFocus(!document.body.classList.contains('terminal-chart-focus'));
 // Opening the AI explicitly always brings its panel back.
 for(const button of [accountButton,$('chartChat')])button.addEventListener('click',()=>chartFocus(false));
+
+$('chatForm').querySelector('button').textContent='שלח';$('chatInput').placeholder='כתוב הודעה… Enter לשליחה, Shift+Enter לשורה חדשה';
+$('chatForm').before($('cancelChat'));

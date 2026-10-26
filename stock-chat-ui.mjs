@@ -102,8 +102,8 @@ async function ask(q,extra={}){
  if(requestState)requestState.textContent='ממתין למודל החינמי…';
  const activeController=new AbortController();requestController=activeController;
  const requestTimeout=setTimeout(()=>activeController.abort(),26000);
- say("user",(normSymbol()?"["+normSymbol()+"] ":"")+question);
- const waiting=say("bot","מנתח עם AI...");
+ say("user",question);
+ const waiting=say("bot","כותב תשובה…");
  try{
   await refreshAuth();
   if(epoch!==conversationEpoch||activeController.signal.aborted)return;
@@ -335,3 +335,6 @@ if(new URLSearchParams(location.search).get("tab")==="chat"){
  document.querySelector('[data-tab="chat"]').click();
 }
 
+
+message.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();if(message.value.trim()&&!chatBusy)form.requestSubmit()}});
+message.addEventListener('input',()=>{message.style.height='auto';message.style.height=Math.min(180,message.scrollHeight)+'px'});

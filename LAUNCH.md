@@ -371,3 +371,10 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Added opt-in 24-bin uniform OHLCV volume allocation over the raw visible candles, with an estimated POC and contiguous >=70% value area. Panning/zooming recalculates it. Missing or invalid volume disables it; no buying/selling or true executions-at-price are inferred.
 - Overlay preference participates in existing account backups/layouts. AI prompt explicitly marks the overlay as an estimate, forbids inferring real order flow and inventing numeric POC/value-area levels not supplied in context.
 - Eight tests cover conservation, exact bins, boundary/flat candles, contiguous value area, invalid inputs, bounds and preference validation. All 266 automated tests pass. No new provider, scheduled job or paid service activated.
+
+## Public RSS news and conversational chat — 2026-10-26
+
+- Added no-subscription public RSS headlines/links from a bounded Google News market query and Federal Reserve, plus a narrowly labeled indexed-X query. Indexed X is not a full/direct/real-time X feed; ordinary publishers are never relabeled as X, empty results are explicit. No full article bodies or paid X API calls.
+- Added a production-only scheduled function every 15 minutes and one atomic attempt per quarter-hour, with bounded upstream sizes/timeouts, source status and previous cache retention on total failure. GET can bootstrap/refresh stale cache under the same shared lock. Existing approved Netlify/Redis infrastructure is used; no new plan or subscription purchased. Existing host usage quotas apply.
+- Made AI tab a full conversation area, multiline textarea, Enter send/Shift+Enter newline, visible cancel while requesting, simple Send action and clean user messages. Existing authentication, cancellation, shared AI limits and free-only model restrictions remain.
+- Added ten public-news behavioral tests; all 276 tests pass. Actual signed-in model response and real iPhone acceptance remain separate. Public RSS is not silently forwarded under the existing licensed-news AI path.

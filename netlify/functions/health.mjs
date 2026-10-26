@@ -1,10 +1,11 @@
+import {publicNewsEnabled} from '../../server/public-news.mjs';
 import {publicAuthConfigured} from "../../server/auth-core.mjs";
 import {storeConfigured} from "../../server/storage.mjs";
 import {googleConfigured} from "../../server/google-auth.mjs";
 import {publicMarketConfigured} from "./public-market.mjs";
 import {newsConfigured} from "../../server/news-core.mjs";
 // No network access, provider request, billing, or secrets are involved in this health check.
-const VERSION="2026-10-26-estimated-profile-1";
+const VERSION="2026-10-26-public-news-chat-1";
 const headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
 export default async function handler(request) {
   if(request.method!=="GET")return Response.json({error:"Method not allowed"},{status:405,headers});
@@ -24,7 +25,8 @@ export default async function handler(request) {
     freeAIEnabled:process.env.ASAF_FREE_AI_ENABLED==="true"&&!!process.env.OPENROUTER_API_KEY&&(process.env.ASAF_PUBLIC_AUTH_ENABLED==='true'?publicAuthConfigured():!!process.env.ASAF_FREE_AI_ACCESS_CODE&&process.env.ASAF_FREE_AI_ACCESS_CODE.length>=24),
     publicAuthEnabled:publicAuthConfigured(),
     durableQuotaEnabled:storeConfigured()&&(process.env.ASAF_PUBLIC_AUTH_ENABLED==='true'||process.env.ASAF_FREE_AI_DURABLE_QUOTA==='true'),
-    newsEnabled:newsConfigured()&&storeConfigured(),
+    newsEnabled:(newsConfigured()||publicNewsEnabled())&&storeConfigured(),
+    newsMode:newsConfigured()?'licensed':publicNewsEnabled()&&storeConfigured()?'public-rss':'off',
     freeAIModel:"openrouter/free",
     info:"No API calls or financial charges are performed by this check."
   },{status:200,headers});
