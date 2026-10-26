@@ -1,3 +1,4 @@
+import {estimatedVolumeProfile} from './volume-profile.mjs';
 import {drawingHistory} from './drawing-history.mjs';
 import {chartStyles,drawingTools,heikinAshi,fibonacciLevels,drawingFromAnchors,drawingMeasurement,arrowHead,drawingText,drawingRR,drawingTradePlan,channelOffset,channelGeometry} from './chart-styles.mjs';
 import {chartWindow,zoomWindow} from './chart-view.mjs';
@@ -10,7 +11,7 @@ export function initLocalChart(){
  let indicators=chartIndicators([]),heikin=null;const history=drawingHistory();
  function historyButtons(){$('chartUndo').disabled=!history.canUndo();$('chartRedo').disabled=!history.canRedo();$('chartClearLines').disabled=!lines.length}
  function recordDrawingChange(){lines=history.commit(lines);historyButtons()}
- const indicatorIds=['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV','chartADX14','chartSupertrend','chartVWAP','chartIchimoku'];
+ const indicatorIds=['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV','chartADX14','chartSupertrend','chartVWAP','chartIchimoku','chartVolumeProfile'];
  const preferenceKey='asaf_chart_preferences_v1';
  try{const saved=JSON.parse(localStorage.getItem(preferenceKey)||'{}');for(const id of indicatorIds)if(typeof saved[id]==='boolean')$(id).checked=saved[id];if(chartStyles.includes(saved.style))$('chartStyle').value=saved.style}catch{}
  function savePreferences(){try{localStorage.setItem(preferenceKey,JSON.stringify({style:$('chartStyle').value,...Object.fromEntries(indicatorIds.map(id=>[id,$(id).checked]))}))}catch{$('chartDrawingStatus').textContent='לא ניתן לשמור העדפות במכשיר; השינוי זמין בלשונית הנוכחית.'}}
@@ -65,6 +66,7 @@ export function initLocalChart(){
    path();ctx.strokeStyle=colors.up;ctx.lineWidth=2;ctx.stroke();
   }
   function series(values,color,scale,lineWidth=1.5){ctx.strokeStyle=color;ctx.lineWidth=lineWidth;ctx.beginPath();let started=false;for(let i=view.start;i<view.end;i++){const value=values[i];if(!Number.isFinite(value)){started=false;continue}if(started)ctx.lineTo(x(i),scale(value));else{ctx.moveTo(x(i),scale(value));started=true}}ctx.stroke()}
+  if($('chartVolumeProfile').checked){const profile=estimatedVolumeProfile(bars.slice(view.start,view.end));ctx.save();ctx.beginPath();ctx.rect(left,top,plotWidth,bottom-top);ctx.clip();if(profile.available){const peak=Math.max(...profile.bins.map(b=>b.volume)),extent=plotWidth*.20;for(const bucket of profile.bins){const w=extent*bucket.volume/peak;ctx.fillStyle=bucket.low>=profile.valueAreaLow&&bucket.high<=profile.valueAreaHigh?'#38bdf85c':'#64748b44';ctx.fillRect(width-right-w,y(bucket.high),w,Math.max(1,y(bucket.low)-y(bucket.high)))}ctx.strokeStyle='#f59e0b';ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(left,y(profile.poc));ctx.lineTo(width-right,y(profile.poc));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fbbf24';ctx.font='10px system-ui';ctx.fillText('Estimated POC '+label(profile.poc),left+5,Math.max(top+12,y(profile.poc)-8))}else{ctx.fillStyle=colors.text;ctx.fillText('Volume profile unavailable: missing volume',left+5,top+14)}ctx.restore()}
   for(const [key,id,color] of overlays)if($(id).checked)series(indicators[key],color,y);
   for(const [name,pane] of Object.entries(panes)){
    const keys=name==='rsi'?['rsi14']:name==='macd'?['macd','macdSignal','macdHistogram']:name==='stochastic'?['stochasticK','stochasticD']:name==='obv'?['obv']:name==='adx'?['adx14','plusDI14','minusDI14']:['atr14'];

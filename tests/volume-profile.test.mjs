@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {estimatedVolumeProfile as profile} from '../volume-profile.mjs';
+import {personalData} from '../personal-data.mjs';
+const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
+test('uniform OHLCV allocation conserves volume with exact known buckets',()=>{const r=profile([{low:10,high:14,volume:40}],{bins:4});assert.equal(r.available,true);assert.deepEqual(r.bins.map(b=>b.volume),[10,10,10,10]);assert.equal(r.poc,10.5);assert.equal(r.totalVolume,40);assert.equal(r.method,'uniform-OHLCV-estimate')});
+test('zero range candles allocate volume once, including the maximum price boundary',()=>{const r=profile([{low:10,high:14,volume:0},{low:14,high:14,volume:30}],{bins:4});assert.deepEqual(r.bins.map(b=>b.volume),[0,0,0,30]);assert.equal(r.poc,13.5)});
+test('value area expands contiguously from the dominant bucket until 70 percent',()=>{const r=profile([{low:10,high:14,volume:0},{low:10.5,high:10.5,volume:10},{low:11.5,high:11.5,volume:50},{low:12.5,high:12.5,volume:30},{low:13.5,high:13.5,volume:10}],{bins:4});assert.equal(r.poc,11.5);assert.equal(r.valueAreaLow,11);assert.equal(r.valueAreaHigh,13);assert.equal(r.valueAreaVolume,80)});
+test('fractional overlaps and zero volume candles preserve total allocated volume',()=>{const r=profile([{low:10,high:15.37,volume:123.4},{low:11.1,high:17,volume:58.2},{low:18,high:18,volume:0}]);near(r.bins.reduce((s,b)=>s+b.volume,0),181.6);assert.ok(r.valueAreaVolume>=r.totalVolume*.7)});
+test('missing, negative or invalid candle inputs disable estimation rather than invent volume',()=>{for(const b of [{low:1,high:2,volume:null},{low:2,high:1,volume:2},{low:1,high:2,volume:-1},{low:1,high:2,volume:Infinity}])assert.equal(profile([b]).available,false);assert.equal(profile([]).available,false);assert.equal(profile([{low:1,high:2,volume:0}]).available,false)});
+test('a completely flat range has a single exact-price level and no division by zero',()=>{const r=profile([{low:10,high:10,volume:2},{low:10,high:10,volume:3}]);assert.equal(r.bins.length,1);assert.equal(r.poc,10);assert.equal(r.valueAreaVolume,5)});
+test('profile parameters are bounded and caller data is never mutated',()=>{for(const bins of [1,101,2.5])assert.throws(()=>profile([],{bins}));assert.throws(()=>profile([],{valueArea:0}));const b=[{low:10,high:20,volume:1}],copy=structuredClone(b);profile(b);assert.deepEqual(b,copy)});
+test('estimated overlay visibility is supported by personal account preferences',()=>{assert.deepEqual(personalData('chartPreferences',{chartVolumeProfile:true}),{chartVolumeProfile:true});assert.throws(()=>personalData('chartPreferences',{chartVolumeProfile:'true'}))});

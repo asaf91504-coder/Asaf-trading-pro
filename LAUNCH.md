@@ -365,3 +365,9 @@ Initial production browser acceptance: the terminal rendered at 1363px without h
 - Scanner filters, saved scanner settings and shared pattern research accept the new candidates. Research UI explains exact thresholds and shows neckline dates/head price.
 - Seven behavioral tests cover both directions, known geometric prices, stage transitions, invalidation, flat/short series and scanner configuration. Full suite: 257 passing.
 - Browser acceptance identified an overlapping double-top label across the taller head. Fixed double-top/bottom candidates to reject an intervening head extreme beyond the 3% bound. Added symmetric regression test; full suite now 258 passing.
+
+## Estimated visible-range volume profile — 2026-10-26
+
+- Added opt-in 24-bin uniform OHLCV volume allocation over the raw visible candles, with an estimated POC and contiguous >=70% value area. Panning/zooming recalculates it. Missing or invalid volume disables it; no buying/selling or true executions-at-price are inferred.
+- Overlay preference participates in existing account backups/layouts. AI prompt explicitly marks the overlay as an estimate, forbids inferring real order flow and inventing numeric POC/value-area levels not supplied in context.
+- Eight tests cover conservation, exact bins, boundary/flat candles, contiguous value area, invalid inputs, bounds and preference validation. All 266 automated tests pass. No new provider, scheduled job or paid service activated.
