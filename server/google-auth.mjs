@@ -55,7 +55,10 @@ export function createGoogleHandler({env=process.env,run=command,verify=async to
    if(previous?.enabled!==undefined&&previous.enabled!==true)return reply({error:'הגישה לחשבון חסומה.'},403);
    if(identity&&(!previous||previous.googleSubject!==subjectHash))return reply({error:'קישור החשבון אינו תקין.'},403);
    if(previous?.googleSubject&&previous.googleSubject!==subjectHash)return reply({error:'כבר מקושר לחשבון Google אחר.'},409);
-   if(!identity&&previous&&current?.id!==previous.id)return reply({error:'קיים חשבון עם אימייל זה. היכנס עם הסיסמה הקיימת ואז קשר את Google.',code:'link_required'},409);
+   // Google is authoritative for @gmail.com addresses. Do not extend this
+   // shortcut to third-party email domains, whose ownership can change.
+   const googleOwnedMailbox=email.endsWith('@gmail.com');
+   if(!identity&&previous&&current?.id!==previous.id&&!googleOwnedMailbox)return reply({error:'קיים חשבון עם אימייל זה. היכנס עם הסיסמה הקיימת ואז קשר את Google.',code:'link_required'},409);
    if(current&&previous&&current.id!==previous.id)return reply({error:'צא מהחשבון לפני מעבר לחשבון Google אחר.'},409);
    if(current&&!previous)return reply({error:'לקישור Google, בחר את אותו אימייל של החשבון הקיים.'},409);
    if(!previous&&env.ASAF_GOOGLE_SIGNUP_ENABLED!=='true')return reply({error:'הרשמה עם Google עדיין אינה פתוחה.'},403);

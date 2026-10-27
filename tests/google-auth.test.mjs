@@ -21,6 +21,10 @@ test('a nonce cannot be used in a different browser and simultaneous consumes cr
 test('same email cannot take over an existing password account; explicit authenticated linking preserves its ID',async()=>{
  const s=setup(),existing=seed(s.state),b=await s.begin(),body={action:'signin',credential:'mock',nonce:b.nonce};assert.equal((await s.handler(request('google-auth',body,b.cookie))).status,409);const linked=await s.handler(request('google-auth',body,b.cookie+'; '+existing.cookie));assert.equal(linked.status,200);const saved=JSON.parse(s.state.db.get(prefix+'auth:user:'+digest('member@example.test')));assert.equal(saved.id,existing.record.id);assert.equal(saved.hash,existing.record.hash);assert.equal(saved.version,'v1');
 });
+test('verified Google Gmail links existing account while preserving its identity and password',async()=>{
+ const s=setup(),existing=seed(s.state,'owner@gmail.com'),b=await s.begin();s.claims={iss:'https://accounts.google.com',aud:env.GOOGLE_CLIENT_ID,exp:Date.now()/1000+300,nonce:b.nonce,sub:'123',email:'owner@gmail.com',email_verified:true};
+ const r=await s.handler(request('google-auth',{action:'signin',credential:'mock',nonce:b.nonce},b.cookie));assert.equal(r.status,200);const saved=JSON.parse(s.state.db.get(prefix+'auth:user:'+digest('owner@gmail.com')));assert.equal(saved.id,existing.record.id);assert.equal(saved.hash,existing.record.hash);assert.ok(saved.googleSubject);
+});
 test('Google does not bypass revocation, closed signup, registration caps, throttles or storage failures',async()=>{
  const closed=setup({ASAF_GOOGLE_SIGNUP_ENABLED:'false'}),b=await closed.begin();assert.equal((await closed.handler(request('google-auth',{action:'signin',credential:'mock',nonce:b.nonce},b.cookie))).status,403);
  const capped=setup({ASAF_ACCOUNT_MAX_MEMBERS:'1'});capped.state.sets.set(prefix+'auth:members',new Set(['existing']));const c=await capped.begin();assert.equal((await capped.handler(request('google-auth',{action:'signin',credential:'mock',nonce:c.nonce},c.cookie))).status,403);
