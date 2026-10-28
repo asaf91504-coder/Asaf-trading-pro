@@ -100,7 +100,7 @@ async function runChatActions(actions,{signal,epoch}={}){
   signal,isCurrent:()=>epoch===conversationEpoch,
   getSymbol:normSymbol,
   getData:()=>loaded?.symbol===normSymbol()?loaded:null,
-  selectSymbol(symbol){chartRevision++;lastVisibleChart=null;loaded=null;chartSymbol.value=symbol;localChart.clear();rememberSymbol();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'));},
+  selectSymbol(symbol){chartRevision++;lastVisibleChart=null;loaded=null;chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;localChart.clear();rememberSymbol();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'));},
   fetchData:()=>loadMarketData({fromChat:true,signal,isCurrent:()=>epoch===conversationEpoch}),
   applyRender:actions=>localChart.applyActions(actions)
  });
