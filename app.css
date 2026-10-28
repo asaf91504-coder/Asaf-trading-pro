@@ -1,0 +1,16 @@
+.app-install-button{white-space:nowrap;font-size:12px;min-height:40px}
+.app-install-dialog{direction:rtl;color:#edf4ff;background:#131d29;border:1px solid #395368;border-radius:16px;padding:24px;width:min(440px,calc(100vw - 36px));max-height:calc(100dvh - 40px);overflow:auto;box-sizing:border-box}
+.app-install-dialog::backdrop{background:#000a}
+.app-install-dialog h2{margin:0 0 16px;font-size:22px;color:#5eead4}
+.app-install-dialog p,.app-install-dialog li{line-height:1.8;color:#c2cfdf}
+.app-install-dialog button,.app-install-dialog a{min-height:44px;display:inline-flex;align-items:center;padding:10px 16px;margin:6px 0 0 8px;font-size:16px}
+.app-install-dialog a{color:#5eead4}
+.app-install-dialog button:focus-visible{outline:3px solid #5eead4;outline-offset:3px}
+.app-offline-banner{position:fixed;inset-inline:0;top:0;margin:0;z-index:1000;background:#604a14;color:#fff2d1;padding:10px 16px;text-align:center;line-height:1.6;font-size:14px}
+.app-offline-banner[hidden],.app-install-button[hidden]{display:none!important}
+@media(display-mode:standalone){
+ html{background:#10151b}
+ .terminal-app{min-height:100vh;min-height:100dvh;padding-top:env(safe-area-inset-top,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+ .terminal-app footer{padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
+}
+@media(max-width:900px){.app-install-button{font-size:12px;padding:8px;min-height:44px}.app-install-dialog{padding:20px}.app-install-dialog li{margin-bottom:8px}}
