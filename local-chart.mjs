@@ -13,11 +13,44 @@ export function chartAccessibleLabel({symbol='',bars=[],start=0,end=bars.length,
  const selected=indicators.map(id=>accessibleIndicators[id]).filter(Boolean);
  return ['גרף מקורי '+symbol,'תצוגה: '+(accessibleStyles[style]||'נרות'),visible.length+' נרות מוצגים מתוך '+bars.length,'טווח מוצג: '+visible[0].date+' עד '+last.date,'נתוני הנר המקורי האחרון בטווח: פתיחה '+number(last.open)+', גבוה '+number(last.high)+', נמוך '+number(last.low)+', סגירה '+number(last.close)+', מחזור '+number(last.volume),'מדדים שנבחרו לתצוגה: '+(selected.join(', ')||'ללא')+'. ערכים זמינים רק כשיש מספיק נתונים','הנתונים שנטענו אינם מובטחים בזמן אמת','חצים לניווט, פלוס ומינוס לזום, Home לנרות האחרונים'].join('. ');
 }
+// Chat requests are declarative; validate the complete batch before changing any UI.
+export function validateChartRenderActions(actions,bars=[]){
+ if(!Array.isArray(actions)||!actions.length||actions.length>24)throw Error('יש לשלוח בין פעולה אחת ל־24 פעולות גרף.');
+ const dates=new Set(bars.map(bar=>bar.date));
+ const cleanText=(value,max)=>typeof value==='string'&&value.trim()&&value.length<=max&&!/[\u0000-\u001f\u007f]/.test(value);
+ return actions.map(action=>{
+  if(!action||typeof action!=='object'||Array.isArray(action))throw Error('פעולת גרף אינה תקינה.');
+  if(action.type==='indicator'){
+   if(!Object.hasOwn(accessibleIndicators,action.indicator)||typeof action.enabled!=='boolean')throw Error('המדד או מצב התצוגה אינם נתמכים.');
+   return {type:'indicator',indicator:action.indicator,enabled:action.enabled};
+  }
+  if(action.type==='style'){
+   if(!chartStyles.includes(action.style))throw Error('סגנון הגרף אינו נתמך.');
+   if(action.style==='heikin'&&(!bars.length||bars.some(bar=>!Number.isFinite(bar.open))))throw Error('נדרשים נתוני פתיחה מלאים ל־Heikin Ashi.');
+   return {type:'style',style:action.style};
+  }
+  if(action.type==='clear_annotations')return {type:'clear_annotations'};
+  if(action.type==='annotations'){
+   if(!bars.length)throw Error('אין נתוני גרף לסימון.');
+   if(!Array.isArray(action.items)||action.items.length>30)throw Error('אפשר להציג עד 30 סימוני AI.');
+   const items=action.items.map(item=>{
+    if(!item||!cleanText(item.label,160)||!cleanText(item.kind,40)||!Array.isArray(item.points)||item.points.length<2||item.points.length>80)throw Error('סימון AI אינו תקין.');
+    const points=item.points.map(point=>{
+     if(!point||!dates.has(point.date)||typeof point.price!=='number'||!Number.isFinite(point.price)||point.price<=0)throw Error('נקודת הסימון אינה תואמת לנתוני הגרף.');
+     return {date:point.date,price:point.price};
+    });
+    return {points,label:item.label.trim(),kind:item.kind.trim(),candidate:true};
+   });
+   return {type:'annotations',items};
+  }
+  throw Error('פעולת הגרף אינה נתמכת.');
+ });
+}
 // Original Canvas renderer. Never fetches data or invents a live price.
 export function initLocalChart(){
  const $=id=>document.getElementById(id),panel=$('localChartPanel'),canvas=$('localChartCanvas'),select=$('localChartRange'),title=$('localChartTitle'),tooltip=$('localChartTooltip'),ctx=canvas.getContext('2d');
  canvas.setAttribute('aria-label',chartAccessibleLabel());
- let bars=[],symbol='',count=60,offset=0,geometry=null,hover=null,drag=null,drawing=false,firstPoint=null,lines=[];
+ let bars=[],symbol='',count=60,offset=0,geometry=null,hover=null,drag=null,drawing=false,firstPoint=null,lines=[],aiAnnotations=[];
  let indicators=chartIndicators([]),heikin=null;const history=drawingHistory();
  function historyButtons(){$('chartUndo').disabled=!history.canUndo();$('chartRedo').disabled=!history.canRedo();$('chartClearLines').disabled=!lines.length}
  function recordDrawingChange(){lines=history.commit(lines);historyButtons()}
@@ -46,7 +79,7 @@ export function initLocalChart(){
   canvas.style.height=height+'px';canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);
   const style=$('chartStyle').value,displayBars=style==='heikin'&&heikin?heikin:bars;
   const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,step=plotWidth/view.count;
-  canvas.setAttribute('aria-label',chartAccessibleLabel({symbol,bars,start:view.start,end:view.end,style,indicators:indicatorIds.filter(id=>$(id).checked).map(id=>id.slice(5))}));
+  canvas.setAttribute('aria-label',chartAccessibleLabel({symbol,bars,start:view.start,end:view.end,style,indicators:indicatorIds.filter(id=>$(id).checked).map(id=>id.slice(5))})+(aiAnnotations.length?'. סימוני AI זמניים, מועמדים לבדיקה: '+aiAnnotations.map(item=>item.label).join('; '):''));
   let min=Math.min(...visible.map(b=>b.low)),max=Math.max(...visible.map(b=>b.high));
   if(style==='baseline'){min=Math.min(min,bars[0].close);max=Math.max(max,bars[0].close)}
   const overlays=[['ma20','chartMA20','#fbbf24'],['ma150','chartMA150','#a78bfa'],['ma50','chartMA50','#fb923c'],['ma100','chartMA100','#22d3ee'],['ma200','chartMA200','#f472b6'],['ema50','chartEMA50','#60a5fa'],['bbUpper','chartBB20','#f472b6'],['bbLower','chartBB20','#f472b6'],['ma20','chartBB20','#f472b6'],['supertrendUp','chartSupertrend',colors.up],['supertrendDown','chartSupertrend',colors.down],['vwap','chartVWAP','#f97316'],['tenkan','chartIchimoku','#22d3ee'],['kijun','chartIchimoku','#c084fc'],['cloudA','chartIchimoku','#4ade80'],['cloudB','chartIchimoku','#fb7185']];
@@ -111,6 +144,17 @@ export function initLocalChart(){
     if(type==='measure'){const value=drawingMeasurement(a,b);ctx.font='12px system-ui';ctx.textAlign='left';const text=(value.percent===null?'out of range':(value.percent>=0?'+':'')+value.percent.toFixed(2)+'%')+' · Δ '+label(value.change)+' · '+value.bars+' bars',tx=Math.max(left+4,Math.min(width-right-ctx.measureText(text).width-4,(x(a.index)+x(b.index))/2)),ty=Math.max(top+14,Math.min(bottom-8,(y(a.price)+y(b.price))/2-10));ctx.fillStyle='#0b1626ee';ctx.fillRect(tx-3,ty-10,ctx.measureText(text).width+6,20);ctx.fillStyle=value.change>=0?colors.up:colors.down;ctx.fillText(text,tx,ty)}
    }ctx.stroke();
   }
+  // AI analysis is a transient layer: it never enters user drawing history or storage.
+  const byDate=new Map(bars.map((bar,index)=>[bar.date,index]));
+  for(const annotation of aiAnnotations){
+   const points=annotation.points.map(point=>({index:byDate.get(point.date),price:point.price}));
+   if(Math.max(...points.map(point=>point.index))<view.start||Math.min(...points.map(point=>point.index))>=view.end)continue;
+   ctx.strokeStyle=annotation.kind==='support'?'#34d399':annotation.kind==='resistance'?'#fb923c':'#fbbf24';ctx.lineWidth=2;ctx.setLineDash([5,3]);ctx.beginPath();
+   points.forEach((point,index)=>{if(index)ctx.lineTo(x(point.index),y(point.price));else ctx.moveTo(x(point.index),y(point.price))});ctx.stroke();ctx.setLineDash([]);
+   const nearest=points.find(point=>point.index>=view.start&&point.index<view.end)||points[0],anchor={index:Math.max(view.start,Math.min(view.end-1,nearest.index)),price:nearest.price},text='AI · מועמד · '+annotation.label;ctx.font='11px system-ui';ctx.textAlign='left';
+   const textWidth=Math.min(plotWidth-8,ctx.measureText(text).width),tx=Math.max(left+4,Math.min(width-right-textWidth-4,x(anchor.index))),ty=Math.max(top+12,Math.min(bottom-10,y(anchor.price)-9));
+   ctx.fillStyle='#0b1626ed';ctx.fillRect(tx-3,ty-9,textWidth+6,18);ctx.fillStyle='#fde68a';ctx.fillText(text,tx,ty,Math.max(1,plotWidth-8));
+  }
   if(firstPoint){ctx.fillStyle='#60a5fa';ctx.beginPath();ctx.arc(x(firstPoint.index),y(firstPoint.price),4,0,Math.PI*2);ctx.fill()}
   const last=visible.at(-1);ctx.strokeStyle='#2dd4bf88';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(left,y(last.close));ctx.lineTo(width-right,y(last.close));ctx.stroke();ctx.restore();ctx.setLineDash([]);
   ctx.fillStyle=colors.text;ctx.font='10px system-ui';ctx.textAlign='left';ctx.fillText(visible[0].date.slice(0,16),left,height-12);ctx.textAlign='right';ctx.fillText(last.date.slice(0,16),width-right,height-12);
@@ -141,6 +185,22 @@ export function initLocalChart(){
  window.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel.classList.contains('chart-expanded')){panel.classList.remove('chart-expanded');$('chartFullscreen').textContent='מסך מלא';draw()}});
  window.addEventListener('resize',()=>draw(),{passive:true});window.addEventListener('asaf:tab',()=>requestAnimationFrame(()=>draw()));
  window.addEventListener('asaf:personal-loaded',event=>{if(event.detail?.section==='chartPreferences'){try{const saved=JSON.parse(localStorage.getItem(preferenceKey)||'{}');for(const id of indicatorIds)if(typeof saved[id]==='boolean')$(id).checked=saved[id];if(chartStyles.includes(saved.style))$('chartStyle').value=saved.style;if($('chartStyle').value==='heikin'&&!heikin){$('chartStyle').value='candles';$('chartStyleStatus').textContent='נדרשים נתוני פתיחה מלאים ל-Heikin Ashi.'}}catch{}draw()}else if(event.detail?.section==='drawings'){firstPoint=null;restoreDrawings();history.reset(lines);historyButtons();draw()}});
+ function clearAnnotations(){aiAnnotations=[];draw();return {annotationCount:0}}
+ function applyActions(actions){
+  const validated=validateChartRenderActions(actions,bars);let preferencesChanged=false;
+  for(const action of validated){
+   if(action.type==='indicator'){$('chart'+action.indicator).checked=action.enabled;preferencesChanged=true}
+   else if(action.type==='style'){$('chartStyle').value=action.style;preferencesChanged=true}
+   else if(action.type==='clear_annotations')aiAnnotations=[];
+   else if(action.type==='annotations')aiAnnotations=action.items;
+  }
+  if(validated.some(action=>action.type==='annotations')&&aiAnnotations.length){
+   const indices=new Map(bars.map((bar,index)=>[bar.date,index])),anchors=aiAnnotations.flatMap(item=>item.points.map(point=>indices.get(point.date))),first=Math.min(...anchors),last=Math.max(...anchors),span=last-first+1,padding=Math.max(2,Math.ceil(span*.08));
+   count=Math.min(bars.length,Math.max(12,span+padding*2));const start=Math.max(0,Math.min(bars.length-count,Math.floor((first+last+1-count)/2)));offset=bars.length-start-count;hover=null;drag=null;
+  }
+  if(preferencesChanged){$('chartStyleStatus').textContent=$('chartStyle').value==='heikin'?'Heikin Ashi מציג מחירים ממוצעים; המדדים והניתוח נשארים לפי הנרות המקוריים.':'';savePreferences()}
+  draw();return {applied:validated.map(action=>action.type==='annotations'?{type:action.type,count:action.items.length}:action),annotationCount:aiAnnotations.length};
+ }
  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>draw()).observe(panel);
- return {settings(){return {style:$('chartStyle').value,indicators:indicatorIds.filter(id=>$(id).checked).map(id=>id.slice(5))}},redraw:()=>draw(),snapshot(){if(!bars.length||panel.hidden)throw Error('אין נתוני גרף לצילום');draw(false);const poster=document.createElement('canvas'),dpr=Math.min(window.devicePixelRatio||1,2);poster.width=canvas.width;poster.height=canvas.height+80*dpr;const p=poster.getContext('2d');p.fillStyle=colors.background;p.fillRect(0,0,poster.width,poster.height);p.fillStyle='#edf4ff';p.font=16*dpr+'px system-ui';p.fillText('ASAF TRADING PRO | '+symbol,12*dpr,25*dpr);p.font=11*dpr+'px system-ui';p.fillText('Last loaded bar: '+bars.at(-1).date+' | User/provider data; not guaranteed live',12*dpr,48*dpr);p.drawImage(canvas,0,65*dpr);return poster.toDataURL('image/png')},setData(nextSymbol,nextBars){drag=null;symbol=String(nextSymbol||'');bars=Array.isArray(nextBars)?nextBars:[];indicators=chartIndicators(bars);try{heikin=heikinAshi(bars)}catch{heikin=null}if($('chartStyle').value==='heikin'&&!heikin)$('chartStyle').value='candles';count=60;offset=0;lines=[];restoreDrawings();history.reset(lines);historyButtons();hover=null;firstPoint=null;drawing=false;$('chartTrend').setAttribute('aria-pressed','false');panel.hidden=!bars.length;$('chartEmpty').hidden=!!bars.length;anchorDefaults();title.textContent='גרף מקורי · '+symbol+' · נר אחרון '+(bars.at(-1)?.date||'');tooltip.textContent='גרור לגלילה, השתמש בזום או בחר נר לצפייה בנתונים.';metrics();if(bars.length)requestAnimationFrame(()=>draw())},clear(){drag=null;bars=[];canvas.setAttribute('aria-label',chartAccessibleLabel());indicators=chartIndicators([]);hover=null;geometry=null;lines=[];history.reset();historyButtons();anchorDefaults();panel.hidden=true;$('chartEmpty').hidden=false;metrics()}};
+ return {applyActions,clearAnnotations,settings(){return {style:$('chartStyle').value,indicators:indicatorIds.filter(id=>$(id).checked).map(id=>id.slice(5))}},redraw:()=>draw(),snapshot(){if(!bars.length||panel.hidden)throw Error('אין נתוני גרף לצילום');draw(false);const poster=document.createElement('canvas'),dpr=Math.min(window.devicePixelRatio||1,2);poster.width=canvas.width;poster.height=canvas.height+80*dpr;const p=poster.getContext('2d');p.fillStyle=colors.background;p.fillRect(0,0,poster.width,poster.height);p.fillStyle='#edf4ff';p.font=16*dpr+'px system-ui';p.fillText('ASAF TRADING PRO | '+symbol,12*dpr,25*dpr);p.font=11*dpr+'px system-ui';p.fillText('Last loaded bar: '+bars.at(-1).date+' | User/provider data; not guaranteed live',12*dpr,48*dpr);p.drawImage(canvas,0,65*dpr);return poster.toDataURL('image/png')},setData(nextSymbol,nextBars){drag=null;aiAnnotations=[];symbol=String(nextSymbol||'');bars=Array.isArray(nextBars)?nextBars:[];indicators=chartIndicators(bars);try{heikin=heikinAshi(bars)}catch{heikin=null}if($('chartStyle').value==='heikin'&&!heikin)$('chartStyle').value='candles';count=60;offset=0;lines=[];restoreDrawings();history.reset(lines);historyButtons();hover=null;firstPoint=null;drawing=false;$('chartTrend').setAttribute('aria-pressed','false');panel.hidden=!bars.length;$('chartEmpty').hidden=!!bars.length;anchorDefaults();title.textContent='גרף מקורי · '+symbol+' · נר אחרון '+(bars.at(-1)?.date||'');tooltip.textContent='גרור לגלילה, השתמש בזום או בחר נר לצפייה בנתונים.';metrics();if(bars.length)requestAnimationFrame(()=>draw())},clear(){drag=null;aiAnnotations=[];bars=[];canvas.setAttribute('aria-label',chartAccessibleLabel());indicators=chartIndicators([]);hover=null;geometry=null;lines=[];history.reset();historyButtons();anchorDefaults();panel.hidden=true;$('chartEmpty').hidden=false;metrics()}};
 }

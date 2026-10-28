@@ -13,8 +13,8 @@ $('loadChart').textContent='פתח';$('chartChat').textContent='נתח גרף';
 const dataButton=document.createElement('button');dataButton.type='button';dataButton.className='terminal-data-button';dataButton.textContent='נתוני שוק';header.append(dataButton);
 const accountButton=document.createElement('button');accountButton.type='button';accountButton.className='terminal-account-button';accountButton.textContent='התחברות';header.append(accountButton);
 const globalTools=document.createElement('details');globalTools.className='terminal-global-tools';const globalSummary=document.createElement('summary');globalSummary.textContent='עזרה ומצב שירותים';main.querySelector('.tabs').before(globalTools);globalTools.append(globalSummary,$('keyboardHelp'),document.querySelector('.server-tools'));
-const connection=$('charts').querySelector('.connection-settings'),imports=$('chartCsv').closest('.row');
-const dataTools=document.createElement('details');dataTools.id='terminalDataTools';dataTools.className='terminal-data-tools';const dataSummary=document.createElement('summary');dataSummary.textContent='מקור נתונים וכלים מתקדמים';dataTools.append(dataSummary);connection.before(dataTools);dataTools.append(connection,imports,$('pasteCsvDetails'),$('referenceChart'));
+const connection=$('charts').querySelector('.connection-settings');
+const dataTools=document.createElement('details');dataTools.id='terminalDataTools';dataTools.className='terminal-data-tools';const dataSummary=document.createElement('summary');dataSummary.textContent='מקור נתונים וכלים מתקדמים';dataTools.append(dataSummary);connection.before(dataTools);dataTools.append(connection,$('referenceChart'));
 function selectTab(id){document.querySelector('[data-tab="'+id+'"]').click()}
 dataButton.onclick=()=>{selectTab('charts');dataTools.open=!dataTools.open;if(dataTools.open)connection.open=true;dataSummary.focus()};
 // Collapsible statistics and indicators leave the actual chart room to breathe.
@@ -26,7 +26,7 @@ const chat=$('chat');chat.querySelector('h2').textContent='ASAF AI';
 const context=document.createElement('p');context.id='terminalAIContext';context.className='terminal-ai-context';context.setAttribute('role','status');context.textContent='אין נתוני גרף מחוברים. הניתוח ישתמש בגרף הפתוח כשיהיו נתונים.';
 const auto=document.createElement('label');auto.className='terminal-auto-chart';auto.innerHTML='<input id="chatAutoChart" type="checkbox" checked> צרף את הגרף הפתוח אוטומטית';
 const account=document.createElement('details');account.className='terminal-account';const summary=document.createElement('summary');summary.textContent='כניסה ופרטי חשבון';account.append(summary,chat.querySelector('.member-panel'));
-const advanced=document.createElement('details');advanced.className='terminal-ai-advanced';const advancedSummary=document.createElement('summary');advancedSummary.textContent='כלי שיחה, מקורות וצירוף קובץ חלופי';advanced.append(advancedSummary);
+const advanced=document.createElement('details');advanced.className='terminal-ai-advanced';const advancedSummary=document.createElement('summary');advancedSummary.textContent='כלי שיחה ומקורות';advanced.append(advancedSummary);
 const log=$('chatLog'),form=$('chatForm'),status=$('chatStatus'),request=$('chatRequestState');
 for(const node of [...chat.children])if(![chat.querySelector('h2'),log,form,status,request].includes(node))advanced.append(node);
 chat.append(context,auto,account,log,status,request,form,advanced);
@@ -66,7 +66,8 @@ focusButton.onclick=()=>chartFocus(!document.body.classList.contains('terminal-c
 // Opening the AI explicitly always brings its panel back.
 for(const button of [accountButton,$('chartChat')])button.addEventListener('click',()=>chartFocus(false));
 
-$('chatForm').querySelector('button').textContent='שלח';$('chatInput').placeholder='כתוב הודעה… Enter לשליחה, Shift+Enter לשורה חדשה';
+$('chatForm').querySelector('button').textContent='שלח';$('chatInput').placeholder='פתח AAPL, הוסף ממוצע 20 וסמן תמיכות…';
+$('askAsaf').onclick=()=>{selectTab('chat');chartFocus(false);$('chatInput').focus()};
 $('chatForm').before($('cancelChat'));
 
 $('chatIncludeNews').closest('label').classList.add('terminal-news-context');$('chatIncludeNews').closest('label').lastChild.textContent=' צרף כותרות אחרונות מהמטמון — ללא קריאת כתבות מלאות';auto.after($('chatIncludeNews').closest('label'));

@@ -1,6 +1,5 @@
 import {filterCachedNews} from './news-search.mjs';
 import {authState,refreshAuth} from './auth-ui.mjs';
-import {prepareChartData} from "./chart-data.mjs";
 import {normalizeSymbol,watchRecords,parseWorkspaceBackup,crossing} from './workspace-core.mjs';
 const $=id=>document.getElementById(id),watchKey='asaf_watch_v2';let watch=[];
 try{watch=watchRecords(JSON.parse(localStorage.getItem(watchKey)||localStorage.getItem('asaf_watch')||'["NASDAQ:AAPL","NASDAQ:NVDA","NASDAQ:MSFT"]'))}catch{}
@@ -23,7 +22,6 @@ $('workspaceExport').onclick=()=>download('asaf-workspace-backup.json','applicat
 $('workspaceImport').onchange=async e=>{try{const f=e.target.files?.[0];if(!f)return;if(f.size>500000)throw Error('גיבוי גדול מדי');const incoming=parseWorkspaceBackup(await f.text());watch=watchRecords([...watch,...incoming]);persist();$('watchStatus').textContent='הגיבוי מוזג. רשומות קיימות נשמרו; כפילויות לא נוספו.'}catch(err){$('watchStatus').textContent='הייבוא נכשל: '+err.message}finally{e.target.value=''}};
 // A local crossing is checked only when fresh bars are loaded. This is not a live alert service.
 window.addEventListener('asaf:dataset-ready',e=>{const {symbol,bars}=e.detail||{};if(!Array.isArray(bars)||bars.length<2)return;$('activeSymbol').textContent=symbol;const item=watch.find(x=>x.symbol.split(':').at(-1)===symbol.split(':').at(-1));const direction=item?.level?crossing(bars.at(-2).close,bars.at(-1).close,item.level):null;$('levelStatus').textContent=direction?'נתוני '+symbol+' חצו את '+item.level+' '+(direction==='up'?'כלפי מעלה':'כלפי מטה')+' בנר '+bars.at(-1).date+'. זו בדיקה של הנתונים שנטענו בלבד.':''});
-$('pasteCsvForm').onsubmit=e=>{e.preventDefault();try{const {symbol,bars,interval}=prepareChartData($('pasteCsvText').value,$('pasteCsvSymbol').value);window.dispatchEvent(new CustomEvent('asaf:load-dataset',{detail:{symbol,bars,source:'CSV',interval}}));$('pasteCsvStatus').textContent='נטענו '+bars.length+' נרות עבור '+symbol+'.';$('pasteCsvText').value='';$('pasteCsvDetails').open=false;document.querySelector('[data-tab="charts"]').click()}catch(err){$('pasteCsvStatus').textContent=err.message}};
 $('symbol').addEventListener('input',()=>{$('activeSymbol').textContent=normalizeSymbol($('symbol').value)||'בחר מניה'});$('activeSymbol').textContent=normalizeSymbol($('symbol').value);render();
 // Keyboard shortcuts never intercept text entry or browser modifier shortcuts.
 document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.target.closest('input,textarea,select,[contenteditable="true"]'))return;if(e.key==='/'){e.preventDefault();document.querySelector('[data-tab="charts"]').click();$('symbol').focus();$('symbol').select()}else if(e.key==='?'){$('keyboardHelp').open=!$('keyboardHelp').open}});
