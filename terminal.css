@@ -31,3 +31,14 @@
 @media(min-width:901px){.terminal-app[data-view=chat] .terminal-stage{display:block;max-width:1000px;margin:0 auto}.terminal-app[data-view=chat] .terminal-watch,.terminal-app[data-view=chat] .terminal-center{display:none}.terminal-app[data-view=chat] .terminal-ai{position:static;display:block!important}.terminal-app[data-view=chat] #chatLog{height:58vh;min-height:360px}.terminal-app[data-view=chat] .bubble{font-size:15px;line-height:1.8;max-width:88%}.terminal-app[data-view=chat] #chatInput{font-size:16px}.terminal-app[data-view=chat] .bubble.user{margin-inline-start:auto;width:fit-content}}
 
 .terminal-news-context{font-size:11px;display:flex;align-items:center;gap:7px;line-height:1.6;color:#b8c4d2}.terminal-app #newsFeed .source-card{display:flex;flex-direction:column;gap:12px}.terminal-app #newsFeed .source-card button{align-self:flex-start;font-size:11px;padding:8px 10px}
+
+/* Mobile controls remain readable on focus; dynamic viewport units follow
+   browser chrome changes. Keyboard behavior still needs device acceptance. */
+@media(max-width:900px){
+ .terminal-app input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),.terminal-app select,.terminal-app textarea{font-size:16px!important}
+ .terminal-app #memberLogin input,.terminal-app #memberLogin button,.terminal-app #googlePrepare,.terminal-app #chatForm button{min-height:44px}
+ .terminal-app #chat{min-height:calc(100vh - 210px);min-height:calc(100dvh - 210px)}
+ .terminal-app #chatLog{min-height:200px;height:clamp(200px,48vh,390px);height:clamp(200px,48dvh,390px)}
+ .terminal-app #chatForm{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}
+ .terminal-app .terminal-layout-menu{max-height:calc(100vh - 128px);max-height:calc(100dvh - 128px);overflow-y:auto}
+}

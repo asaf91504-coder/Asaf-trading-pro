@@ -101,12 +101,15 @@ async function ask(q,extra={}){
  const requestState=$('chatRequestState');
  if(requestState)requestState.textContent='ממתין למודל החינמי…';
  const activeController=new AbortController();requestController=activeController;
- const requestTimeout=setTimeout(()=>activeController.abort(),26000);
+ let timedOut=false;
+ const requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},26000);
  say("user",question);
  const waiting=say("bot","כותב תשובה…");
  try{
   await refreshAuth();
-  if(epoch!==conversationEpoch||activeController.signal.aborted)return;
+  if(epoch!==conversationEpoch)return;
+  if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
+  if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
   if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
   let code=authState.enabled?"":sessionStorage.getItem(freeAiAccessKey)||"";
   if(!authState.enabled&&!code){
@@ -119,7 +122,8 @@ async function ask(q,extra={}){
   let image=null;
   const candidate=chartAttachment({manual:extra.image||pendingImage,auto:$('chatAutoChart')?.checked===true,hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
-  if(epoch!==conversationEpoch||activeController.signal.aborted)return;
+  if(epoch!==conversationEpoch)return;
+  if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   const response=await fetch("/.netlify/functions/free-chat",{
    method:"POST",signal:activeController.signal,
    headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},
@@ -155,7 +159,16 @@ async function ask(q,extra={}){
   setAiStatus("✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך");
  }catch(e){
   if(epoch!==conversationEpoch)return;
-  waiting.textContent="⚠️ "+(e.name==="AbortError"?"הבקשה ארכה יותר מדי או בוטלה. אפשר לנסות שוב.":e.message);
+  waiting.textContent="⚠️ "+(e.name==="AbortError"?(timedOut?"הזמן להמתנה לתשובה הסתיים.":"הבקשה בוטלה."):e.message);
+  // Recover text locally, without making another request or spending quota.
+  // The next send is an explicit new request using the then-visible context.
+  if(!message.value.trim()){message.value=question;message.dispatchEvent(new Event('input'))}
+  const recovery=document.createElement('p');
+  recovery.textContent=(extra.newsArticleId?'כדי לנסות שוב עם אותה כותרת, פתח אותה מחדש בלשונית החדשות. ':'')+'השאלה נשמרה כאן. לפני שליחה מחדש, בדוק את המניה, הגרף והקבצים המצורפים; ההודעה הבאה תשתמש בבחירה הנוכחית.';
+  waiting.append(recovery);
+  const edit=document.createElement('button');edit.type='button';edit.textContent='העתק את השאלה לעריכה';
+  edit.addEventListener('click',()=>{if(message.value.trim()&&message.value.trim()!==question){if(!window.confirm('להחליף את הטיוטה הנוכחית בשאלה הזו?'))return}message.value=question;message.dispatchEvent(new Event('input'));message.focus()});
+  waiting.append(edit);
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
  }finally{
   clearTimeout(requestTimeout);
@@ -305,7 +318,7 @@ $("downloadChart").addEventListener("click",()=>{
 form.addEventListener("submit",event=>{
  event.preventDefault();
  const q=message.value.trim();
- if(!q)return;
+ if(!q||chatBusy)return;
  message.value="";
  ask(q);
 });
