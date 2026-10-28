@@ -128,7 +128,6 @@ async function ask(q,extra={}){
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
-  if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
   const command=!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(question,{currentSymbol:normSymbol()}):null;
   if(command?.recognized){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
@@ -144,6 +143,7 @@ async function ask(q,extra={}){
    }
    waiting.textContent+='\n\nכותב ניתוח על הנתונים שנבחרו…';
   }
+  if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
   let code=authState.enabled?"":sessionStorage.getItem(freeAiAccessKey)||"";
   if(!authState.enabled&&!code){
    code=prompt("הכנס קוד גישה פרטי ל-AI החינמי (לא API key):")||"";

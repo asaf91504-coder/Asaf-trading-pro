@@ -43,3 +43,7 @@ test('same-symbol dataset replacement prevents stale model actions from executin
  s.ctx.fetch=async()=>{s.ctx.chartRevision++;return {ok:true,json:async()=>({answer:'תכנון',actions:[{type:'indicator',indicator:'MA20',enabled:true}]})}};
  await s.ctx.ask('question');assert.equal(executions,0);assert.match(s.bubbles[1].textContent,/נתוני הגרף השתנו/);
 });
+test('local display commands work without sign-in but model requests remain protected',async()=>{
+ const local=setup();local.ctx.authState.authenticated=false;local.ctx.parseChartCommand=parseChartCommand;local.ctx.runChatActions=async()=>({changed:true,messages:['הופעל MA20.']});await local.ctx.ask('הוסף MA20');assert.match(local.bubbles[1].textContent,/הופעל MA20/);assert.equal(local.calls(),0);
+ const remote=setup();remote.ctx.authState.authenticated=false;await remote.ctx.ask('explain market');assert.equal(remote.calls(),0);assert.match(remote.bubbles[1].textContent,/להיכנס לחשבון/);
+});
