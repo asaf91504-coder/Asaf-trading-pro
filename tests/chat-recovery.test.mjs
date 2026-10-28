@@ -5,11 +5,11 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const askSource=source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')"));
 function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
- const nodes=new Map(),bubbles=[];let calls=0;
+ const nodes=new Map(),bubbles=[];let calls=0;const payloads=[];
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
- const ctx={message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async()=>{calls++;throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,calls:()=>calls};
+ const ctx={message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
+ vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,payloads,calls:()=>calls};
 }
 test('failed request restores draft without an automatic retry',async()=>{
  const s=setup();await s.ctx.ask('my question');assert.equal(s.message.value,'my question');assert.equal(s.calls(),1);assert.equal(s.button.disabled,false);assert.match(s.bubbles[1].children[0].textContent,/בבחירה הנוכחית/);
@@ -22,4 +22,8 @@ test('cancellation during auth restores draft and completes pending bubble',asyn
 });
 test('unavailable auth fails closed but retains prompt',async()=>{
  const s=setup({unavailable:true});await s.ctx.ask('keep me');assert.equal(s.calls(),0);assert.equal(s.message.value,'keep me');assert.match(s.bubbles[1].textContent,/לא ניתן לבדוק/);
+});
+
+test('explicit retry preserves original request including symbol and headline',async()=>{
+ const s=setup();await s.ctx.ask('headline question',{newsArticleId:'chosen'});assert.equal(s.calls(),1);s.ctx.normSymbol=()=> 'MSFT';const retry=s.bubbles[1].children[2];retry.click();await new Promise(resolve=>setImmediate(resolve));assert.equal(s.calls(),2);assert.deepEqual(s.payloads[1],s.payloads[0]);assert.equal(s.payloads[1].symbol,'AAPL');assert.equal(s.payloads[1].newsArticleId,'chosen');
 });

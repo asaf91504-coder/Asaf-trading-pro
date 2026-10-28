@@ -101,6 +101,7 @@ async function ask(q,extra={}){
  const requestState=$('chatRequestState');
  if(requestState)requestState.textContent='ממתין למודל החינמי…';
  const activeController=new AbortController();requestController=activeController;
+ let preparedPayload=extra.retryPayload||null;
  let timedOut=false;
  const requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},26000);
  say("user",question);
@@ -124,10 +125,7 @@ async function ask(q,extra={}){
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
-  const response=await fetch("/.netlify/functions/free-chat",{
-   method:"POST",signal:activeController.signal,
-   headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},
-   body:JSON.stringify({
+  preparedPayload=preparedPayload||{
     message:question,
     symbol:activeData?.symbol||normSymbol(),
     source:activeData?.source||"none",
@@ -140,8 +138,8 @@ async function ask(q,extra={}){
     chartSettings:activeData?localChart.settings():null,
     image,
     history:conversation.slice(-8)
-   })
-  });
+  };
+  const response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
   let data;try{data=await response.json()}catch{throw Error("פונקציית AI לא נפרסה ל-Netlify. צריך לחבר את GitHub ולפרוס את האתר.")}
   if(!response.ok){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
@@ -151,6 +149,8 @@ async function ask(q,extra={}){
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   waiting.textContent=data.answer;
+  if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
+
   conversation.push({role:"user",content:question},{role:"assistant",content:data.answer});
   conversation=conversation.slice(-8);
   pendingImage=null;
@@ -169,6 +169,7 @@ async function ask(q,extra={}){
   const edit=document.createElement('button');edit.type='button';edit.textContent='העתק את השאלה לעריכה';
   edit.addEventListener('click',()=>{if(message.value.trim()&&message.value.trim()!==question){if(!window.confirm('להחליף את הטיוטה הנוכחית בשאלה הזו?'))return}message.value=question;message.dispatchEvent(new Event('input'));message.focus()});
   waiting.append(edit);
+  if(preparedPayload){const retry=document.createElement('button');retry.type='button';retry.textContent='נסה שוב עם אותם נתונים';retry.addEventListener('click',()=>{if(chatBusy)return;ask(question,{...extra,retryPayload:preparedPayload})});waiting.append(retry)}
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
  }finally{
   clearTimeout(requestTimeout);
