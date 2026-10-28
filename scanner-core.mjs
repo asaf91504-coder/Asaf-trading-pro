@@ -15,7 +15,7 @@ export function scanBars(symbol,bars){
  const indicators=indicatorSnapshot(bars);
  return {symbol,bars,research:patternResearch(bars),summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram,stochasticK:indicators.stochastic1433.k,stochasticD:indicators.stochastic1433.d,obv:indicators.obv,obvPrevious:indicators.obvPrevious,adx14:indicators.dmi14.adx,plusDI14:indicators.dmi14.plusDI,minusDI14:indicators.dmi14.minusDI,supertrend:indicators.supertrend103.value,supertrendDirection:indicators.supertrend103.direction},symbolFrom:'provider'};
 }
-export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,adxEnabled=false,minADX=25,diDirection='any',supertrendDirection='any',pattern='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
+export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,adxEnabled=false,minADX=25,diDirection='any',supertrendDirection='any',pattern='any',scenarioSide='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
  const a=record.summary,reasons=[];
  if(a.close<=minPrice)reasons.push('מחיר אינו מעל '+minPrice);
  if(above20&&!a.aboveMA20)reasons.push('מתחת ל-MA20 או שווה לו');
@@ -38,13 +38,14 @@ export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=
   if(!prior||last.close<=prior.close)reasons.push('הסגירה אינה מעל הסגירה הקודמת');
   if(a.volumeRatio===null||a.volumeRatio<=1)reasons.push('אין מחזור מעל ממוצע 20 הימים הקודמים');
  }
+ if(!['any','long','short'].includes(scenarioSide))reasons.push('כיוון תרחיש אינו תקין');
  if(pattern!=='any'&&!Object.hasOwn(patternLabels,pattern))reasons.push('סוג תבנית אינו תקין');
  if(!Number.isFinite(minMeasuredMove)||minMeasuredMove<0||minMeasuredMove>1000||!Number.isFinite(minScenarioRR)||minScenarioRR<0||minScenarioRR>100)reasons.push('ספי תרחיש אינם תקינים');
- if(pattern!=='any'||crossedOnly||minMeasuredMove>0||minScenarioRR>0){
+ if(pattern!=='any'||scenarioSide!=='any'||crossedOnly||minMeasuredMove>0||minScenarioRR>0){
   const candidates=(record.research?.candidates||[]).filter(c=>pattern==='any'||c.kind===pattern);
   if(!record.research?.available)reasons.push('אין נתוני מחקר יומיים לתבניות');
   else if(!candidates.length)reasons.push('לא נמצא מועמד לתבנית שנבחרה');
-  else if(!candidates.some(c=>(!crossedOnly||c.stage==='crossed')&&(!(minMeasuredMove>0||minScenarioRR>0)||(c.scenario&&c.scenario.movePercent>=minMeasuredMove&&c.scenario.riskReward>=minScenarioRR))))reasons.push('המועמדים אינם עומדים בחצייה או בספי התרחיש שנבחרו');
+  else if(!candidates.some(c=>(!crossedOnly||c.stage==='crossed')&&(scenarioSide==='any'||c.scenario?.side===scenarioSide)&&(!(minMeasuredMove>0||minScenarioRR>0)||(c.scenario&&c.scenario.movePercent>=minMeasuredMove&&c.scenario.riskReward>=minScenarioRR))))reasons.push('המועמדים אינם עומדים בכיוון, בחצייה או בספי התרחיש שנבחרו');
  }
  return {matches:!reasons.length,reasons};
 }

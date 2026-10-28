@@ -1,7 +1,12 @@
 [build]
-  command = "node scripts/write-runtime-context.mjs"
+  # Tests run with an empty environment so production service credentials cannot
+  # leak into fixtures. Generate runtime context only after the test gate passes.
+  command = 'env -i PATH="$PATH" node --test tests/*.test.mjs && node scripts/write-runtime-context.mjs'
   publish = "."
   functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
 
 [[headers]]
   for = "/*"

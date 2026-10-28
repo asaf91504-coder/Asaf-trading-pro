@@ -3,7 +3,7 @@ import {personalData,personalKeys} from './personal-data.mjs';
 const $=id=>document.getElementById(id),key=personalKeys.scannerPresets;
 const read=()=>personalData('scannerPresets',JSON.parse(localStorage.getItem(key)||'[]'));
 const host=document.createElement('details');host.className='scanner-preset-tools panel';const summary=document.createElement('summary');summary.textContent='תבניות סריקה שמורות';
-const help=document.createElement('p');help.textContent='החל הגדרות על הנרות שכבר נטענו. אין כאן פנייה לספק. תבנית אסף: מחיר מעל $5, מעל MA20, סגירה עולה במחזור מוגבר, יעד מדוד של לפחות 15% ומיון ATR. שווי שוק של מיליארד דולר אינו נבדק בלי נתוני חברות; יעד מדוד אינו הבטחת תשואה.';
+const help=document.createElement('p');help.textContent='החל הגדרות על הנרות שכבר נטענו. אין כאן פנייה לספק. תבנית אסף: מחיר מעל $5, מעל MA20, סגירה עולה במחזור מוגבר, תרחיש לונג עם יעד מדוד של לפחות 15% ומיון ATR. שווי שוק של מיליארד דולר אינו נבדק בלי נתוני חברות; יעד מדוד אינו הבטחת תשואה.';
 const select=document.createElement('select');select.setAttribute('aria-label','תבנית סריקה שמורה');const name=document.createElement('input');name.maxLength=60;name.placeholder='שם לתבנית';name.setAttribute('aria-label','שם תבנית סריקה');
 const row=document.createElement('div');row.className='row';const status=document.createElement('p');status.setAttribute('role','status');let lastRemoved=null;
 function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{try{fn()}catch(e){status.textContent=e.message}};row.append(b);return b}

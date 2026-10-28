@@ -18,6 +18,8 @@ const normSymbol=()=>String(chartSymbol.value||"").trim().toUpperCase().replace(
 function say(role,content){
  const item=document.createElement("div");
  item.className="bubble "+role;
+ item.setAttribute('role','group');
+ item.setAttribute('aria-label',role==='user'?'אתה':'ASAF AI');
  item.textContent=content;
  log.append(item);
  log.scrollTop=log.scrollHeight;
