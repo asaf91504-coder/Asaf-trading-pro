@@ -15,7 +15,7 @@ export function stockContext(symbol,bars,meta={}) {
   const changePct=prev.close>0?(last.close-prev.close)/prev.close*100:null;
   const candleRange=last.high-last.low,body=Math.abs(last.close-(last.open??last.close));
   return {
-    ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,source:meta.source==="Twelve Data"?"Twelve Data":"CSV",interval:typeof meta.interval==="string"?meta.interval:"1day",receivedAt:meta.receivedAt||null,exchangeTimezone:meta.exchangeTimezone||null,
+    ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,source:["Twelve Data","CoinLore"].includes(meta.source)?meta.source:"CSV",interval:typeof meta.interval==="string"?meta.interval:"1day",receivedAt:meta.receivedAt||null,exchangeTimezone:meta.exchangeTimezone||null,
     dailyChangePercent:changePct===null?null:Math.round(changePct*100)/100,
     rangeLow20:rangeLow,priorHigh20:priorHigh,rangeHigh50,rangeLow50,
     candleDirection:last.open==null?"לא ידוע":last.close>last.open?"עולה":last.close<last.open?"יורד":"דוג'י",
@@ -23,13 +23,13 @@ export function stockContext(symbol,bars,meta={}) {
     hasVolume:typeof last.volume==="number"
   };
 }
-const subjectGuide=`אני מנתח שוק ההון בלבד: מניות, מדדים, קריפטו, מט"ח, תבניות טכניות, דוחות, נפח מסחר וניהול סיכונים. לניתוח גרף ספציפי צריך לטעון CSV של נרות OHLC; אני לא רואה את גרף TradingView מתוך המסגרת שלו.`;
+const subjectGuide=`אני מנתח שוק ההון בלבד: מניות, מדדים, קריפטו, מט"ח, תבניות טכניות, דוחות, נפח מסחר וניהול סיכונים. לניתוח גרף ספציפי נדרשים נרות OHLC ממקור מחובר; אין גישה לנתוני TradingView מתוך המסגרת שלו.`;
 export function answerStockQuestion(question, context=null) {
   const q=String(question||"").trim().toLowerCase();
   if (!q) return "שאל אותי על מגמה, פריצה, תמיכה, התנגדות, מחזור, ATR או ניתוח מלא של מניה.";
   if(includes(q,["מזג אוויר","מתכון","בדיחה","בישול","סרט","כדורגל","אהבה","football","recipe","weather"])) return "אני מתמחה בשוק ההון בלבד. אפשר לשאול על גרפים, מניות, מחזורים, אינדיקטורים, דוחות או ניהול סיכונים.";
   if(!context) {
-    const prefix="אין עדיין נתוני גרף מחוברים. לא ניתן לקבוע מה קורה במניה רק מסימול או מהתצוגה של TradingView. העלה CSV עם Date, Open, High, Low, Close, Volume (לפחות 21 ימים; ל-MA150 דרושים 150 ימים).";
+    const prefix="אין עדיין נתוני גרף מחוברים. לא ניתן לקבוע מה קורה במניה רק מסימול או מהתצוגה של TradingView. בקש לפתוח נכס ממקור נתונים מחובר. נדרשים לפחות 21 נרות; ל-MA150 דרושים 150 נרות.";
     if(includes(q,["מה זה atr","atr?","atr מה","atr14 מה"])) return "ATR14 מודד את טווח התנועה היומי הממוצע תוך התחשבות בפערים בין ימים. ATR אינו חוזה כיוון; משתמשים בו להערכת תנודתיות ומרחק סטופ.\n\n"+prefix;
     if(includes(q,["כוס וידית","cup and handle"])) return "כוס וידית היא תבנית אפשרית של בסיס מעוגל ותיקון קצר באזור השיא. נדרש מבנה מחיר, מחזור ואישור פריצה. בלי היסטוריית נרות לא ניתן לזהות אותה.\n\n"+prefix;
     if(includes(q,["דאבל בוטום","תחתית כפולה","double bottom"])) return "תחתית כפולה דורשת שתי נקודות שפל דומות, שיא ביניהן ופריצת קו הצוואר לאישור. אין להסיק שהמבנה קיים בלי נתוני גרף.\n\n"+prefix;
@@ -39,7 +39,7 @@ export function answerStockQuestion(question, context=null) {
   const c=context;
   const fromProvider=c.source==="Twelve Data";
   const isIntraday=!["1day","1week","1month"].includes(c.interval);
-  const sourceText=fromProvider?"Twelve Data, נתונים שעשויים להיות מעוכבים":"קובץ CSV שהועלה";
+  const sourceText=c.source==="CoinLore"?"CoinLore בלבד · מחקר פנימי · הנר האחרון עשוי להיות חלקי":fromProvider?"Twelve Data, נתונים שעשויים להיות מעוכבים":"קובץ CSV שהועלה";
   const timeframe=isIntraday?" (טווח "+c.interval+"; הממוצעים ופריצת 20 מתייחסים לנרות, לא לימים)":"";
   const title=`📈 ${c.symbol} | נר אחרון ${c.date} | ${c.bars} נרות | מקור: ${sourceText}${timeframe}`;
   const trend=`מגמה: סגירה ${fmt(c.close)}, MA20 ${fmt(c.sma20)} (${c.aboveMA20?"מעליו":"מתחתיו"}), MA150 ${fmt(c.sma150)} (${yes(c.aboveMA150)} מעליו).`;

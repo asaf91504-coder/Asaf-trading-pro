@@ -1,0 +1,16 @@
+{
+  "appId": "com.asaftradingpro.app",
+  "appName": "ASAF Trading Pro",
+  "webDir": "www",
+  "server": {
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

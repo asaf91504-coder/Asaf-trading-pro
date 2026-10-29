@@ -5,7 +5,7 @@ export const chartActionIndicators=Object.freeze(['MA20','MA150','EMA50','RSI14'
 export const chartActionPatterns=Object.freeze(['cup_handle','inverse_head_shoulders','head_shoulders','double_bottom','double_top','all']);
 export const maxChartActions=20;
 const indicatorSet=new Set(chartActionIndicators),patternSet=new Set(chartActionPatterns);
-const symbolRE=/^(?:(?:NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC):)?[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/;
+const symbolRE=/^(?:(?:NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC|COINLORE):)?[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/;
 const actionKeys={symbol:['type','symbol'],indicator:['type','indicator','enabled'],style:['type','style'],levels:['type','kind'],trendlines:['type'],pattern:['type','pattern'],clear_annotations:['type']};
 
 export function validateChartActions(value){
@@ -22,7 +22,9 @@ export function validateChartActions(value){
  });
 }
 
+const cryptoAliases=new Map([['BTC','COINLORE:BTCUSD'],['BTCUSD','COINLORE:BTCUSD'],['ETH','COINLORE:ETHUSD'],['ETHUSD','COINLORE:ETHUSD']]);
 const companies=[
+ ['COINLORE:BTCUSD',['ביטקוין','bitcoin','btc','btcusd']],['COINLORE:ETHUSD',['אתריום','אית׳ריום','ethereum','eth','ethusd']],
  ['NASDAQ:AAPL',['אפל','apple','aapl']],['NASDAQ:MSFT',['מיקרוסופט','microsoft','msft']],
  ['NASDAQ:NVDA',['אנבידיה','אנווידיה','נבידיה','nvidia','nvda']],['NASDAQ:TSLA',['טסלה','tesla','tsla']],
  ['NASDAQ:GOOGL',['גוגל','אלפבית','google','alphabet','googl']],['NASDAQ:AMZN',['אמזון','amazon','amzn']],
@@ -87,15 +89,18 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  const command=commandRE.test(text);
  const reservedBare=new Set([...chartActionIndicators.map(id=>id.toUpperCase()),'RSI','ATR','ADX','AI','CSV','OHLC','OHLCV','OK','HELLO','HI','YES','NO','THANKS']);
  const bareKnownCompany=companies.some(([,aliases])=>aliases.some(alias=>alias.toLowerCase()===text.toLowerCase()));
- const bareSymbol=bareKnownCompany||/^(?:NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC):[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/i.test(text)||(/^\$?[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/.test(text)&&(!reservedBare.has(text)||text.startsWith('$')));
+ const bareSymbol=bareKnownCompany||/^(?:NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC|COINLORE):[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/i.test(text)||(/^\$?[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/.test(text)&&(!reservedBare.has(text)||text.startsWith('$')));
  if(explanatoryRE.test(text)&&!/(?:ואז|וגם|ולאחר|ואחר כך|\band then\b)/iu.test(text))return {actions:[],recognized:false,message:''};
  const symbols=new Set();
- for(const match of text.matchAll(/\b(NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC):([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)\b/giu))symbols.add(match[1].toUpperCase()+':'+match[2].toUpperCase());
+ for(const match of text.matchAll(/\b(NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC|COINLORE):([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)\b/giu))symbols.add(match[1].toUpperCase()+':'+match[2].toUpperCase());
  for(const match of text.matchAll(/\$([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)\b/giu))symbols.add(match[1].toUpperCase());
- for(const company of companyMatchers)if(company.matchers.some(re=>re.test(text))){const ticker=company.symbol.split(':').at(-1);if(![...symbols].some(s=>s.includes(':')&&s.endsWith(':'+ticker)))symbols.add(company.symbol)}
- for(const match of text.matchAll(/(?:מני(?:ה|ית|ת)|סימול|טיקר|גרף\s+של|\b(?:ticker|stock|chart\s+(?:of|for))\b)\s*[:]?\s*\$?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_])/gu))symbols.add(match[1].toUpperCase());
+ for(const company of companyMatchers)if(company.matchers.some(re=>{const match=re.exec(text);return match&&text[match.index+match[0].length]!==':'})){const ticker=company.symbol.split(':').at(-1);if(company.symbol.startsWith('COINLORE:')&&[...symbols].some(s=>s.includes(':')&&s.split(':').at(-1)===ticker.replace(/USD$/,'')))continue;if(![...symbols].some(s=>s.includes(':')&&s.endsWith(':'+ticker)))symbols.add(company.symbol)}
+ for(const match of text.matchAll(/(?:מני(?:ה|ית|ת)|סימול|טיקר|גרף\s+של|\b(?:ticker|stock|chart\s+(?:of|for))\b)\s*[:]?\s*\$?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu))symbols.add(match[1].toUpperCase());
  for(const match of text.matchAll(/(?:פתח|תפתח|טען|תטען|נתח|תנתח|\b(?:open|load|analy[sz]e)\b)\s+(?:את\s+)?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu)){if(!indicatorSet.has(match[1])&&!['AI','OHLC','OHLCV','CSV'].includes(match[1]))symbols.add(match[1])}
  if(bareSymbol&&!symbols.size)symbols.add(text.replace(/^\$/,'').toUpperCase());
+ // Unqualified crypto aliases have an explicit venue/pair; qualified stock
+ // symbols keep their requested exchange and are never silently reclassified.
+ for(const symbol of [...symbols])if(!symbol.includes(':')&&cryptoAliases.has(symbol)&&![...symbols].some(other=>other.includes(':')&&other.split(':').at(-1)===symbol)){symbols.delete(symbol);symbols.add(cryptoAliases.get(symbol))}
  // Same ticker with/without an explicit exchange is one request; prefer exchange.
  for(const symbol of [...symbols])if(!symbol.includes(':')&&[...symbols].some(other=>other.endsWith(':'+symbol)))symbols.delete(symbol);
  if(symbols.size>1)return {actions:[],recognized:true,message:'מצאתי כמה מניות בבקשה. בחר מניה אחת לגרף הפעיל כדי שאפעל על הנתונים הנכונים.',unresolvedSymbol:true};

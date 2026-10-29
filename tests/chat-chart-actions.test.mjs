@@ -2,6 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parseChartCommand,validateChartActions,chartActionIndicators,chartActionPatterns,maxChartActions} from '../chat-chart-actions.mjs';
 
+test('Bitcoin and Ethereum aliases select explicit CoinLore USD pairs without pretending to be stock symbols',()=>{
+ for(const text of ['ביטקוין','bitcoin','BTC','BTCUSD','פתח $BTC','פתח BTC','פתח COINLORE:BTCUSD','פתח סימול COINLORE:BTCUSD'])assert.deepEqual(parseChartCommand(text).actions,[{type:'symbol',symbol:'COINLORE:BTCUSD'}],text);
+ for(const text of ['אתריום','ethereum','ETH','ETHUSD','פתח $ETH','פתח COINLORE:ETHUSD'])assert.deepEqual(parseChartCommand(text).actions,[{type:'symbol',symbol:'COINLORE:ETHUSD'}],text);
+ assert.deepEqual(parseChartCommand('פתח ביטקוין והוסף MA20').actions,[{type:'symbol',symbol:'COINLORE:BTCUSD'},{type:'indicator',indicator:'MA20',enabled:true}]);
+ assert.deepEqual(parseChartCommand('פתח NASDAQ:BTC').actions,[{type:'symbol',symbol:'NASDAQ:BTC'}]);
+ assert.deepEqual(parseChartCommand('פתח Coinbase').actions,[{type:'symbol',symbol:'NASDAQ:COIN'}]);
+ assert.equal(parseChartCommand('פתח BTC ו ETH').unresolvedSymbol,true);
+ assert.doesNotThrow(()=>validateChartActions([{type:'symbol',symbol:'COINLORE:ETHUSD'}]));
+ assert.deepEqual(parseChartCommand('MA20').actions,[]);
+});
+
 const actions=text=>parseChartCommand(text).actions;
 test('Hebrew multi-intent request resolves known company and distinct chart actions',()=>{
  assert.deepEqual(actions('פתח אפל ותוסיף ממוצע 20 ותסמן תמיכות והתנגדויות וקווי מגמה'),[

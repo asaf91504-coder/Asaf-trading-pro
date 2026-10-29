@@ -6,4 +6,7 @@ export async function refreshAuth(){if(refreshing)return refreshing;refreshing=(
 if($('memberLogin'))$('memberLogin').onsubmit=async e=>{e.preventDefault();const button=e.target.querySelector('button');button.disabled=true;try{const r=await fetch('/.netlify/functions/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('memberEmail').value,password:$('memberPassword').value}),signal:AbortSignal.timeout(10000)});const body=await r.json();if(!r.ok)throw Error(body.error||'הכניסה נכשלה');await refreshAuth()}catch(err){$('memberStatus').textContent=err.message}finally{$('memberPassword').value='';button.disabled=false}};
 if($('memberLogout'))$('memberLogout').onclick=async()=>{try{const r=await fetch('/.netlify/functions/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'}),signal:AbortSignal.timeout(6000)});if(!r.ok)throw Error();apply({enabled:true,authenticated:false});await refreshAuth()}catch{if($('memberStatus'))$('memberStatus').textContent='לא ניתן לאשר יציאה. נסה שוב.'}};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAuth()});
+// Native handoff grants only a normal server session cookie. Re-read it through
+// the existing authenticated endpoint rather than trusting a client event.
+window.addEventListener('asaf:native-authenticated',()=>refreshAuth());
 render();refreshAuth();

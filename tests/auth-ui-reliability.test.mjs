@@ -5,9 +5,9 @@ import assert from 'node:assert/strict';
 // its state machine. Requests never leave this process.
 test('unavailable auth blocks access without logout; recovery preserves account, confirmed invalidity clears it',async()=>{
  const original={document:globalThis.document,window:globalThis.window,fetch:globalThis.fetch,CustomEvent:globalThis.CustomEvent};
- const events=[];let response=()=>Response.json({enabled:true,authenticated:true,memberId:'member-1'});
+ const events=[],handlers={};let response=()=>Response.json({enabled:true,authenticated:true,memberId:'member-1'});
  globalThis.document={getElementById:()=>null,addEventListener:()=>{}};
- globalThis.window={dispatchEvent:event=>events.push(event.type)};
+ globalThis.window={dispatchEvent:event=>events.push(event.type),addEventListener:(type,handler)=>{handlers[type]=handler}};
  globalThis.CustomEvent=class extends Event{constructor(type,options){super(type);this.detail=options.detail}};
  globalThis.fetch=async()=>response();
  try{
@@ -22,5 +22,6 @@ test('unavailable auth blocks access without logout; recovery preserves account,
   response=()=>Response.json({enabled:true,authenticated:false});await mod.refreshAuth();assert.equal(mod.authState.memberId,null);assert.ok(events.includes('asaf:logout'));
   response=()=>Response.json({enabled:true,authenticated:true,memberId:'member-1'});await mod.refreshAuth();events.length=0;
   response=()=>Response.json({enabled:true,authenticated:true,memberId:'member-2'});await mod.refreshAuth();assert.equal(events.filter(e=>e==='asaf:logout').length,1);
+  response=()=>Response.json({enabled:true,authenticated:false});await handlers['asaf:native-authenticated']({detail:{authenticated:true,memberId:'forged'}});assert.equal(mod.authState.authenticated,false);assert.equal(mod.authState.memberId,null);
  }finally{Object.assign(globalThis,original)}
 });

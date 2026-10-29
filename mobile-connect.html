@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#10151b">
+ <meta name="referrer" content="no-referrer">
+ <meta name="robots" content="noindex,nofollow">
+ <title>חיבור האפליקציה לחשבון · ASAF Trading Pro</title>
+ <link rel="icon" type="image/png" href="/icons/app-192.png">
+ <style>
+  :root{color-scheme:dark;font-family:system-ui,Arial;background:#10151b;color:#edf4ff}*{box-sizing:border-box}body{margin:0;padding:24px max(18px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left))}main{max-width:600px;margin:0 auto}h1{font-size:25px;color:#5eead4}h2{font-size:20px}p{line-height:1.8;color:#b8c7d8}a{color:#5eead4}.panel{border:1px solid #35516a;border-radius:14px;padding:20px;margin:20px 0;background:#13202e}label{display:block;line-height:1.8;margin:12px 0}input:not([type=checkbox]){width:100%;min-width:0}input,button{font:inherit;font-size:16px;color:#edf4ff;background:#1a3448;border:1px solid #46657c;border-radius:8px;padding:12px}button{min-height:44px;cursor:pointer}button:disabled{opacity:.5;cursor:default}button.primary{background:#0e6f61}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #5eead4;outline-offset:3px}[hidden]{display:none!important}#mobileRequestCode{display:inline-block;font-size:24px;letter-spacing:3px;color:#5eead4;direction:ltr}#mobileApprovalStatus{white-space:pre-wrap}#memberLogout{margin-top:8px}.account-id{overflow-wrap:anywhere;font-size:14px}.warning{color:#f5d58d}.row{display:flex;flex-wrap:wrap;gap:12px}.welcome-message{color:#5eead4}
+ </style>
+</head>
+<body>
+<main>
+ <a href="/?tab=chat">ASAF Trading Pro</a>
+ <h1>חיבור האפליקציה לחשבון</h1>
+ <p>זהו אישור חד־פעמי לגרסת האפליקציה. ההתחברות עם Google מתבצעת בדפדפן המערכת; אין צורך להזין סיסמה בתוך האפליקציה.</p>
+ <p id="mobileApprovalStatus" role="status" aria-live="polite">בודק את בקשת החיבור…</p>
+ <section id="mobileRequest" class="panel" hidden aria-labelledby="mobileRequestTitle">
+  <h2 id="mobileRequestTitle">אמת את הבקשה</h2>
+  <p>קוד הבקשה: <strong id="mobileRequestCode"></strong></p>
+  <p class="warning">אשר רק בקשה שפתחת בעצמך באפליקציה. השווה את הקוד לקוד שמוצג שם. אם מישהו שלח לך את הקישור או שהקוד אינו תואם — אל תאשר.</p>
+ </section>
+ <section id="mobileLoginPanel" class="panel" hidden aria-labelledby="mobileLoginTitle">
+  <h2 id="mobileLoginTitle">החשבון שאליו תתחבר האפליקציה</h2>
+  <p id="memberStatus" role="status">בודק מצב כניסה…</p>
+  <p id="mobileAccountIdentity" class="account-id"></p>
+  <button id="googlePrepare" type="button" disabled>כניסה / הרשמה עם Google</button>
+  <div id="googleLoginButton" class="row"></div>
+  <p id="googleLoginStatus" role="status"></p>
+  <form id="memberLogin" hidden>
+   <label>אימייל לחשבון מוזמן<input id="memberEmail" type="email" autocomplete="username" maxlength="250" required dir="ltr"></label>
+   <label>סיסמה<input id="memberPassword" type="password" autocomplete="current-password" maxlength="200" required></label>
+   <button type="submit">כניסה לחשבון מוזמן</button>
+  </form>
+  <button id="memberLogout" type="button" hidden>יציאה כדי לבחור חשבון אחר</button>
+  <!-- Existing Google login module contracts. Account management is not part of
+       this approval surface; its outer wrapper remains permanently hidden. -->
+  <div hidden aria-hidden="true">
+   <section id="accountActions" hidden><p id="accountDetails"></p><button id="accountLogoutAll" type="button">נתק את כל הכניסות</button><button id="accountDelete" type="button">מחק חשבון</button></section>
+   <p id="accountActionStatus"></p>
+   <section id="adminActions" hidden><form id="adminForm"><input id="adminEmail" type="email"><select id="adminAction"><option value="status">בדוק</option></select><button type="submit">בצע</button></form><p id="adminStatus"></p></section>
+  </div>
+ </section>
+ <section id="mobileApprovalPanel" class="panel" hidden aria-labelledby="mobileApprovalTitle">
+  <h2 id="mobileApprovalTitle">אישור החיבור</h2>
+  <label><input id="mobileConfirmDevice" type="checkbox"> פתחתי את הבקשה באפליקציה בעצמי והקוד תואם.</label>
+  <button id="mobileApprove" class="primary" type="button" disabled>חבר את האפליקציה לחשבון הזה</button>
+  <p>האישור מאפשר לאפליקציה להשתמש בחשבון הנוכחי. לא יבוצע תשלום ולא ישתנו הרשאות החשבון.</p>
+ </section>
+ <p><a href="/data-privacy.html">נתונים ופרטיות</a> · <a href="/?tab=chat">חזרה לאתר</a></p>
+</main>
+<script type="module" src="./mobile-connect.mjs"></script>
+</body>
+</html>

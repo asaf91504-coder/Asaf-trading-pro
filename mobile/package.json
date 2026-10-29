@@ -1,0 +1,27 @@
+{
+  "name": "asaf-trading-pro-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Bundled native project preparation for ASAF Trading Pro; not a signed store release",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "sync": "npm run build && cap sync",
+    "add:android": "npm run build && cap add android",
+    "add:ios": "npm run build && cap add ios",
+    "open:android": "cap open android",
+    "open:ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/app-launcher": "8.0.1",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0",
+    "esbuild": "0.28.2"
+  }
+}

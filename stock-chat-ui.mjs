@@ -27,6 +27,16 @@ function say(role,content){
  log.scrollTop=log.scrollHeight;
  return item;
 }
+const cryptoIntervals=new Set(['1day']);
+function cryptoResearchSymbol(value){
+ const symbol=String(value||'').toUpperCase();
+ if(symbol.startsWith('COINLORE:'))return symbol;
+ if(/^(?:BTC|ETH)-?USD$/.test(symbol))return 'COINLORE:'+symbol.replace('-','');
+ return null;
+}
+function datasetContext(symbol,bars,meta){
+ return {...stockContext(symbol,bars,meta),source:meta.source,...(meta.source==='CoinLore'?{internalResearchOnly:true,coverage:meta.coverage||'CoinLore aggregated crypto data',quote:meta.quote,latestBarMayBePartial:meta.latestBarMayBePartial===true}:{} )};
+}
 function currentContext(){
  if(!loaded) return null;
  const now=normSymbol();
@@ -38,20 +48,20 @@ function currentContext(){
 }
 function renderStatus(){
  const attribution=$("marketAttribution");
- if($('marketCoverage'))$('marketCoverage').textContent=['1day','1week'].includes(loaded?.interval)?'נתוני יום/EOD מאוחדים לפי הספק':'פיד תוך־יומי מזירות נבחרות, כ־5% ממחזור ארה״ב לפי הספק; המחזורים אינם מחזור כלל השוק';
+ if($('marketCoverage'))$('marketCoverage').textContent=loaded?.source==='CoinLore'?'CoinLore בלבד · קריפטו · ניסוי מחקר פנימי · רענון REST ידני, לא זרם עסקאות':['1day','1week'].includes(loaded?.interval)?'נתוני יום/EOD מאוחדים לפי הספק':'פיד תוך־יומי מזירות נבחרות, כ־5% ממחזור ארה״ב לפי הספק; המחזורים אינם מחזור כלל השוק';
  if(attribution)attribution.hidden=!(loaded&&loaded.source==="Twelve Data"&&normSymbol()===loaded.symbol);
  if(!loaded){badge.textContent="אין נתוני גרף מחוברים. כשהפיד יחובר, הנרות יוצגו בגרף וישמשו לניתוח אוטומטי בעת שליחת שאלה.";return;}
  const now=normSymbol();
  badge.textContent=now===loaded.symbol?
- "✓ "+(loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"CSV מקומי")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות":
- "⚠️ הקובץ שייך לסימול "+loaded.symbol+" שהוזן, אבל הגרף הנבחר הוא "+now+". הנתונים לא ישמשו לניתוח הסימול האחר.";
+ "✓ "+(loaded.source==="CoinLore"?"CoinLore בלבד · ניסוי מחקר פנימי · רענון REST לכל היותר פעם בדקה, לא פיד עסקאות":loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"מקור לא מאומת")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות"+(loaded.source==="CoinLore"?" | התקבלו: "+(loaded.receivedAt||"לא ידוע")+" | הנר האחרון עשוי להיות חלקי":""):
+ "⚠️ הנתונים שייכים לסימול "+loaded.symbol+" שהוזן, אבל הגרף הנבחר הוא "+now+". הנתונים לא ישמשו לניתוח הסימול האחר.";
 }
 function restore(){
  try{
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
-  if(saved&&saved.source==="Twelve Data"&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
+  if(saved&&(saved.source==="Twelve Data"||saved.source==='CoinLore'&&saved.internalResearchOnly===true&&cryptoResearchSymbol(saved.symbol)===saved.symbol&&cryptoIntervals.has(saved.interval))&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
     saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT);if(!new URLSearchParams(location.search).has("symbol"))chartSymbol.value=saved.symbol;
-    chartRevision++;loaded={symbol:saved.symbol,bars:saved.bars,source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,context:stockContext(saved.symbol,saved.bars,{source:saved.source,interval:saved.interval,receivedAt:saved.receivedAt,exchangeTimezone:saved.exchangeTimezone})};
+    chartRevision++;const meta={source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,exchangeTimezone:saved.exchangeTimezone,...(saved.source==='CoinLore'?{internalResearchOnly:true,coverage:saved.coverage||'CoinLore aggregated crypto data',quote:saved.quote,latestBarMayBePartial:saved.latestBarMayBePartial===true}:{})};loaded={symbol:saved.symbol,bars:saved.bars,...meta,context:datasetContext(saved.symbol,saved.bars,meta)};
     if(normSymbol()===saved.symbol)localChart.setData(saved.symbol,saved.bars);
   }
  }catch{}
@@ -66,7 +76,7 @@ let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
 let conversation=[];
 mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
-function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt}}))}
+function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 function resetRequest(){lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
 $('cancelChat')?.addEventListener('click',()=>requestController?.abort());
 window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
@@ -167,6 +177,7 @@ async function ask(q,extra={}){
     interval:activeData?.interval||"1day",
     receivedAt:activeData?.receivedAt||null,
     useServerMarket:activeData?.source==="Twelve Data",
+    useServerCrypto:activeData?.source==="CoinLore",
     includeNews:extra.newsArticleId?true:$("chatIncludeNews")?.checked===true,
     newsArticleId:extra.newsArticleId||null,
     bars:recentAIBars(activeData?.bars),
@@ -224,10 +235,11 @@ $('exportConversation')?.addEventListener('click',()=>{
  const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='asaf-conversation.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 window.addEventListener('asaf:load-dataset',event=>{
- const data=event.detail;if(!data||data.source!=='Twelve Data'||!Array.isArray(data.bars))return;
+ const data=event.detail;if(!data||!['Twelve Data','CoinLore'].includes(data.source)||data.source==='CoinLore'&&data.internalResearchOnly!==true||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
- try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT),interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',source=data.source==='Twelve Data'?'Twelve Data':'CSV',receivedAt=data.receivedAt||null,context=stockContext(symbol,bars,{source,interval,receivedAt});
- chartRevision++;resetRequest();chartSymbol.value=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,source,interval,receivedAt};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,source,interval,receivedAt}))}catch{}
+ try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT);if(data.source==='CoinLore'&&(cryptoResearchSymbol(symbol)!==symbol||!cryptoIntervals.has(data.interval)))throw Error('סימול הקריפטו או טווח הזמן אינם נתמכים.');
+ const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
+ chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
@@ -244,64 +256,60 @@ const lastFetchBySymbol=new Map();
 const publicFeed=fetch('/.netlify/functions/public-market',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
 publicFeed.then(c=>{const option=$('marketAutoRefresh');if(option)option.disabled=!c.enabled;if(authState.enabled)$('marketForgetCode').hidden=true});
 async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
- const symbol=normSymbol();
+ const requested=normSymbol(),crypto=cryptoResearchSymbol(requested),symbol=crypto||requested;
  if(!symbol)throw Error("נא להזין סימול מניה תחילה.");
- const interval=$("marketInterval").value;
- const fetchKey=symbol+"|"+interval;
- const memberMode=authState.enabled,feed=await publicFeed;
- if((memberMode||fromChat)&&!feed.enabled)throw Error('נתוני השוק טרם חוברו. ממתינים לספק ולאישור רישוי; לא ניתן להציג גרף או לסמן רמות ללא נרות.');
- if(memberMode&&!authState.authenticated)throw Error('יש להיכנס לחשבון לפני טעינת נתונים.');
- if(fromChat&&!memberMode)throw Error('טעינה בצ׳אט זמינה רק דרך חיבור הנתונים של האתר.');
- if(Date.now()-(lastFetchBySymbol.get(fetchKey)||0)<(memberMode?60000:300000)){
-   throw Error("הרענון עדיין בהמתנה למכסה. בחיבור חשבון אפשר לרענן פעם בדקה; בחיבור פרטי פעם ב־5 דקות.");
+ const interval=$("marketInterval").value,fetchKey=symbol+"|"+interval;
+ if(crypto&&!cryptoIntervals.has(interval))throw Error('בניסוי הקריפטו זמין טווח 1day בלבד. בחר טווח נתמך; הטווח לא שונה אוטומטית.');
+ const memberMode=authState.enabled;
+ if(crypto){
+  if(!authState.authenticated)throw Error('יש להיכנס לחשבון בעל הפרויקט לפני טעינת נתוני ניסוי הקריפטו.');
+ }else{
+  const feed=await publicFeed;
+  if((memberMode||fromChat)&&!feed.enabled)throw Error('נתוני השוק טרם חוברו. ממתינים לספק ולאישור רישוי; לא ניתן להציג גרף או לסמן רמות ללא נרות.');
+  if(memberMode&&!authState.authenticated)throw Error('יש להיכנס לחשבון לפני טעינת נתונים.');
+  if(fromChat&&!memberMode)throw Error('טעינה בצ׳אט זמינה רק דרך חיבור הנתונים של האתר.');
  }
- let passcode=memberMode?"":sessionStorage.getItem(privateAccessKey);
- if(!memberMode&&!passcode){
-   passcode=window.prompt("קוד הגישה הפרטי לנתוני השוק (לא מפתח API):")||"";
-   if(!passcode)throw Error("לא הוזן קוד גישה לנתונים.");
+ if(!isCurrent()||signal?.aborted)throw new DOMException('Cancelled','AbortError');
+ if(crypto&&symbol!==requested){chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;rememberSymbol();}
+ if(Date.now()-(lastFetchBySymbol.get(fetchKey)||0)<(crypto||memberMode?60000:300000))throw Error('הרענון עדיין בהמתנה למכסה. אפשר לרענן בחיבור חשבון לכל היותר פעם בדקה; בחיבור פרטי פעם ב־5 דקות.');
+ let passcode=crypto||memberMode?'':sessionStorage.getItem(privateAccessKey);
+ if(!crypto&&!memberMode&&!passcode){
+  passcode=window.prompt('קוד הגישה הפרטי לנתוני השוק (לא מפתח API):')||'';
+  if(!passcode)throw Error('לא הוזן קוד גישה לנתונים.');
  }
- if(!memberMode&&passcode.length<20)throw Error("קוד הגישה חייב להכיל לפחות 20 תווים.");
+ if(!crypto&&!memberMode&&passcode.length<20)throw Error('קוד הגישה חייב להכיל לפחות 20 תווים.');
  marketButton.disabled=true;
- marketStatus.textContent="מתחבר לספק הנתונים (לחיצה ידנית בלבד)...";
+ marketStatus.textContent=crypto?'טוען נרות מ־CoinLore לניסוי מחקר פנימי של בעל הפרויקט…':'מתחבר לספק הנתונים (בקשה מפורשת בלבד)…';
  try{
-   const response=await fetch(memberMode?"/.netlify/functions/public-market":"/.netlify/functions/market",{
-     method:"POST",signal,
-     credentials:"same-origin",
-     headers:{"Content-Type":"application/json",...(!memberMode?{"x-asaf-market-access":passcode}:{})},
-     body:JSON.stringify({symbol,interval})
-   });
-   let result;try{result=await response.json()}catch{throw Error("פונקציית Netlify לא נפרסה או החזירה תשובה לא תקינה (ייתכן 404)")};
-   if(!response.ok){
-     if(response.status===401)sessionStorage.removeItem(privateAccessKey);
-     throw Error(result.error||"קריאת נתונים נכשלה");
-   }
-   if(!Array.isArray(result.bars)||result.bars.length<21)throw Error("התקבלו פחות מ-21 נרות");
-   if(!isCurrent()||signal?.aborted)throw new DOMException("Cancelled","AbortError");
-   if(normSymbol()!==symbol||$("marketInterval").value!==interval)throw Error("הסימול בגרף השתנה בזמן הטעינה, נסה שוב");
-   if(result.symbol!==symbol.split(":").at(-1))throw Error("הספק החזיר סימול שונה מהנבחר");
-   const bars=result.bars.slice(-200);
-   const meta={source:"Twelve Data",interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone};
-   const context=stockContext(symbol,bars,meta);
-   chartRevision++;lastVisibleChart=null;loaded={symbol,bars,context,source:"Twelve Data",interval,receivedAt:result.receivedAt};
-   localChart.setData(symbol,bars);
-   if(!memberMode)sessionStorage.setItem(privateAccessKey,passcode);
-   try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
-   lastFetchBySymbol.set(fetchKey,Date.now());
-   renderStatus();datasetReady();
-   marketStatus.textContent="✓ נר אחרון: "+result.latestBarTime+" | "+(result.exchange||"בורסה לא ידועה")+" | אזור זמן: "+(result.exchangeTimezone||"לא ידוע")+" | מקור Twelve Data"+(result.cached?" (מטמון)":"")+' | '+(result.coverage||'כיסוי לא הוצהר')+(Number.isFinite(result.delayMinutes)?" | עיכוב מוצהר: "+result.delayMinutes+" דקות":"; נתונים עשויים להיות מעוכבים.");
-   status.textContent="הגרף המקורי והצ'אט מציגים כעת את אותם "+bars.length+" נרות. אפשר לבקש בצ׳אט ניתוח וסימונים.";
-   if(!fromChat)say("bot","📡 קיבלתי "+bars.length+" נרות מאושרים של "+symbol+" בטווח "+interval+". נר אחרון: "+result.latestBarTime+". כל התשובות מכאן מבוססות על נתוני הספק שנקלטו, לא על צילום חלון TradingView.");
-   if(!fromChat)document.querySelector('[data-tab="charts"]').click();
-   return loaded;
- }catch(error){
-   marketStatus.textContent="לא התחבר: "+error.message;throw error;
- }finally{
-   marketButton.disabled=false;
- }
-};
+  const response=await fetch(crypto?'/.netlify/functions/crypto-research':memberMode?'/.netlify/functions/public-market':'/.netlify/functions/market',{
+   method:'POST',signal,credentials:'same-origin',headers:{'Content-Type':'application/json',...(!crypto&&!memberMode?{'x-asaf-market-access':passcode}:{})},body:JSON.stringify({symbol,interval})
+  });
+  let result;try{result=await response.json()}catch{throw Error('פונקציית הנתונים החזירה תשובה לא תקינה.');}
+  if(!response.ok){if(response.status===401&&!crypto)sessionStorage.removeItem(privateAccessKey);throw Error(result.error||'קריאת נתונים נכשלה');}
+  if(!Array.isArray(result.bars)||result.bars.length<21)throw Error('התקבלו פחות מ־21 נרות.');
+  if(!isCurrent()||signal?.aborted)throw new DOMException('Cancelled','AbortError');
+  if(normSymbol()!==symbol||$('marketInterval').value!==interval)throw Error('הסימול או טווח הזמן השתנו בזמן הטעינה. שלח בקשה חדשה.');
+  if(result.symbol!==(crypto?symbol:symbol.split(':').at(-1)))throw Error('הספק החזיר סימול שונה מהנבחר.');
+  if(crypto&&(!Number.isFinite(result.quote?.price)||result.quote.price<=0||result.quote.quoteTime!==null||result.quote.receivedAt!==result.receivedAt))throw Error('ציטוט הקריפטו אינו תקין.');
+  if(crypto&&(result.source!=='CoinLore'||result.interval!==interval||result.internalResearchOnly!==true))throw Error('מקור הקריפטו או תחום הניסוי לא אומתו.');
+  const bars=result.bars.slice(-200),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone,...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
+  const context=datasetContext(symbol,bars,meta);
+  chartRevision++;lastVisibleChart=null;loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);
+  if(!crypto&&!memberMode)sessionStorage.setItem(privateAccessKey,passcode);
+  try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
+  lastFetchBySymbol.set(fetchKey,Date.now());renderStatus();datasetReady();
+  marketStatus.textContent=crypto?'✓ CoinLore בלבד · ניסוי מחקר פנימי · '+symbol+' · '+interval+' · נר אחרון: '+result.latestBarTime+' · התקבלו: '+result.receivedAt+' · ציטוט נפרד: $'+result.quote.price+' (זמן עסקה אינו ידוע) · רענון REST לכל היותר פעם בדקה, ללא זרם עסקאות; הנר האחרון עשוי להיות חלקי.':
+   '✓ נר אחרון: '+result.latestBarTime+' | '+(result.exchange||'בורסה לא ידועה')+' | אזור זמן: '+(result.exchangeTimezone||'לא ידוע')+' | מקור Twelve Data'+(result.cached?' (מטמון)':'')+' | '+(result.coverage||'כיסוי לא הוצהר')+(Number.isFinite(result.delayMinutes)?' | עיכוב מוצהר: '+result.delayMinutes+' דקות':'; נתונים עשויים להיות מעוכבים.');
+  status.textContent='הגרף המקורי והצ׳אט מציגים כעת את אותם '+bars.length+' נרות. אפשר לבקש בצ׳אט ניתוח וסימונים.';
+  if(!fromChat)say('bot',crypto?'נטענו '+bars.length+' נרות של '+symbol+' מ־CoinLore בלבד לניסוי מחקר פנימי. נר אחרון: '+result.latestBarTime+'. זהו צילום מצב REST ולא פיד עסקאות רציף; הנר האחרון עשוי להיות חלקי.':'📡 קיבלתי '+bars.length+' נרות של '+symbol+' בטווח '+interval+'. נר אחרון: '+result.latestBarTime+'.');
+  if(!fromChat)document.querySelector('[data-tab="charts"]').click();
+  return loaded;
+ }catch(error){marketStatus.textContent='לא התחבר: '+error.message;throw error;}
+ finally{marketButton.disabled=false;}
+}
 marketButton.addEventListener("click",()=>loadMarketData().catch(error=>{marketStatus.textContent=error.message}));
 setInterval(()=>{if($('marketAutoRefresh')?.checked&&!document.hidden&&authState.authenticated&&!marketButton.disabled)marketButton.click()},61000);
-window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false});
+window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false;if(loaded?.source==='CoinLore'){chartRevision++;loaded=null;localChart.clear();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'))}});
 $("marketForgetCode").addEventListener("click",()=>{
  sessionStorage.removeItem(privateAccessKey);
  marketStatus.textContent="קוד הגישה הזמני נשכח מהמכשיר.";
