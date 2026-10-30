@@ -62,8 +62,8 @@ export function initLocalChart(){
  function saveDrawings(){try{let saved=JSON.parse(localStorage.getItem(drawingKey)||'{}');if(!saved||Array.isArray(saved)||typeof saved!=='object')saved={};saved[symbol]={savedAt:Date.now(),lines:lines.slice(-30).map(line=>line.map(p=>({date:bars[p.index]?.date,price:p.price,...(p.tool?{tool:p.tool}:{}),...(p.text?{text:p.text}:{}),...(p.rr?{rr:p.rr}:{}),...(p.offset?{offset:p.offset}:{})})))};const entries=Object.entries(saved).sort((a,b)=>(b[1]?.savedAt||0)-(a[1]?.savedAt||0)).slice(0,30);localStorage.setItem(drawingKey,JSON.stringify(Object.fromEntries(entries)));if($('chartDrawingStatus'))$('chartDrawingStatus').textContent='קווי המגמה נשמרו במכשיר לפי סימול ותאריך.'}catch{if($('chartDrawingStatus'))$('chartDrawingStatus').textContent='לא ניתן לשמור קווים במכשיר; הם זמינים בלשונית הנוכחית בלבד.'}}
  function restoreDrawings(){try{const saved=JSON.parse(localStorage.getItem(drawingKey)||'{}')?.[symbol],byDate=new Map(bars.map((b,i)=>[b.date,i]));lines=(Array.isArray(saved?.lines)?saved.lines:[]).slice(-30).filter(line=>Array.isArray(line)&&line.length===2&&line.every(p=>p&&typeof p.price==='number'&&Number.isFinite(p.price)&&p.price>0&&byDate.has(p.date))).map(line=>line.map(p=>({index:byDate.get(p.date),price:p.price,...(drawingTools.includes(p.tool)?{tool:p.tool}:{}),...(p.text?{text:p.text}:{}),...(p.rr?{rr:p.rr}:{}),...(p.offset?{offset:p.offset}:{})})));}catch{lines=[]}}
  anchorFields();historyButtons();
- const colors={background:'#0b1626',grid:'#1b2c40',text:'#91a7bd',up:'#2dd4bf',down:'#fb7185',ma20:'#fbbf24',ma150:'#a78bfa',ema50:'#60a5fa'};
- const label=v=>Number(v).toLocaleString('en-US',{maximumFractionDigits:4});
+ const colors={background:'#131722',grid:'#232936',text:'#9299a8',up:'#26a69a',down:'#ef5350',ma20:'#fbbf24',ma150:'#a78bfa',ema50:'#60a5fa'};
+ const label=v=>Number(v).toLocaleString('en-US',{maximumFractionDigits:Math.abs(v)>=100?2:4});
  const average=(i,n)=>indicators['ma'+n]?.[i]??null;
  const enabled=n=>$('chartMA'+n)?.checked!==false;
  function metrics(){
@@ -75,7 +75,7 @@ export function initLocalChart(){
  function draw(includeHover=true){
   if(!bars.length||panel.hidden||canvas.getBoundingClientRect().width<1)return;
   const width=Math.max(180,Math.floor(canvas.getBoundingClientRect().width)),paneNames=[['rsi','chartRSI14'],['macd','chartMACD'],['atr','chartATR14'],['stochastic','chartStochastic'],['obv','chartOBV'],['adx','chartADX14']].filter(([,id])=>$(id).checked).map(([name])=>name);
-  const layout=chartLayout(width,paneNames,panel.classList.contains('chart-expanded')?Math.max(220,window.innerHeight-380):270),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
+  const layout=chartLayout(width,paneNames,panel.classList.contains('chart-expanded')?Math.max(220,window.innerHeight-300):Math.max(300,Math.min(500,window.innerHeight*.48))),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.style.height=height+'px';canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);
   const style=$('chartStyle').value,displayBars=style==='heikin'&&heikin?heikin:bars;
   const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,step=plotWidth/view.count;
@@ -90,6 +90,9 @@ export function initLocalChart(){
   geometry={...view,width,height,left,right,top,bottom,step,min,max,x,y};
   ctx.font='11px system-ui';ctx.textBaseline='middle';ctx.textAlign='left';
   for(let j=0;j<=4;j++){const price=min+(max-min)*j/4,py=y(price);ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText(label(price),width-right+5,py)}
+  const timeTicks=Math.max(2,Math.min(6,Math.floor(plotWidth/110)));
+  for(let tick=0;tick<timeTicks;tick++){const index=view.start+Math.round(tick*(view.count-1)/(timeTicks-1)),px=x(index);ctx.strokeStyle=colors.grid;ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,volBottom);ctx.stroke();ctx.fillStyle=colors.text;ctx.textAlign=tick===0?'left':tick===timeTicks-1?'right':'center';ctx.fillText(bars[index].date.slice(5,10),px,height-12)}
+  ctx.textAlign='left';
   const maxVol=Math.max(1,...visible.map(b=>b.volume||0));
   const lineStyle=['line','area','baseline'].includes(style);
   visible.forEach((b,j)=>{const px=x(view.start+j),color=b.open!=null&&b.close<b.open?colors.down:colors.up,w=Math.max(1,Math.min(16,step*.65));
@@ -156,8 +159,10 @@ export function initLocalChart(){
    ctx.fillStyle='#0b1626ed';ctx.fillRect(tx-3,ty-9,textWidth+6,18);ctx.fillStyle='#fde68a';ctx.fillText(text,tx,ty,Math.max(1,plotWidth-8));
   }
   if(firstPoint){ctx.fillStyle='#60a5fa';ctx.beginPath();ctx.arc(x(firstPoint.index),y(firstPoint.price),4,0,Math.PI*2);ctx.fill()}
-  const last=visible.at(-1);ctx.strokeStyle='#2dd4bf88';ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(left,y(last.close));ctx.lineTo(width-right,y(last.close));ctx.stroke();ctx.restore();ctx.setLineDash([]);
-  ctx.fillStyle=colors.text;ctx.font='10px system-ui';ctx.textAlign='left';ctx.fillText(visible[0].date.slice(0,16),left,height-12);ctx.textAlign='right';ctx.fillText(last.date.slice(0,16),width-right,height-12);
+  const last=visible.at(-1);ctx.strokeStyle=last.close>=last.open?colors.up:colors.down;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(left,y(last.close));ctx.lineTo(width-right,y(last.close));ctx.stroke();ctx.restore();ctx.setLineDash([]);
+  ctx.fillStyle=last.close>=last.open?colors.up:colors.down;
+  ctx.fillRect(width-right,y(last.close)-10,right,20);ctx.fillStyle='#ffffff';ctx.font='bold 11px system-ui';ctx.textAlign='left';ctx.fillText(label(last.close),width-right+4,y(last.close),right-6);
+
   ctx.textAlign='left';ctx.font='11px system-ui';ctx.fillText(symbol+(style==='heikin'?' · HEIKIN ASHI: averaged prices; indicators use raw OHLC':style==='baseline'?' · BASELINE: first loaded close':'')+'  ·  '+view.count+' bars  ·  '+(offset?'HISTORICAL VIEW':'LATEST LOADED BAR'),left,13);
   if(!hover)tooltip.textContent='גרור לגלילה · גלגלת לזום · נתונים עד '+bars.at(-1).date;
   if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){const px=x(hover.index),py=hover.y;ctx.save();ctx.strokeStyle='#91a7bd';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,height-22);ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.restore();const b=bars[hover.index];tooltip.textContent=b.date+' | O '+(b.open==null?'—':label(b.open))+' H '+label(b.high)+' L '+label(b.low)+' C '+label(b.close)+' | Vol '+(b.volume==null?'—':label(b.volume))+' | '+[['RSI14','rsi14'],['ATR14','atr14'],['MACD','macd'],['Signal','macdSignal'],['Histogram','macdHistogram'],['BB upper','bbUpper'],['BB lower','bbLower'],['Stoch %K','stochasticK'],['Stoch %D','stochasticD'],['OBV','obv'],['ADX14','adx14'],['+DI','plusDI14'],['-DI','minusDI14'],['Supertrend 10/3','supertrend'],['VWAP','vwap'],['Tenkan9','tenkan'],['Kijun26','kijun']].map(([name,key])=>name+' '+(indicators[key][hover.index]===null?'—':label(indicators[key][hover.index]))).join(' | ')}

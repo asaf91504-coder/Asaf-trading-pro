@@ -46,7 +46,7 @@ function renderWatch(){
  if(!watchList.children.length){const p=document.createElement('p');p.textContent='הוסף מניות לרשימת המעקב שלך.';watchList.append(p)}
 }
 window.addEventListener('asaf:watch-changed',renderWatch);window.addEventListener('storage',renderWatch);$('symbol').addEventListener('input',()=>{context.textContent='אין נתוני גרף תואמים לסימול שנבחר.';renderWatch()});
-window.addEventListener('asaf:dataset-ready',e=>{const d=e.detail,last=d?.bars?.at(-1);if(!last)return;quotes.set(d.symbol,{close:last.close,date:last.date,source:d.source||'CSV'});context.textContent=d.symbol+' · '+(d.interval||'1day')+' · '+(d.source==='Twelve Data'?'נתוני ספק':'נתונים מקומיים')+' · נר '+last.date+' · '+d.bars.length+' נרות. יישלחו עם השאלה; אין צורך להעלות צילום.';renderWatch()});
+window.addEventListener('asaf:dataset-ready',e=>{const d=e.detail,last=d?.bars?.at(-1);if(!last)return;quotes.set(d.symbol,{close:last.close,date:last.date,source:d.source||'CSV'});context.textContent=d.symbol+' · '+(d.interval||'1day')+' · '+(d.source==='CoinLore'?'CoinLore · מחקר קריפטו':d.source==='Twelve Data'?'נתוני ספק':'נתונים מקומיים')+' · נר '+last.date+' · '+d.bars.length+' נרות. יישלחו עם השאלה; אין צורך להעלות צילום.';renderWatch()});
 window.addEventListener('asaf:dataset-cleared',()=>{quotes.clear();renderWatch();context.textContent='אין נתוני גרף מחוברים. לא ניתן לנתח מחיר עדכני בלי נתונים.'});
 renderWatch();
 const wide=matchMedia('(min-width: 901px)');
@@ -71,3 +71,19 @@ $('askAsaf').onclick=()=>{selectTab('chat');chartFocus(false);$('chatInput').foc
 $('chatForm').before($('cancelChat'));
 
 $('chatIncludeNews').closest('label').classList.add('terminal-news-context');$('chatIncludeNews').closest('label').lastChild.textContent=' צרף כותרות אחרונות מהמטמון — ללא קריאת כתבות מלאות';auto.after($('chatIncludeNews').closest('label'));
+
+// Compact chart workbench: keep the original controls and event handlers.
+const chartPanel=$('localChartPanel'),chartNav=$('localChartRange').closest('.row');
+chartNav.classList.add('chart-navigation-strip');
+const chartTop=document.createElement('div');chartTop.className='chart-workbench-top';
+chartPanel.prepend(chartTop);chartTop.append($('localChartTitle'),toolDetails);
+toolSummary.textContent='ƒx אינדיקטורים';
+const drawingDetails=document.createElement('details');drawingDetails.className='chart-drawing-menu';
+const drawingSummary=document.createElement('summary');drawingSummary.textContent='כלי ציור';
+drawingDetails.append(drawingSummary,drawingToolbar);chartTop.append(drawingDetails);
+const fullscreen=$('chartFullscreen');chartTop.append(fullscreen);
+$('localChartCanvas').after(chartNav);
+const notes=document.createElement('details');notes.className='chart-notes';
+const notesTitle=document.createElement('summary');notesTitle.textContent='מידע על הנתונים והחישובים';notes.append(notesTitle);
+for(const node of [...chartPanel.children])if(node.matches('p'))notes.append(node);
+chartPanel.append(notes);

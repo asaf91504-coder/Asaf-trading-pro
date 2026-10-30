@@ -42,3 +42,24 @@
  .terminal-app #chatForm{padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}
  .terminal-app .terminal-layout-menu{max-height:calc(100vh - 128px);max-height:calc(100dvh - 128px);overflow-y:auto}
 }
+
+/* Chart workbench: quiet canvas, compact controls, clear price scale. */
+.terminal-app #localChartPanel{background:#131722!important;border:1px solid #2a2e39!important;border-radius:0!important;margin:0!important;padding:0!important;overflow:visible}
+.terminal-app .terminal-stage{gap:5px}
+.terminal-app .terminal-center{min-width:0}
+.terminal-app #charts{padding:0!important;border:0!important;background:#131722!important}
+.terminal-app #localChartCanvas{display:block;width:100%;border:0!important;border-radius:0!important;background:#131722}
+.chart-workbench-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid #2a2e39;background:#131722}
+.terminal-app #localChartTitle{font-size:12px!important;font-weight:600;margin:0!important;flex:1;min-width:160px;color:#d1d4dc}
+.chart-workbench-top details{position:relative;margin:0;padding:0;border:0}
+.chart-workbench-top summary,.chart-workbench-top>button{cursor:pointer;white-space:nowrap;border:1px solid #363b48;border-radius:4px;padding:8px 10px!important;font-size:12px;background:#1e222d;color:#d1d4dc}
+.chart-workbench-top details[open]>.chart-tools,.chart-workbench-top details[open]>.terminal-drawing-toolbar{position:absolute;top:38px;inset-inline-end:0;z-index:40;width:330px;max-width:calc(100vw - 40px);max-height:55vh;overflow:auto;display:flex;flex-wrap:wrap;padding:14px;margin:0;background:#1e222d;border:1px solid #434957;border-radius:6px;box-shadow:0 12px 36px #0008}
+.terminal-app .chart-navigation-strip{display:flex;direction:ltr;gap:6px;padding:7px 10px!important;margin:0!important;border-top:1px solid #2a2e39;background:#131722}
+.terminal-app .chart-navigation-strip button,.terminal-app .chart-navigation-strip select{background:transparent;border:1px solid #2a2e39;border-radius:4px;min-height:32px;padding:5px 9px;font-size:11px}
+.chart-navigation-strip label{font-size:10px;color:#9299a8}
+.chart-notes,.terminal-chart-stats,.terminal-app #chartPreciseDrawingDetails{padding:9px 12px!important;border-top:1px solid #2a2e39;font-size:11px;color:#9299a8;margin:0!important}
+.chart-notes summary{cursor:pointer}.chart-notes p{line-height:1.7;font-size:11px}
+.terminal-app #localChartTooltip{padding:5px 12px;font-size:11px;color:#9299a8}
+.terminal-app .terminal-data-tools{font-size:10px;margin:0;padding:5px 10px;border:0;border-bottom:1px solid #2a2e39;border-radius:0}
+@media(min-width:1201px){.terminal-stage{grid-template-columns:165px minmax(0,1fr) 310px}}
+@media(max-width:900px){.chart-workbench-top{padding:8px;gap:5px}.terminal-app #localChartTitle{flex-basis:100%;font-size:11px!important}.chart-workbench-top summary,.chart-workbench-top>button{min-height:40px}.terminal-app .chart-navigation-strip{flex-wrap:wrap}.terminal-app .chart-navigation-strip button{min-height:40px}.chart-workbench-top details[open]>.chart-tools,.chart-workbench-top details[open]>.terminal-drawing-toolbar{inset-inline-end:auto;inset-inline-start:0;max-width:calc(100vw - 30px)}}
