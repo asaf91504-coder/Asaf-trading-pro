@@ -24,7 +24,7 @@ if(typeof document!=='undefined'){
  dialog.querySelector('#resetAccessibility').addEventListener('click',()=>{preferences=normalizePreferences();for(const input of dialog.querySelectorAll('[data-preference]'))input.checked=false;save()});
  let opener;
  for(const button of document.querySelectorAll('[data-accessibility-open]'))button.addEventListener('click',()=>{opener=button;dialog.showModal();dialog.querySelector('.accessibility-close').focus()});
- dialog.addEventListener('close',()=>opener?.focus());
+ dialog.addEventListener('close',()=>{if(document.activeElement===document.body||dialog.contains(document.activeElement))opener?.focus()});
  // Native modal focus containment + Escape; never trap focus in a custom overlay.
  for(const link of document.querySelectorAll('.skip-links a'))link.addEventListener('click',event=>{
   const id=link.getAttribute('href').slice(1);let target=document.getElementById(id);if(!target)return;
