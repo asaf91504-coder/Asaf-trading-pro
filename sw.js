@@ -2,7 +2,7 @@
    always use the network; no user content or authenticated response is cached. */
 const OFFLINE_CACHE='asaf-offline-v1';
 const OFFLINE_PATH='/offline.html';
-const PUBLIC_PAGES=new Set(['/','/index.html','/journal','/journal.html','/data-privacy','/data-privacy.html']);
+const PUBLIC_PAGES=new Set(['/','/index.html','/journal','/journal.html','/data-privacy','/data-privacy.html','/accessibility','/accessibility.html','/terms','/terms.html','/help','/help.html']);
 
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(OFFLINE_CACHE).then(cache=>cache.add(OFFLINE_PATH)));

@@ -3,8 +3,8 @@ import path from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 
 const directory=path.dirname(fileURLToPath(import.meta.url));
-const pages=['index.html','journal.html','activate.html','data-privacy.html','offline.html'];
-const styles=['workspace.css','terminal.css','app.css'];
+const pages=['index.html','journal.html','activate.html','data-privacy.html','accessibility.html','terms.html','help.html','offline.html'];
+const styles=['workspace.css','terminal.css','app.css','accessibility.css'];
 const imports=source=>[...source.matchAll(/(?:\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?|\bimport\s*\()\s*['"]([^'"]+)['"]/g)].map(match=>match[1]);
 function localFile(value){
  const clean=value.split(/[?#]/)[0].replace(/^\.\//,'').replace(/^\//,'');

@@ -52,6 +52,23 @@ export function initLocalChart(){
  canvas.setAttribute('aria-label',chartAccessibleLabel());
  let bars=[],symbol='',count=60,offset=0,geometry=null,hover=null,drag=null,drawing=false,firstPoint=null,lines=[],aiAnnotations=[];
  let indicators=chartIndicators([]),heikin=null;const history=drawingHistory();
+ const dataDetails=document.createElement('details');dataDetails.className='chart-data-table';
+ const dataSummary=document.createElement('summary');dataSummary.textContent='נתוני הנרות בטבלה נגישה';
+ const tableRegion=document.createElement('div');tableRegion.className='chart-data-scroll';tableRegion.tabIndex=0;tableRegion.setAttribute('role','region');tableRegion.setAttribute('aria-label','טבלת נרות — גלילה אופקית');
+ const table=document.createElement('table');tableRegion.append(table);dataDetails.append(dataSummary,tableRegion);panel.append(dataDetails);
+ let tableBars=null,tableStart=-1,tableEnd=-1;
+ function renderDataTable(view){
+  if(!dataDetails.open||tableBars===bars&&tableStart===view.start&&tableEnd===view.end)return;
+  tableBars=bars;tableStart=view.start;tableEnd=view.end;table.replaceChildren();
+  const start=Math.max(view.start,view.end-200),caption=document.createElement('caption');
+  caption.textContent=symbol+' · נתוני הנרות המקוריים · '+(view.end-start)+' נרות'+(start>view.start?' אחרונים מתוך הטווח המוצג; השתמש בגלילת הגרף לצפייה בנרות קודמים':'');table.append(caption);
+  const head=document.createElement('thead'),header=document.createElement('tr');
+  for(const name of ['תאריך','פתיחה','גבוה','נמוך','סגירה','מחזור']){const th=document.createElement('th');th.scope='col';th.textContent=name;header.append(th)}head.append(header);table.append(head);
+  const body=document.createElement('tbody');
+  for(const bar of bars.slice(start,view.end)){const row=document.createElement('tr');for(const [index,value] of [bar.date,bar.open,bar.high,bar.low,bar.close,bar.volume].entries()){const cell=document.createElement(index===0?'th':'td');if(index===0)cell.scope='row';cell.dir='ltr';cell.textContent=index===0?String(value):Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:4}):'לא זמין';row.append(cell)}body.append(row)}table.append(body);
+ }
+ dataDetails.addEventListener('toggle',()=>{if(dataDetails.open)draw()});
+
  function historyButtons(){$('chartUndo').disabled=!history.canUndo();$('chartRedo').disabled=!history.canRedo();$('chartClearLines').disabled=!lines.length}
  function recordDrawingChange(){lines=history.commit(lines);historyButtons()}
  const indicatorIds=['chartMA20','chartMA150','chartEMA50','chartRSI14','chartBB20','chartMACD','chartATR14','chartMA50','chartMA100','chartMA200','chartStochastic','chartOBV','chartADX14','chartSupertrend','chartVWAP','chartIchimoku','chartVolumeProfile'];
@@ -79,6 +96,7 @@ export function initLocalChart(){
   canvas.style.height=height+'px';canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);
   const style=$('chartStyle').value,displayBars=style==='heikin'&&heikin?heikin:bars;
   const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,step=plotWidth/view.count;
+  renderDataTable(view);
   canvas.setAttribute('aria-label',chartAccessibleLabel({symbol,bars,start:view.start,end:view.end,style,indicators:indicatorIds.filter(id=>$(id).checked).map(id=>id.slice(5))})+(aiAnnotations.length?'. סימוני AI זמניים, מועמדים לבדיקה: '+aiAnnotations.map(item=>item.label).join('; '):''));
   let min=Math.min(...visible.map(b=>b.low)),max=Math.max(...visible.map(b=>b.high));
   if(style==='baseline'){min=Math.min(min,bars[0].close);max=Math.max(max,bars[0].close)}

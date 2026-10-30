@@ -7,8 +7,8 @@ import {prepareNativeAssets} from '../build.mjs';
 async function fixture(run){
  const temporary=await mkdtemp(path.join(os.tmpdir(),'asaf-native-assets-')),sourceRoot=path.join(temporary,'public'),output=path.join(temporary,'result'),bootstrapFile=path.join(temporary,'native-bootstrap.mjs');
  await mkdir(sourceRoot);await mkdir(path.join(sourceRoot,'icons'));await writeFile(bootstrapFile,'/* native bootstrap fixture */');
- for(const page of ['index.html','journal.html','activate.html','data-privacy.html','offline.html'])await writeFile(path.join(sourceRoot,page),'<html><head><link rel="manifest" href="/manifest.webmanifest"></head><body><script type="module" src="./app-install.mjs"></script><script type="module" src="./a.mjs"></script></body></html>');
- for(const css of ['workspace.css','terminal.css','app.css'])await writeFile(path.join(sourceRoot,css),'body{}');
+ for(const page of ['index.html','journal.html','activate.html','data-privacy.html','accessibility.html','terms.html','help.html','offline.html'])await writeFile(path.join(sourceRoot,page),'<html><head><link rel="manifest" href="/manifest.webmanifest"></head><body><script type="module" src="./app-install.mjs"></script><script type="module" src="./a.mjs"></script></body></html>');
+ for(const css of ['workspace.css','terminal.css','app.css','accessibility.css'])await writeFile(path.join(sourceRoot,css),'body{}');
  await writeFile(path.join(sourceRoot,'a.mjs'),"import {value} from './b.mjs'; export {value};");await writeFile(path.join(sourceRoot,'b.mjs'),'export const value=1;');
  await writeFile(path.join(sourceRoot,'.env'),'SECRET=not-a-public-asset');await writeFile(path.join(sourceRoot,'private.mjs'),'export const key="secret"');await mkdir(path.join(sourceRoot,'server'));await writeFile(path.join(sourceRoot,'server','auth.mjs'),'private server');
  try{await run({sourceRoot,output,bootstrapFile,bundleBootstrap:false})}finally{await rm(temporary,{recursive:true,force:true})}
