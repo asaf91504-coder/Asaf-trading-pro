@@ -45,3 +45,9 @@ test('endpoint returns the server evidence receipt and sends resolved viewport t
   assert.equal(sent.model,'openrouter/free');assert.equal(sent.max_tokens,1800);assert.match(sent.messages[0].content,/visibleChart/);assert.match(sent.messages.at(-1).content, /"includesLatestLoadedBar":false/);assert.doesNotMatch(sent.messages.at(-1).content, /-1234/);
  }finally{process.env=previous;global.fetch=original}
 });
+
+test('technical conditions retain strict comparisons even when display values round to equality',()=>{
+ const near=bars.map(bar=>({...bar,close:100,open:100,high:101,low:99,volume:100}));near.at(-1).close=100.001;near.at(-1).volume=100.001;
+ const evidence=marketDataContext('AAPL',near,{interval:'1day'}).technicalEvidence;
+ assert.equal(evidence.aboveMA20,true);assert.equal(evidence.volumeAbovePrior20Average,true);
+});

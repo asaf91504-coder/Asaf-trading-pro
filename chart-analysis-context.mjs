@@ -15,12 +15,13 @@ export function chartViewContext(bars, range) {
 export function technicalEvidence(context,bars) {
  const last=bars.at(-1),prev=bars.at(-2);
  const finite=value=>typeof value==='number'&&Number.isFinite(value);
+ const previousVolumes=bars.slice(-21,-1).map(bar=>bar.volume),averageVolume=previousVolumes.length===20&&previousVolumes.every(finite)?previousVolumes.reduce((a,b)=>a+b,0)/20:null;
  return {changeFromPreviousClosePercent:context.dailyChangePercent,
-  aboveMA20:finite(context.sma20)?last.close>context.sma20:null,
-  aboveMA150:finite(context.sma150)?last.close>context.sma150:null,
+  aboveMA20:typeof context.aboveMA20==='boolean'?context.aboveMA20:null,
+  aboveMA150:typeof context.aboveMA150==='boolean'?context.aboveMA150:null,
   distanceFromMA20Percent:finite(context.sma20)&&context.sma20>0?(last.close/context.sma20-1)*100:null,
   volumeAbovePreviousBar:finite(last.volume)&&finite(prev?.volume)?last.volume>prev.volume:null,
-  volumeAbovePrior20Average:finite(context.volumeRatio)?context.volumeRatio>1:null,
+  volumeAbovePrior20Average:finite(last.volume)&&averageVolume>0?last.volume>averageVolume:null,
   prior20Low:Math.min(...bars.slice(-21,-1).map(bar=>bar.low)),
   marketCap:null,earningsDate:null,targetUpsidePercent:null,
   missingEvidence:['Market cap, earnings dates and a justified 15% upside target are not established by OHLCV candles.'],
