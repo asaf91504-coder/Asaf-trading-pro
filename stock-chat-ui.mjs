@@ -5,7 +5,7 @@ import {recentAIBars,CHART_HISTORY_LIMIT} from "./chart-data.mjs";
 import {authState,refreshAuth} from "./auth-ui.mjs";
 import {stockContext,answerStockQuestion} from "./market-chat.mjs";
 import {initLocalChart} from "./local-chart.mjs";
-import {parseChartCommand} from './chat-chart-actions.mjs';
+import {parseChartCommand,requestsChartControl} from './chat-chart-actions.mjs';
 import {executeChartActions} from './chart-command-controller.mjs';
 
 const $=id=>document.getElementById(id);
@@ -170,7 +170,7 @@ async function ask(q,extra={}){
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   preparedPayload=preparedPayload||{
     message:question,
-    chartControl:!extra.newsArticleId&&!localReceipt,
+    chartControl:!extra.newsArticleId&&!localReceipt&&requestsChartControl(question),
     chartRevision,
     chartToolReceipt:localReceipt,
     symbol:activeData?.symbol||normSymbol(),
@@ -296,7 +296,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   if(result.symbol!==(crypto?symbol:symbol.split(':').at(-1)))throw Error('הספק החזיר סימול שונה מהנבחר.');
   if(crypto&&(!Number.isFinite(result.quote?.price)||result.quote.price<=0||result.quote.quoteTime!==null||result.quote.receivedAt!==result.receivedAt))throw Error('ציטוט הקריפטו אינו תקין.');
   if(crypto&&(result.source!=='CoinLore'||result.interval!==interval||result.internalResearchOnly!==true))throw Error('מקור הקריפטו או תחום הניסוי לא אומתו.');
-  const bars=result.bars.slice(-200),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone,...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
+  const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone,...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
   const context=datasetContext(symbol,bars,meta);
   chartRevision++;lastVisibleChart=null;loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);
   if(!crypto&&!memberMode)sessionStorage.setItem(privateAccessKey,passcode);

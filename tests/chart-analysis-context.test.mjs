@@ -51,3 +51,9 @@ test('technical conditions retain strict comparisons even when display values ro
  const evidence=marketDataContext('AAPL',near,{interval:'1day'}).technicalEvidence;
  assert.equal(evidence.aboveMA20,true);assert.equal(evidence.volumeAbovePrior20Average,true);
 });
+
+test('regular analysis and follow-ups do not require model tool JSON',async()=>{
+ const {requestsChartControl}=await import('../chat-chart-actions.mjs');
+ for(const q of ['מה המגמה לפי הגרף שאני רואה?','ומה יבטל את התרחיש?','איך מחשבים RSI?','אל תוסיף קווים'])assert.equal(requestsChartControl(q),false,q);
+ assert.equal(requestsChartControl('צייר קווים לפי השפלים'),true);assert.equal(requestsChartControl('show a different chart style'),true);
+});

@@ -131,3 +131,11 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  const result=validateChartActions(uniqueActions(actions));
  return {actions:result,recognized:!!(result.length||notes.length||bareSymbol),message:notes.join(' '),...(!symbol&&currentSymbol&&symbolRE.test(currentSymbol)?{currentSymbol}:{})};
 }
+
+// Ordinary questions use natural text; only an explicit display command asks
+// the model for a declarative tool plan when the local parser cannot handle it.
+export function requestsChartControl(value){
+ if(typeof value!=='string'||value.length>6000)return false;
+ const text=normalize(value);
+ return commandRE.test(text)&&!explanatoryRE.test(text)&&!negatedRE.test(text);
+}
