@@ -186,7 +186,7 @@ export default async function handler(request){
   if(payload.chartControl===true)return reply({...parseChartToolResponse(answer,{truncated}),truncated,analysisContext,model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ התשובה נקטעה במגבלת האורך. אפשר לבקש המשך; לא נשלחת בקשה נוספת אוטומטית.":"");
   return reply({answer:text,truncated,analysisContext,model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
- }catch{return reply({error:"אין כרגע חיבור למודל החינמי"},502)}
+ }catch(error){return reply({error:error?.name==='AbortError'?"המודל החינמי לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.":"אין כרגע חיבור למודל החינמי",code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
  finally{clearTimeout(timeout)}
 }
 

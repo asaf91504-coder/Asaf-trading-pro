@@ -52,3 +52,11 @@ test('a late text analysis warns when the selected chart changes, even without t
  const s=setup();s.ctx.fetch=async()=>{s.ctx.chartRevision++;return {ok:true,json:async()=>({answer:'analysis of original snapshot'})}};
  await s.ctx.ask('explain this chart');assert.match(s.bubbles[1].textContent,/הגרף השתנה/);assert.match(s.bubbles[1].textContent,/analysis of original snapshot/);
 });
+
+test('numeric chart analysis avoids an unnecessary vision request while an explicit screenshot is retained',async()=>{
+ const s=setup();let options;
+ s.ctx.chartAttachment=o=>{options=o;return null};s.ctx.$('chatAutoChart').checked=true;
+ await s.ctx.ask('מה המגמה לפי הגרף?');assert.equal(options.auto,false);
+ const visual=setup();visual.ctx.chartAttachment=o=>{options=o;return null};visual.ctx.$('chatAutoChart').checked=true;
+ await visual.ctx.ask('מה רואים בתמונה?',{image:'data:image/png;base64,dGVzdA=='});assert.equal(options.auto,true);assert.equal(options.manual,'data:image/png;base64,dGVzdA==');
+});

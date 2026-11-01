@@ -164,7 +164,7 @@ async function ask(q,extra={}){
   const context=currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let image=null;
-  const candidate=chartAttachment({manual:null,auto:$('chatAutoChart')?.checked===true,hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
+  const candidate=chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
