@@ -70,3 +70,20 @@
 @media(max-width:900px){.chart-workbench-body{grid-template-columns:36px minmax(0,1fr)}.terminal-app .chart-drawing-rail button{width:32px;min-height:44px;font-size:21px}.chart-drawing-rail{gap:2px;padding:3px 1px}.chart-ohlc{font-size:11px;padding:6px 8px}.chart-workbench-top{gap:4px}.chart-quick-ranges button{min-width:38px}.chart-advanced-footer{font-size:13px}}
 
 .chat-analysis-receipt{border-top:1px solid #3b4658;margin:12px 0 0!important;padding-top:9px;font-size:11px!important;line-height:1.7;color:#b5c4d8;overflow-wrap:anywhere}.bubble.bot{line-height:1.8}
+
+/* Conversation is the primary workspace; account controls live in a modal. */
+.terminal-account-dialog{direction:rtl;color:#edf4ff;background:#131d29;border:1px solid #395368;border-radius:16px;padding:24px;width:min(580px,calc(100vw - 24px));max-height:calc(100dvh - 32px);overflow:auto}
+.terminal-account-dialog::backdrop{background:#000b}
+.terminal-account-dialog .member-panel{margin-top:18px}
+.terminal-conversation-nav{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
+.terminal-conversation-context{font-size:13px;margin:0 0 12px;color:#a9b9d1}
+.terminal-conversation-context summary{cursor:pointer;padding:8px 0}
+.terminal-app[data-view=chat] .terminal-conversation-nav button:first-child{display:none}
+.terminal-app[data-view=chat] .terminal-command,.terminal-app[data-view=chat] .terminal-focus-button,.terminal-app[data-view=chat] .workspace-heading,.terminal-app[data-view=chat] .workspace-context,.terminal-app[data-view=chat] .connection-strip{display:none}
+.terminal-app[data-view=chat] .terminal-ai{width:100%;min-width:0}
+.terminal-app[data-view=chat] #chat{min-height:0;padding:18px}
+.terminal-app[data-view=chat] #chatLog{height:clamp(280px,55dvh,800px);min-height:240px;font-size:16px;overscroll-behavior:contain;overflow-wrap:anywhere}
+.terminal-app[data-view=chat] #chatForm{display:flex;gap:10px;background:#131d29;padding:10px 0 max(10px,env(safe-area-inset-bottom));margin-bottom:0}
+.terminal-app[data-view=chat] #chatInput{flex:1;min-width:0;font-size:16px;min-height:52px}
+.terminal-app[data-view=chat] #chat h2{display:flex;justify-content:space-between;align-items:center;gap:12px}
+@media(max-width:900px){.terminal-app[data-view=chat] #chat{padding:12px}.terminal-app[data-view=chat] #chatLog{height:50dvh;min-height:220px}.terminal-app[data-view=chat] .bubble{font-size:15px;line-height:1.8}.terminal-app[data-view=chat] .tabs{position:static}}
