@@ -1,3 +1,4 @@
+import {analysisReceipt} from './chart-analysis-context.mjs';
 import {chartAttachment} from './chart-attachment.mjs';
 import {mountConversationArchive} from './conversation-archive-ui.mjs';
 import {recentAIBars,CHART_HISTORY_LIMIT} from "./chart-data.mjs";
@@ -195,6 +196,7 @@ async function ask(q,extra={}){
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+data.answer;
+  if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
   if(Array.isArray(data.actions)&&data.actions.length){
    if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
    else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;waiting.textContent+='\n\nתוצאת הביצוע בפועל:\n'+execution.messages.join('\n');}catch(error){if(error.name==='AbortError')throw error;waiting.textContent+='\nלא בוצעו כלים מהתשובה: '+error.message;}}
@@ -204,6 +206,8 @@ async function ask(q,extra={}){
 
   conversation.push({role:"user",content:question},{role:"assistant",content:waiting.textContent});
   conversation=conversation.slice(-8);
+  if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
+  log.scrollTop=log.scrollHeight;
   pendingImage=null;
   if(imageInput)imageInput.value="";
   if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";

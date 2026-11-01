@@ -9,7 +9,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const nodes=new Map(),bubbles=[];let calls=0;const payloads=[];
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
- const ctx={chartRevision:0,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
+ const ctx={log:{scrollTop:0,scrollHeight:0},chartRevision:0,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
  vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,payloads,calls:()=>calls};
 }
 test('failed request restores draft without an automatic retry',async()=>{
@@ -46,4 +46,9 @@ test('same-symbol dataset replacement prevents stale model actions from executin
 test('local display commands work without sign-in but model requests remain protected',async()=>{
  const local=setup();local.ctx.authState.authenticated=false;local.ctx.parseChartCommand=parseChartCommand;local.ctx.runChatActions=async()=>({changed:true,messages:['הופעל MA20.']});await local.ctx.ask('הוסף MA20');assert.match(local.bubbles[1].textContent,/הופעל MA20/);assert.equal(local.calls(),0);
  const remote=setup();remote.ctx.authState.authenticated=false;await remote.ctx.ask('explain market');assert.equal(remote.calls(),0);assert.match(remote.bubbles[1].textContent,/להיכנס לחשבון/);
+});
+
+test('a late text analysis warns when the selected chart changes, even without tool actions',async()=>{
+ const s=setup();s.ctx.fetch=async()=>{s.ctx.chartRevision++;return {ok:true,json:async()=>({answer:'analysis of original snapshot'})}};
+ await s.ctx.ask('explain this chart');assert.match(s.bubbles[1].textContent,/הגרף השתנה/);assert.match(s.bubbles[1].textContent,/analysis of original snapshot/);
 });
