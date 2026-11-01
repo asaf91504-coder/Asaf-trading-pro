@@ -87,3 +87,25 @@ const notes=document.createElement('details');notes.className='chart-notes';
 const notesTitle=document.createElement('summary');notesTitle.textContent='מידע על הנתונים והחישובים';notes.append(notesTitle);
 for(const node of [...chartPanel.children])if(node.matches('p'))notes.append(node);
 chartPanel.append(notes);
+
+// A dedicated drawing rail and a compact quote strip keep the canvas central.
+const chartBody=document.createElement('div');chartBody.className='chart-workbench-body';
+const drawingRail=document.createElement('div');drawingRail.className='chart-drawing-rail';drawingRail.setAttribute('role','group');drawingRail.setAttribute('aria-label','כלי ציור מהירים');
+const chartViewport=document.createElement('div');chartViewport.className='chart-viewport';
+const quoteLine=document.createElement('div');quoteLine.id='chartOHLC';quoteLine.className='chart-ohlc';quoteLine.dir='ltr';quoteLine.setAttribute('aria-label','נתוני הנר הנבחר');
+const canvas=$('localChartCanvas');canvas.before(chartBody);chartBody.append(drawingRail,chartViewport);chartViewport.append(quoteLine,canvas);
+const railButtons=[];
+for(const [tool,icon,label] of [['navigate','↖','ניווט וסמן'],['trend','╱','קו מגמה'],['horizontal','━','קו מחיר אופקי'],['vertical','┃','קו אנכי'],['rectangle','▭','מלבן'],['fibonacci','≋','פיבונאצ׳י'],['arrow','↗','חץ'],['measure','↔','מדידת שינוי']]){
+ const button=document.createElement('button');button.type='button';button.textContent=icon;button.title=label;button.setAttribute('aria-label',label);button.dataset.tool=tool;button.setAttribute('aria-pressed',String(tool==='navigate'));
+ button.onclick=()=>{const active=$('chartTrend').getAttribute('aria-pressed')==='true';if(tool==='navigate'){if(active)$('chartTrend').click()}else{if(active)$('chartTrend').click();$('chartDrawingTool').value=tool;$('chartDrawingTool').dispatchEvent(new Event('change'));$('chartTrend').click()}canvas.focus();syncRail()};drawingRail.append(button);railButtons.push(button);
+}
+function syncRail(){const active=$('chartTrend').getAttribute('aria-pressed')==='true',tool=active?$('chartDrawingTool').value:'navigate';for(const button of railButtons)button.setAttribute('aria-pressed',String(button.dataset.tool===tool))}
+new MutationObserver(syncRail).observe($('chartTrend'),{attributes:true,attributeFilter:['aria-pressed']});$('chartDrawingTool').addEventListener('change',syncRail);
+const undoQuick=document.createElement('button');undoQuick.type='button';undoQuick.textContent='↶';undoQuick.title='בטל ציור אחרון';undoQuick.setAttribute('aria-label','בטל ציור אחרון');undoQuick.onclick=()=>$('chartUndo').click();drawingRail.append(undoQuick);
+const syncUndo=()=>undoQuick.disabled=$('chartUndo').disabled;new MutationObserver(syncUndo).observe($('chartUndo'),{attributes:true,attributeFilter:['disabled']});syncUndo();
+const quickRanges=document.createElement('div');quickRanges.className='chart-quick-ranges';quickRanges.setAttribute('role','group');quickRanges.setAttribute('aria-label','מספר נרות בתצוגה');
+for(const value of ['30','60','120','200']){const button=document.createElement('button');button.type='button';button.textContent=value;button.setAttribute('aria-label','הצג '+value+' נרות');button.onclick=()=>{$('localChartRange').value=value;$('localChartRange').dispatchEvent(new Event('change'))};quickRanges.append(button)}chartNav.prepend(quickRanges);
+const advancedChart=document.createElement('details');advancedChart.className='chart-advanced-footer';const chartFooterSummary=document.createElement('summary');chartFooterSummary.textContent='נתוני נרות, ציור מדויק וייצוא';advancedChart.append(chartFooterSummary);
+for(const node of [...chartPanel.children])if(node!==chartTop&&node!==chartBody&&node!==chartNav)advancedChart.append(node);chartPanel.append(advancedChart);
+
+const exactRange=document.createElement('div');exactRange.className='row';const rangeLabel=chartNav.querySelector('label[for="localChartRange"]');if(rangeLabel)exactRange.append(rangeLabel);exactRange.append($('localChartRange'));advancedChart.append(exactRange);

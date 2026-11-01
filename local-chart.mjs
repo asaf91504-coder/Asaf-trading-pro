@@ -1,3 +1,4 @@
+import {priceTicks,chartTimeLabel} from './chart-presentation.mjs';
 import {estimatedVolumeProfile} from './volume-profile.mjs';
 import {drawingHistory} from './drawing-history.mjs';
 import {chartStyles,drawingTools,heikinAshi,fibonacciLevels,drawingFromAnchors,drawingMeasurement,arrowHead,drawingText,drawingRR,drawingTradePlan,channelOffset,channelGeometry} from './chart-styles.mjs';
@@ -92,10 +93,10 @@ export function initLocalChart(){
  function draw(includeHover=true){
   if(!bars.length||panel.hidden||canvas.getBoundingClientRect().width<1)return;
   const width=Math.max(180,Math.floor(canvas.getBoundingClientRect().width)),paneNames=[['rsi','chartRSI14'],['macd','chartMACD'],['atr','chartATR14'],['stochastic','chartStochastic'],['obv','chartOBV'],['adx','chartADX14']].filter(([,id])=>$(id).checked).map(([name])=>name);
-  const layout=chartLayout(width,paneNames,panel.classList.contains('chart-expanded')?Math.max(220,window.innerHeight-300):Math.max(300,Math.min(500,window.innerHeight*.48))),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
+  const layout=chartLayout(width,paneNames,panel.classList.contains('chart-expanded')?Math.max(180,window.innerHeight-240-paneNames.length*105):Math.max(300,Math.min(500,window.innerHeight*.48))),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.style.height=height+'px';canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);
   const style=$('chartStyle').value,displayBars=style==='heikin'&&heikin?heikin:bars;
-  const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,step=plotWidth/view.count;
+  const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,futureSpace=Math.min(60,plotWidth*.10),step=(plotWidth-futureSpace)/view.count;
   renderDataTable(view);
   canvas.setAttribute('aria-label',chartAccessibleLabel({symbol,bars,start:view.start,end:view.end,style,indicators:indicatorIds.filter(id=>$(id).checked).map(id=>id.slice(5))})+(aiAnnotations.length?'. סימוני AI זמניים, מועמדים לבדיקה: '+aiAnnotations.map(item=>item.label).join('; '):''));
   let min=Math.min(...visible.map(b=>b.low)),max=Math.max(...visible.map(b=>b.high));
@@ -107,9 +108,9 @@ export function initLocalChart(){
   const x=i=>left+(i-view.start+.5)*step,y=v=>top+(max-v)/(max-min)*(bottom-top);
   geometry={...view,width,height,left,right,top,bottom,step,min,max,x,y};
   ctx.font='11px system-ui';ctx.textBaseline='middle';ctx.textAlign='left';
-  for(let j=0;j<=4;j++){const price=min+(max-min)*j/4,py=y(price);ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText(label(price),width-right+5,py)}
+  for(const price of priceTicks(min,max)){const py=y(price);ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText(label(price),width-right+5,py)}
   const timeTicks=Math.max(2,Math.min(6,Math.floor(plotWidth/110)));
-  for(let tick=0;tick<timeTicks;tick++){const index=view.start+Math.round(tick*(view.count-1)/(timeTicks-1)),px=x(index);ctx.strokeStyle=colors.grid;ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,volBottom);ctx.stroke();ctx.fillStyle=colors.text;ctx.textAlign=tick===0?'left':tick===timeTicks-1?'right':'center';ctx.fillText(bars[index].date.slice(5,10),px,height-12)}
+  for(let tick=0;tick<timeTicks;tick++){const index=view.start+Math.round(tick*(view.count-1)/(timeTicks-1)),px=x(index);ctx.strokeStyle=colors.grid;ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,volBottom);ctx.stroke();ctx.fillStyle=colors.text;ctx.textAlign=tick===0?'left':tick===timeTicks-1?'right':'center';ctx.fillText(chartTimeLabel(bars[index].date,bars[view.start].date.slice(0,10)===bars[view.end-1].date.slice(0,10)),px,height-12)}
   ctx.textAlign='left';
   const maxVol=Math.max(1,...visible.map(b=>b.volume||0));
   const lineStyle=['line','area','baseline'].includes(style);
@@ -181,9 +182,17 @@ export function initLocalChart(){
   ctx.fillStyle=last.close>=last.open?colors.up:colors.down;
   ctx.fillRect(width-right,y(last.close)-10,right,20);ctx.fillStyle='#ffffff';ctx.font='bold 11px system-ui';ctx.textAlign='left';ctx.fillText(label(last.close),width-right+4,y(last.close),right-6);
 
-  ctx.textAlign='left';ctx.font='11px system-ui';ctx.fillText(symbol+(style==='heikin'?' · HEIKIN ASHI: averaged prices; indicators use raw OHLC':style==='baseline'?' · BASELINE: first loaded close':'')+'  ·  '+view.count+' bars  ·  '+(offset?'HISTORICAL VIEW':'LATEST LOADED BAR'),left,13);
+  ctx.textAlign='left';ctx.font='11px system-ui';ctx.fillStyle=colors.text;ctx.fillText(symbol+' · '+view.count+' candles'+(style==='heikin'?' · Heikin Ashi (averaged)':offset?' · Historical':''),left,13,plotWidth);
+  const selectedBar=bars[includeHover&&hover&&hover.index>=view.start&&hover.index<view.end?hover.index:view.end-1];
+  const ohlc=$('chartOHLC');if(ohlc){ohlc.textContent=selectedBar.date+'   O '+(selectedBar.open==null?'—':label(selectedBar.open))+'   H '+label(selectedBar.high)+'   L '+label(selectedBar.low)+'   C '+label(selectedBar.close);ohlc.dataset.direction=selectedBar.close>=(selectedBar.open??selectedBar.close)?'up':'down'}
+
   if(!hover)tooltip.textContent='גרור לגלילה · גלגלת לזום · נתונים עד '+bars.at(-1).date;
   if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){const px=x(hover.index),py=hover.y;ctx.save();ctx.strokeStyle='#91a7bd';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,height-22);ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.restore();const b=bars[hover.index];tooltip.textContent=b.date+' | O '+(b.open==null?'—':label(b.open))+' H '+label(b.high)+' L '+label(b.low)+' C '+label(b.close)+' | Vol '+(b.volume==null?'—':label(b.volume))+' | '+[['RSI14','rsi14'],['ATR14','atr14'],['MACD','macd'],['Signal','macdSignal'],['Histogram','macdHistogram'],['BB upper','bbUpper'],['BB lower','bbLower'],['Stoch %K','stochasticK'],['Stoch %D','stochasticD'],['OBV','obv'],['ADX14','adx14'],['+DI','plusDI14'],['-DI','minusDI14'],['Supertrend 10/3','supertrend'],['VWAP','vwap'],['Tenkan9','tenkan'],['Kijun26','kijun']].map(([name,key])=>name+' '+(indicators[key][hover.index]===null?'—':label(indicators[key][hover.index]))).join(' | ')}
+  if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){
+   const py=hover.y,price=max-(py-top)/(bottom-top)*(max-min),px=x(hover.index),date=bars[hover.index].date;
+   ctx.fillStyle='#363c4a';ctx.fillRect(width-right,py-10,right,20);ctx.fillStyle='#fff';ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText(label(price),width-right+4,py,right-6);
+   const dateWidth=Math.min(plotWidth,ctx.measureText(date).width+16),dateX=Math.max(left,Math.min(width-right-dateWidth,px-dateWidth/2));ctx.fillStyle='#363c4a';ctx.fillRect(dateX,height-23,dateWidth,22);ctx.fillStyle='#fff';ctx.fillText(date,dateX+8,height-12,dateWidth-16);
+  }
   let custom=select.querySelector('[data-custom]');if(![...select.options].some(o=>!o.dataset.custom&&+o.value===view.count)){if(!custom){custom=document.createElement('option');custom.dataset.custom='true';select.append(custom)}custom.value=String(view.count);custom.textContent=String(view.count)}else custom?.remove();select.value=String(view.count);
   $('chartPrev').disabled=view.start===0;$('chartNext').disabled=offset===0;
  }
