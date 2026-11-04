@@ -93,7 +93,7 @@ export function initLocalChart(){
  function draw(includeHover=true){
   if(!bars.length||panel.hidden||canvas.getBoundingClientRect().width<1)return;
   const width=Math.max(180,Math.floor(canvas.getBoundingClientRect().width)),paneNames=[['rsi','chartRSI14'],['macd','chartMACD'],['atr','chartATR14'],['stochastic','chartStochastic'],['obv','chartOBV'],['adx','chartADX14']].filter(([,id])=>$(id).checked).map(([name])=>name);
-  const layout=chartLayout(width,paneNames,panel.classList.contains('chart-expanded')?Math.max(180,window.innerHeight-240-paneNames.length*105):Math.max(300,Math.min(500,window.innerHeight*.48))),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
+  const layout=chartLayout(width,paneNames,(panel.classList.contains('chart-expanded')||document.body?.dataset?.view==='charts')?Math.max(180,window.innerHeight-300-paneNames.length*105):Math.max(300,Math.min(500,window.innerHeight*.48))),{left,right,top,bottom,volTop,volBottom,height,panes}=layout,dpr=Math.min(window.devicePixelRatio||1,2);
   canvas.style.height=height+'px';canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);
   const style=$('chartStyle').value,displayBars=style==='heikin'&&heikin?heikin:bars;
   const view=chartWindow(bars.length,count,offset),visible=displayBars.slice(view.start,view.end),plotWidth=width-left-right,futureSpace=Math.min(60,plotWidth*.10),step=(plotWidth-futureSpace)/view.count;

@@ -1,3 +1,4 @@
+import {mountAssetSearch} from './asset-search-ui.mjs';
 import {authState} from './auth-ui.mjs';
 import {watchRecords,normalizeSymbol} from './workspace-core.mjs';
 const $=id=>document.getElementById(id),main=document.querySelector('main'),header=document.querySelector('header');
@@ -127,3 +128,16 @@ const advancedChart=document.createElement('details');advancedChart.className='c
 for(const node of [...chartPanel.children])if(node!==chartTop&&node!==chartBody&&node!==chartNav)advancedChart.append(node);chartPanel.append(advancedChart);
 
 const exactRange=document.createElement('div');exactRange.className='row';const rangeLabel=chartNav.querySelector('label[for="localChartRange"]');if(rangeLabel)exactRange.append(rangeLabel);exactRange.append($('localChartRange'));advancedChart.append(exactRange);
+
+// Chart workspace occupies the page; retain a single conversation and chart instance.
+mountAssetSearch({host:command,open(symbol){$('symbol').value=symbol;$('symbol').dispatchEvent(new Event('input'));selectTab('charts');$('marketFetch').click()}});
+const workspaceChat=document.createElement('button');workspaceChat.type='button';workspaceChat.className='workspace-chat-toggle';workspaceChat.textContent='✦ ASAF AI';workspaceChat.setAttribute('aria-expanded','false');command.append(workspaceChat);
+function toggleWorkspaceChat(open){document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
+workspaceChat.onclick=()=>toggleWorkspaceChat(!document.body.classList.contains('chart-chat-open'));
+const closeSidebar=document.createElement('button');closeSidebar.type='button';closeSidebar.className='chart-chat-close';closeSidebar.textContent='חזרה לגרף';closeSidebar.onclick=()=>toggleWorkspaceChat(false);conversationNav.append(closeSidebar);
+const quickActions=document.createElement('div');quickActions.className='chart-ai-prompts';quickActions.setAttribute('aria-label','בקשות ניתוח מהירות');
+for(const label of ['נתח את הגרף','מתח קווי מגמה','סמן תמיכות והתנגדויות','הוסף ממוצע 20 וממוצע 150']){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=()=>{$('chatInput').value=label;$('chatInput').focus()};quickActions.append(button)}
+form.before(quickActions);
+const visibleMarketStatus=document.createElement('p');visibleMarketStatus.className='chart-load-status';visibleMarketStatus.setAttribute('role','status');$('charts').prepend(visibleMarketStatus);
+const syncMarketStatus=()=>visibleMarketStatus.textContent=$('marketFetchStatus').textContent;new MutationObserver(syncMarketStatus).observe($('marketFetchStatus'),{childList:true,subtree:true,characterData:true});syncMarketStatus();
+$('loadChart').addEventListener('click',()=>{selectTab('charts');$('marketFetch').click()});

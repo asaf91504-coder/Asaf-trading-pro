@@ -87,3 +87,36 @@
 .terminal-app[data-view=chat] #chatInput{flex:1;min-width:0;font-size:16px;min-height:52px}
 .terminal-app[data-view=chat] #chat h2{display:flex;justify-content:space-between;align-items:center;gap:12px}
 @media(max-width:900px){.terminal-app[data-view=chat] #chat{padding:12px}.terminal-app[data-view=chat] #chatLog{height:50dvh;min-height:220px}.terminal-app[data-view=chat] .bubble{font-size:15px;line-height:1.8}.terminal-app[data-view=chat] .tabs{position:static}}
+
+/* Full-width chart desk with an optional, shared AI conversation. */
+.terminal-app[data-view=charts] main{max-width:none;padding:0 12px 12px}
+.terminal-app[data-view=charts] .workspace-heading,.terminal-app[data-view=charts] .workspace-context,.terminal-app[data-view=charts] .connection-strip,.terminal-app[data-view=charts] .terminal-watch,.terminal-app[data-view=charts] .terminal-global-tools,.terminal-app[data-view=charts] .terminal-focus-button{display:none}
+.terminal-app[data-view=charts] .terminal-stage{display:grid;grid-template-columns:minmax(0,1fr);max-width:none;min-height:calc(100dvh - 150px);gap:12px;align-items:start}
+.terminal-app[data-view=charts] .terminal-center{min-width:0}
+.terminal-app[data-view=charts] .terminal-ai{display:none!important}
+.terminal-app[data-view=charts].chart-chat-open .terminal-stage{grid-template-columns:minmax(0,1fr) 360px}
+.terminal-app[data-view=charts].chart-chat-open .terminal-ai{display:block!important;position:sticky;top:8px}
+.terminal-app[data-view=charts].chart-chat-open #chat.hidden{display:flex!important}
+.terminal-app[data-view=charts] #chartEmpty{min-height:calc(100dvh - 240px);display:flex;flex-direction:column;justify-content:center;align-items:center;background:radial-gradient(ellipse at center,#172b37 0,#13171e 70%);border:1px solid #293642}
+.terminal-app[data-view=charts] #chartEmpty[hidden]{display:none}
+.terminal-app[data-view=charts] #charts{padding:0;border:0;background:transparent}
+.chart-load-status{font-size:12px;line-height:1.6;color:#b6c8d9;margin:6px 0;overflow-wrap:anywhere}
+.chart-chat-close,.chart-ai-prompts{display:none}
+.terminal-app[data-view=charts] .chart-chat-close{display:block}
+.terminal-app[data-view=charts] .chart-ai-prompts{display:flex;gap:6px;flex-wrap:wrap}
+.chart-ai-prompts button{font-size:11px;padding:7px;background:#203139;border-color:#365e64}
+.terminal-app .workspace-chat-toggle{background:#164c47;border-color:#348577;white-space:nowrap}
+.asset-search-trigger{white-space:nowrap}
+.asset-search-dialog{direction:rtl;color:#edf4ff;background:#141c27;border:1px solid #3a5265;border-radius:16px;width:min(620px,calc(100vw - 24px));max-height:85dvh;padding:22px;overflow:auto;box-shadow:0 20px 80px #0008}
+.asset-search-dialog::backdrop{background:#050b13cc;backdrop-filter:blur(5px)}
+.asset-search-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.asset-search-heading h2{font-size:22px;margin:0 0 18px}
+.asset-search-dialog form{display:grid;grid-template-columns:1fr auto;gap:10px}.asset-search-dialog label{grid-column:1/-1;font-size:13px;color:#b8c5d4}.asset-search-dialog input{grid-column:1/-1;width:100%;font-size:16px}
+.asset-search-note,#assetSearchStatus{font-size:12px;line-height:1.7;color:#aebdcd}
+.asset-search-results{display:grid;gap:6px}.asset-search-results button{display:grid;grid-template-columns:110px 1fr auto;align-items:center;gap:10px;text-align:start;background:#1b2735;min-height:48px}.asset-search-results button:hover{background:#254039}.asset-search-results small{font-size:11px;color:#a3b7c8}
+.terminal-app[data-view=charts] .terminal-command{flex:1;max-width:none}
+@media(max-width:900px){
+ .terminal-app[data-view=charts] main{padding:0 6px 8px}.terminal-app[data-view=charts] .terminal-stage,.terminal-app[data-view=charts].chart-chat-open .terminal-stage{display:block}
+ .terminal-app[data-view=charts].chart-chat-open .terminal-ai{position:fixed;z-index:90;inset:112px 8px 8px;background:#131d29;border:1px solid #3d6570;border-radius:12px;overflow:auto;box-shadow:0 15px 50px #000b}
+ .terminal-app[data-view=charts].chart-chat-open #chat{min-height:0;height:100%;padding:12px}.terminal-app[data-view=charts].chart-chat-open #chatLog{min-height:100px;height:auto;flex:1}.terminal-app[data-view=charts].chart-chat-open #chatForm{padding-bottom:env(safe-area-inset-bottom,0px)}
+ .terminal-command{flex-wrap:wrap!important}.terminal-command .asset-search-trigger{flex:1 0 60%;font-size:13px}.terminal-command #symbol{max-width:135px}.asset-search-results button{grid-template-columns:90px 1fr}.asset-search-results small{grid-column:2}.asset-search-dialog{padding:16px}
+}
