@@ -120,3 +120,32 @@
  .terminal-app[data-view=charts].chart-chat-open #chat{min-height:0;height:100%;padding:12px}.terminal-app[data-view=charts].chart-chat-open #chatLog{min-height:100px;height:auto;flex:1}.terminal-app[data-view=charts].chart-chat-open #chatForm{padding-bottom:env(safe-area-inset-bottom,0px)}
  .terminal-command{flex-wrap:wrap!important}.terminal-command .asset-search-trigger{flex:1 0 60%;font-size:13px}.terminal-command #symbol{max-width:135px}.asset-search-results button{grid-template-columns:90px 1fr}.asset-search-results small{grid-column:2}.asset-search-dialog{padding:16px}
 }
+
+/* Scanner: one readable decision at a time, especially on a phone. */
+.terminal-app[data-view=scanner] .terminal-stage{display:block;max-width:1050px;margin:auto}
+.terminal-app[data-view=scanner] .terminal-watch,.terminal-app[data-view=scanner] .terminal-ai,.terminal-app[data-view=scanner] .workspace-heading,.terminal-app[data-view=scanner] .workspace-context,.terminal-app[data-view=scanner] .connection-strip,.terminal-app[data-view=scanner] .terminal-command,.terminal-app[data-view=scanner] .terminal-focus-button{display:none!important}
+.terminal-app #scanner{padding:24px;background:#141d28}
+.terminal-app #scanner p{font-size:14px;line-height:1.8;max-width:75ch}
+.terminal-app #scanner h3{font-size:18px;margin:22px 0 12px}
+.scanner-start,.scanner-basic,.scanner-advanced,.scanner-methodology{padding:18px;margin:16px 0;border:1px solid #344455;border-radius:12px;background:#182431}
+.scanner-start>summary,.scanner-advanced>summary,.scanner-methodology>summary{font-size:16px;cursor:pointer;min-height:28px}
+.scanner-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.terminal-app #scanner .scanner-fields label,.terminal-app #scanner .scanner-start label{display:flex;flex-direction:column;align-items:stretch;gap:8px;font-size:15px;line-height:1.6;min-width:0}
+.terminal-app #scanner input:not([type=checkbox]),.terminal-app #scanner select{width:100%;font-size:16px;padding:12px;min-height:48px;max-width:100%}
+.scanner-fields small{font-size:12px;color:#b1c1d1}
+.terminal-app #scanner .scanner-fields .scanner-check{display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid #35495a;border-radius:9px}
+.terminal-app #scanner input[type=checkbox]{width:22px;height:22px;flex-shrink:0;accent-color:#4bd3b6}
+.terminal-app #scanner #scanProvider{font-size:17px;min-height:50px;flex:1;background:#15796c}
+.terminal-app #scanner .scanner-start .row{display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.terminal-app #scanner .scanner-start .row label{flex-direction:row;align-items:center;font-size:13px}
+.scanner-result-actions{justify-content:flex-end}.scanner-active-filters{color:#a7dfd3}
+@media(max-width:700px){
+ .terminal-app #scanner{padding:14px;border-radius:10px}.terminal-app #scanner .section-heading{display:block}.terminal-app #scanner h2{font-size:23px}.terminal-app #scanner .section-heading .badge{display:inline-block;margin-top:10px}
+ .scanner-fields{grid-template-columns:1fr}.scanner-start,.scanner-basic,.scanner-advanced,.scanner-methodology{padding:14px}
+ .terminal-app #scanner .research-table{min-width:0;width:100%}.scanner-results-table thead{display:none}.scanner-results-table,.scanner-results-table tbody{display:block}
+ .scanner-results-table tr{display:block;border:1px solid #3a4b5c;border-radius:12px;padding:12px;margin-bottom:12px;background:#172536}
+ .scanner-results-table td{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;text-align:start;padding:10px 4px;font-size:14px;overflow-wrap:anywhere}
+ .scanner-results-table td[data-label]::before{content:attr(data-label);font-weight:600;color:#afc4d7}
+ .scanner-results-table td[colspan]{display:block;line-height:1.8}.scanner-results-table button{min-height:44px}
+ .terminal-app #scanner .chart-metrics{grid-template-columns:1fr 1fr}
+}
