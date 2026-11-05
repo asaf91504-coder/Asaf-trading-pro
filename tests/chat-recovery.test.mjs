@@ -105,3 +105,11 @@ test('slow preparation does not consume model budget and completed requests clea
  };
  await s.ctx.ask('analysis');assert.match(s.bubbles[1].textContent,/completed after/);assert.equal(timers.size,0);
 });
+
+test('explanatory chart command sends the execution receipt to the model and retains chart scope',async()=>{
+ const s=setup();s.ctx.parseChartCommand=()=>({recognized:true,actions:[{type:'indicator',indicator:'MA20',enabled:true}],message:''});
+ s.ctx.runChatActions=async()=>({changed:true,messages:['הופעל MA20.']});
+ s.ctx.currentContext=()=>({});s.ctx.loaded={symbol:'AAPL',source:'CSV',interval:'1day',receivedAt:'2026-11-06T00:00:00Z',bars:[]};s.ctx.localChart.settings=()=>({});
+ let payload;s.ctx.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'הממוצע מסייע להשוות את המחיר למגמה האחרונה.'})}};
+ await s.ctx.ask('הוסף MA20 ולמה הוא חשוב?');assert.match(payload.chartToolReceipt,/הופעל MA20/);assert.equal(s.ctx.conversation.at(-1).chartContext.symbol,'AAPL');assert.equal(s.ctx.conversation.at(-1).chartContext.interval,'1day');assert.match(s.bubbles[1].textContent,/מסייע/);
+});

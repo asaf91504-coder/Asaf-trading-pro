@@ -151,9 +151,9 @@ async function ask(q,extra={}){
    const answer=[command.message,...result.messages].filter(Boolean).join('\n');
    localReceipt=answer||'לא זוהתה פעולה לביצוע. נסה לציין סימול וכלי גרף.';
    waiting.textContent=localReceipt;
-   const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|analy[sz]e|analysis|explain)/iu.test(question);
+   const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|למה|מדוע|האם|מה דעתך|analy[sz]e|analysis|explain|why)/iu.test(question);
    if(!wantsAnalysis||!command.actions.length||!currentContext()){
-    conversation.push({role:'user',content:question},{role:'assistant',content:waiting.textContent});conversation=conversation.slice(-8);
+    conversation.push({role:'user',content:question,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}},{role:'assistant',content:waiting.textContent,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}});conversation=conversation.slice(-24);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }
@@ -189,7 +189,7 @@ async function ask(q,extra={}){
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
-    history:conversation.slice(-8)
+    history:conversation.slice(-24)
   };
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
@@ -215,8 +215,8 @@ async function ask(q,extra={}){
 
   if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 
-  conversation.push({role:"user",content:question},{role:"assistant",content:waiting.textContent});
-  conversation=conversation.slice(-8);
+  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:waiting.textContent,chartContext:{symbol:preparedPayload.symbol,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
+  conversation=conversation.slice(-24);
   if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
   if(followAnswer)log.scrollTop=log.scrollHeight;
   pendingImage=null;

@@ -62,12 +62,13 @@ test('impossible candle dates are rejected before any model request',async()=>{
 });
 test("real context and follow-ups reach only free model",async()=>{
  await simulate(enabled,async calls=>{
-  const result=await handler(req({message:"איך הפריצה?",symbol:"NASDAQ:NVDA",source:"CSV",interval:"1day",bars:source(),history:[{role:"user",content:"בדוק מחזור"},{role:"assistant",content:"בודק"}]}));
+  const result=await handler(req({message:"איך הפריצה?",chartToolReceipt:"הופעל MA20",symbol:"NASDAQ:NVDA",source:"CSV",interval:"1day",bars:source(),history:[{role:"user",content:"בדוק מחזור"},{role:"assistant",content:"בודק"}]}));
   assert.equal(result.status,200);
   const data=await result.json();assert.match(data.answer,/מגמה עולה/);
   assert.equal(calls.length,1);assert.equal(calls[0].url,"https://openrouter.ai/api/v1/chat/completions");
   assert.equal(calls[0].body.model,"openrouter/free");
   assert.equal(calls[0].body.messages.at(-1).content.includes("NASDAQ:NVDA"),true);
+  assert.match(calls[0].body.messages.at(-1).content,/CLIENT_TOOL_RECEIPT.*הופעל MA20/s);
   assert.equal(calls[0].body.messages[1].content,"בדוק מחזור");
   assert.equal(calls[0].body.messages[2].content,"בודק");
   assert.ok(!JSON.stringify(data).includes("test_only_not_a_real_key"));
