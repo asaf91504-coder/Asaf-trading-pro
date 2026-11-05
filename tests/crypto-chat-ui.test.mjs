@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import {isChatNearBottom} from '../chat-interaction.mjs';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const helpers=source.slice(source.indexOf('const cryptoIntervals='),source.indexOf('function currentContext('));
@@ -42,7 +43,7 @@ test('successful crypto load enforces explicit refresh budget and restore preser
 });
 test('AI receives a server-crypto request flag rather than a stock-provider or unverified-CSV claim',async()=>{
  const f=fixture();await f.context.loadMarketData({fromChat:true});const c=f.context,bubbles=[];let payload;
- Object.assign(c,{log:{scrollTop:0,scrollHeight:0},setTimeout,clearTimeout,AbortController,Event,chartAttachment:()=>null,recentAIBars:value=>value,currentContext:()=>c.loaded.context,refreshAuth:async()=>{},requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),chatBusy:false,conversationEpoch:0,conversation:[],requestController:null,pendingImage:null,imageInput:null,imageStatus:null,freeAiAccessKey:'ai',message:{value:'',dispatchEvent(){},focus(){}},form:{querySelector:()=>({disabled:false})},setAiStatus(){},say(_role,content){const item={textContent:content,append(){}};bubbles.push(item);return item}});
+ Object.assign(c,{isChatNearBottom,log:{scrollTop:0,scrollHeight:0},setTimeout,clearTimeout,AbortController,Event,chartAttachment:()=>null,recentAIBars:value=>value,currentContext:()=>c.loaded.context,refreshAuth:async()=>{},requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),chatBusy:false,conversationEpoch:0,conversation:[],requestController:null,pendingImage:null,imageInput:null,imageStatus:null,freeAiAccessKey:'ai',message:{value:'',dispatchEvent(){},focus(){}},form:{querySelector:()=>({disabled:false})},setAiStatus(){},say(_role,content){const item={textContent:content,append(){}};bubbles.push(item);return item}});
  c.localChart.settings=()=>({style:'candles',indicators:['MA20']});
  c.fetch=async(url,options)=>{assert.equal(url,'/.netlify/functions/free-chat');payload=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'ניתוח נתוני CoinLore'})}};
  vm.runInContext(source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')")),c);await c.ask('explain this chart');

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {parseChartCommand} from '../chat-chart-actions.mjs';
+import {isChatNearBottom} from '../chat-interaction.mjs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const askSource=source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')"));
 function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
@@ -10,7 +11,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,payloads,calls:()=>calls};
+ ctx.isChatNearBottom=isChatNearBottom;vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,payloads,calls:()=>calls};
 }
 test('failed request restores draft without an automatic retry',async()=>{
  const s=setup();await s.ctx.ask('my question');assert.equal(s.message.value,'my question');assert.equal(s.calls(),1);assert.equal(s.button.disabled,false);assert.match(s.bubbles[1].children[0].textContent,/בבחירה הנוכחית/);
@@ -80,4 +81,12 @@ test('retry while auth is still unavailable never sends an AI request',async()=>
  s.bubbles[1].children[2].click();await new Promise(resolve=>setImmediate(resolve));
  assert.equal(s.calls(),0);assert.equal(s.message.value,'keep me');
  assert.equal(s.ctx.chatBusy,false);
+});
+
+test('answer completion keeps the reading position unless already following the bottom',async()=>{
+ for(const [top,expected] of [[100,100],[1050,1500]]){
+  const s=setup();Object.assign(s.ctx.log,{scrollTop:top,scrollHeight:1500,clientHeight:400});
+  s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:'A completed analysis'})});
+  await s.ctx.ask('explain');assert.equal(s.ctx.log.scrollTop,expected);
+ }
 });

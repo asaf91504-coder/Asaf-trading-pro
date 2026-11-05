@@ -25,3 +25,21 @@ test('drawing and preference previews merge at their documented symbol and prefe
  assert.deepEqual(plan.counts,{current:1,incoming:2,merged:2,overlapping:1});assert.deepEqual(completePersonalRestore(plan,'drawings',local,text),incoming);
  const preferences=preparePersonalRestore('chartPreferences',{style:'line',chartRSI14:true},encoded('chartPreferences',{style:'candles'}));assert.deepEqual(preferences.data,{style:'candles',chartRSI14:true});
 });
+
+test('file restore refuses account switching and concurrent local edits',async()=>{
+ const {prepareFileRestore}=await import('../personal-restore.mjs');
+ for(const change of ['account','data']){
+  let member='first',rows=[trade('local')],confirmed=false;
+  const file={size:200,text:async()=>{if(change==='account')member='second';else rows=[trade('new')];return encoded('journal',[trade('backup')])}};
+  await assert.rejects(prepareFileRestore({file,section:'journal',read:()=>rows,getMember:()=>member,confirm:()=>{confirmed=true;return true}}));
+  assert.equal(confirmed,false);
+ }
+});
+test('file restore cancellation leaves data unchanged and a valid import preserves local rows',async()=>{
+ const {prepareFileRestore}=await import('../personal-restore.mjs');
+ const rows=[trade('local')],file={size:200,text:async()=>encoded('journal',[trade('backup')])};
+ const options={file,section:'journal',read:()=>rows,getMember:()=> 'same'};
+ assert.equal(await prepareFileRestore({...options,confirm:()=>false}),null);
+ assert.equal((await prepareFileRestore({...options,confirm:()=>true})).length,2);
+ assert.equal(rows.length,1);
+});

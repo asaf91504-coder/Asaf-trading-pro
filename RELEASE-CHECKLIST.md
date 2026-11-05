@@ -29,3 +29,13 @@ This checklist supersedes older launch-status claims where they conflict. A pass
 ## Intrinio reminders
 
 An existing scheduled task checks for a verified trial end date and warns three days and one day before it in Asia/Jerusalem. Do not infer activation from a request or email acceptance; do not create duplicate reminders or cancel/purchase automatically.
+
+## Chat, restore and touch-input pass — 2026-11-05
+
+- 444 automated tests pass. Native wrapper build and Capacitor sync pass; this is not device execution.
+- File restore now rejects an account change or concurrent local edits during asynchronous file reading, including before confirmation. Cancellation leaves local data untouched.
+- Touch-keyboard Enter inserts a newline; desktop Enter sends, Shift-Enter and IME composition do not send.
+- Completed AI answers preserve the reader's scroll position when reading older messages. Readers already near the bottom follow the answer.
+- Mobile composer uses safe-area padding, bounded input height and a smaller minimum conversation height for keyboard space.
+- Production browser verified the chat command to enable MA20 returns a successful tool receipt. No real model response or licensed stock-feed analysis is claimed by this command.
+- Still pending: authenticated account journey and second-device restore, live provider/model acceptance, and real iPhone keyboard/rotation/pinch testing. Browser automation currently offers no phone viewport/device emulation.

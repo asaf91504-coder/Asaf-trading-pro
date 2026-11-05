@@ -1,6 +1,6 @@
 import {authState,refreshAuth} from './auth-ui.mjs';
-import {personalSections,personalKeys,personalData,emptyPersonal,mergePersonal,personalBackup,parsePersonalBackup} from './personal-data.mjs';
-import {preparePersonalRestore,completePersonalRestore} from './personal-restore.mjs';
+import {personalSections,personalKeys,personalData,emptyPersonal,mergePersonal,personalBackup} from './personal-data.mjs';
+import {preparePersonalRestore,completePersonalRestore,prepareFileRestore} from './personal-restore.mjs';
 const labels={journal:'יומן העסקאות',research:'מקורות המחקר',chartPreferences:'העדפות הגרף',drawings:'קווי המגמה',conversations:'ארכיון שיחות הטקסט',layouts:'פריסות העבודה',scannerPresets:'תבניות הסריקה'};
 const defaults={style:'candles',chartMA20:true,chartMA150:true,chartEMA50:false,chartRSI14:true,chartBB20:false,chartMACD:false,chartATR14:false,chartMA50:false,chartMA100:false,chartMA200:false,chartStochastic:false,chartOBV:false,chartADX14:false,chartSupertrend:false,chartVWAP:false,chartIchimoku:false,chartVolumeProfile:false};
 const read=section=>{const saved=JSON.parse(localStorage.getItem(personalKeys[section])||JSON.stringify(emptyPersonal(section)));return personalData(section,section==='chartPreferences'?{...defaults,...saved}:saved)};
@@ -38,6 +38,6 @@ export function mountPersonalSync(host,{only=null}={}){
   }catch(e){if(e.status===409)revisions.clear();status.textContent=e.message}finally{busy=false;render()}
  }
  load.onclick=()=>sync('load');save.onclick=()=>sync('save');exportButton.onclick=()=>{try{backup(select.value,read(select.value));status.textContent='הגיבוי נוצר במכשיר. לא נשלח לחשבון.'}catch(e){status.textContent=e.message}};
- file.onchange=async()=>{const selected=select.value,f=file.files?.[0];if(!f)return;clearPreview();busy=true;render();try{if(f.size>750000)throw Error('גיבוי גדול מדי');const incoming=parsePersonalBackup(await f.text(),selected);if(!window.confirm('למזג את הגיבוי של '+labels[selected]+'? פרטי הגיבוי יקבלו עדיפות בכפילויות.'))return;let merged=mergePersonal(selected,read(selected),incoming);if(selected==='chartPreferences')merged={...defaults,...merged};applyLocal(selected,merged);status.textContent='הגיבוי מוזג במכשיר בלבד. לשמירה בחשבון לחץ על כפתור השמירה.'}catch(e){status.textContent=e.message}finally{file.value='';busy=false;render()}};
+ file.onchange=async()=>{const selected=select.value,f=file.files?.[0];if(!f||busy)return;clearPreview();busy=true;render();try{let merged=await prepareFileRestore({file:f,section:selected,read,getMember:()=>authState.memberId,confirm:()=>window.confirm('למזג את הגיבוי של '+labels[selected]+'? פרטי הגיבוי יקבלו עדיפות בכפילויות.')});if(merged===null)return;if(selected==='chartPreferences')merged={...defaults,...merged};applyLocal(selected,merged);status.textContent='הגיבוי מוזג במכשיר בלבד. לשמירה בחשבון לחץ על כפתור השמירה.'}catch(e){status.textContent=e.message}finally{file.value='';busy=false;render()}};
 }
 mountPersonalSync(document.getElementById('personalSync'));

@@ -1,4 +1,5 @@
 import {analysisReceipt} from './chart-analysis-context.mjs';
+import {shouldSendOnEnter,isChatNearBottom} from './chat-interaction.mjs';
 import {chartAttachment} from './chart-attachment.mjs';
 import {mountConversationArchive} from './conversation-archive-ui.mjs';
 import {recentAIBars,CHART_HISTORY_LIMIT} from "./chart-data.mjs";
@@ -195,6 +196,7 @@ async function ask(q,extra={}){
   if(epoch!==conversationEpoch)return;
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
+  const followAnswer=isChatNearBottom(log);
   waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+data.answer;
   if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
   if(Array.isArray(data.actions)&&data.actions.length){
@@ -207,7 +209,7 @@ async function ask(q,extra={}){
   conversation.push({role:"user",content:question},{role:"assistant",content:waiting.textContent});
   conversation=conversation.slice(-8);
   if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
-  log.scrollTop=log.scrollHeight;
+  if(followAnswer)log.scrollTop=log.scrollHeight;
   pendingImage=null;
   if(imageInput)imageInput.value="";
   if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";
@@ -378,7 +380,7 @@ if(new URLSearchParams(location.search).get("tab")==="chat"){
 }
 
 
-message.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();if(message.value.trim()&&!chatBusy)form.requestSubmit()}});
+message.addEventListener('keydown',event=>{if(shouldSendOnEnter(event,window.matchMedia('(pointer: coarse)').matches)){event.preventDefault();if(message.value.trim()&&!chatBusy)form.requestSubmit()}});
 message.addEventListener('input',()=>{message.style.height='auto';message.style.height=Math.min(180,message.scrollHeight)+'px'});
 
 // Preserve only the chart the user actually saw before opening full-page chat.

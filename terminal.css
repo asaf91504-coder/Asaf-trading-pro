@@ -189,3 +189,12 @@
  .terminal-app #chatInput{width:0;flex:1}
  .terminal-app .terminal-conversation-nav{margin-bottom:4px}
 }
+
+/* Keep the composer readable with a phone keyboard and respect device safe areas. */
+.terminal-app #chatLog{overscroll-behavior-y:contain;overflow-anchor:none}
+@media(max-width:700px){
+ .terminal-app #chatForm{position:sticky;bottom:0;z-index:3;background:var(--surface,#141e29);padding:8px 0 max(8px,env(safe-area-inset-bottom))}
+ .terminal-app #chatInput{max-height:30dvh;min-height:52px;scroll-margin-block:20px}
+ .terminal-app[data-view=chat] #chatLog{min-height:140px;height:clamp(140px,38dvh,420px)}
+ .asset-search-dialog input,.asset-search-dialog select,.terminal-account-dialog input{font-size:16px}
+}
