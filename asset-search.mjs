@@ -7,3 +7,12 @@ export function searchAssets(query,type='all'){
  return assets.filter(a=>(type==='all'||a.type===type)&&(!q||(a.symbol+' '+a.name).toLowerCase().includes(q))).slice(0,12);
 }
 export function manualSymbol(query){const q=String(query||'').trim().toUpperCase();return /^[A-Z0-9][A-Z0-9:._-]{0,29}$/.test(q)?q:null}
+export function resolveAssetQuery(query,type='all'){
+ const q=String(query||'').trim().toUpperCase();if(!q)return null;
+ const exact=assets.find(a=>a.symbol===q||a.symbol.split(':').at(-1)===q);
+ if(exact)return type==='all'||exact.type===type?exact.symbol:null;
+ const matches=searchAssets(q,type);
+ if(matches.length===1)return matches[0].symbol;
+ if(matches.length>1||searchAssets(q).length)return null;
+ return manualSymbol(q);
+}

@@ -1,5 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {searchAssets,manualSymbol} from '../asset-search.mjs';
+import {searchAssets,manualSymbol,resolveAssetQuery} from '../asset-search.mjs';
+test('submit resolves company names and Hebrew names to their listed symbols',()=>{assert.equal(resolveAssetQuery('אפל'),'NASDAQ:AAPL');assert.equal(resolveAssetQuery(' Apple '),'NASDAQ:AAPL');assert.equal(resolveAssetQuery('ביטקוין','crypto'),'BTCUSD');assert.equal(resolveAssetQuery('aapl'),'NASDAQ:AAPL')});
+test('submit avoids ambiguous matches and respects selected asset type',()=>{assert.equal(resolveAssetQuery('a'),null);assert.equal(resolveAssetQuery('BTCUSD','stock'),null);assert.equal(resolveAssetQuery('אפל','crypto'),null);assert.equal(resolveAssetQuery(''),null);assert.equal(resolveAssetQuery('NYSE:XYZ'),'NYSE:XYZ')});
 test('search supports company names, Hebrew names and ticker fragments',()=>{assert.equal(searchAssets('אפל')[0].symbol,'NASDAQ:AAPL');assert.equal(searchAssets('btc')[0].symbol,'BTCUSD');assert.equal(searchAssets('Ethereum')[0].symbol,'ETHUSD')});
 test('asset filters do not mix crypto and equities',()=>{assert.equal(searchAssets('BTC','stock').length,0);assert.ok(searchAssets('','crypto').every(a=>a.type==='crypto'))});
 test('unknown symbols may be requested without claiming provider coverage',()=>{assert.equal(manualSymbol(' nyse:xyz '),'NYSE:XYZ');assert.equal(manualSymbol('<script>'),null);assert.equal(manualSymbol('ביטקוין'),null);assert.deepEqual(searchAssets('not-a-company'),[])});
