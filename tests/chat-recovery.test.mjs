@@ -90,3 +90,18 @@ test('answer completion keeps the reading position unless already following the 
   await s.ctx.ask('explain');assert.equal(s.ctx.log.scrollTop,expected);
  }
 });
+
+test('slow preparation does not consume model budget and completed requests clear all timers',async()=>{
+ const s=setup(),timers=new Map();let id=0,preparationTimer;
+ s.ctx.setTimeout=(fn,ms)=>{timers.set(++id,{fn,ms});return id};
+ s.ctx.clearTimeout=id=>timers.delete(id);
+ s.ctx.refreshAuth=async()=>{preparationTimer=[...timers.keys()][0];assert.equal(timers.get(preparationTimer).ms,30000)};
+ s.ctx.fetch=async()=>{
+  assert.equal(timers.has(preparationTimer),false);
+  assert.ok([...timers.values()].some(t=>t.ms===65000));
+  [...timers.values()].find(t=>t.ms===20000).fn();
+  assert.match(s.ctx.$('chatRequestState').textContent,/עדיין מעבד/);
+  return {ok:true,json:async()=>({answer:'completed after a slow preparation'})};
+ };
+ await s.ctx.ask('analysis');assert.match(s.bubbles[1].textContent,/completed after/);assert.equal(timers.size,0);
+});

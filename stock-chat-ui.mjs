@@ -128,11 +128,12 @@ async function ask(q,extra={}){
  const submitButton=form.querySelector('button');
  submitButton.disabled=true;if($("cancelChat"))$("cancelChat").disabled=false;
  const requestState=$('chatRequestState');
- if(requestState)requestState.textContent='ממתין למודל החינמי…';
+ if(requestState)requestState.textContent='מכין את החיבור ונתוני הגרף…';
  const activeController=new AbortController();requestController=activeController;
  let preparedPayload=extra.retryPayload||null,localReceipt=extra.retryPayload?.chartToolReceipt||'';
  let timedOut=false;
- const requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},26000);
+ let requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},30000);
+ let slowNotice=null;
  say("user",question);
  const waiting=say("bot","כותב תשובה…");
  try{
@@ -187,6 +188,11 @@ async function ask(q,extra={}){
     image,
     history:conversation.slice(-8)
   };
+  // Model time starts only after authentication and chart preparation finish.
+  clearTimeout(requestTimeout);
+  requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
+  if(requestState)requestState.textContent='הנתונים נשלחו — ממתין לניתוח…';
+  slowNotice=setTimeout(()=>{if(epoch===conversationEpoch&&!activeController.signal.aborted&&requestState)requestState.textContent='המודל עדיין מעבד את הבקשה. אפשר להמתין או לבטל; אין צורך לשלוח שוב.'},20000);
   const response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
   let data;try{data=await response.json()}catch{throw Error("פונקציית AI לא נפרסה ל-Netlify. צריך לחבר את GitHub ולפרוס את האתר.")}
   if(!response.ok){
@@ -233,6 +239,7 @@ async function ask(q,extra={}){
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
  }finally{
   clearTimeout(requestTimeout);
+  clearTimeout(slowNotice);
   if(epoch===conversationEpoch){chatBusy=false;requestController=null;submitButton.disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(requestState)requestState.textContent='';}
  }
 }

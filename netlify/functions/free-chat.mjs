@@ -104,6 +104,7 @@ function rateLimit(){
  recent.push(now);seen.set(key,recent);return true;
 }
 export default async function handler(request){
+ const startedAt=Date.now();
  if(request.method!=="POST")return reply({error:"POST only"},405);
  if(process.env.ASAF_FREE_AI_ENABLED!=="true")return reply({error:"AI חופשי עדיין לא הוגדר. נדרש חיבור חינמי ב-Netlify; לא תבוצע קריאה בתשלום."},503);
  const key=process.env.OPENROUTER_API_KEY,pass=process.env.ASAF_FREE_AI_ACCESS_CODE;
@@ -168,12 +169,15 @@ export default async function handler(request){
   if(!storeConfigured())return reply({error:'מגבלת השימוש המשותפת טרם הוגדרה; לא נשלחה בקשה למודל.'},503);
   try{if(!await reserveAIRequest({memberId:member?.id}))return reply({error:'מכסת הבקשות המשותפת נוצלה. נסה מאוחר יותר.'},429)}catch{return reply({error:'שירות הגבלת השימוש אינו זמין. הבקשה נחסמה לפני פנייה למודל.'},503)}
  }
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),18000);
+ // Keep the complete function below the host's 60-second execution ceiling.
+ const remainingMs=Math.min(45000,50000-(Date.now()-startedAt));
+ if(remainingMs<=0)return reply({error:'הכנת הנתונים התעכבה. השאלה נשמרה ואפשר לנסות שוב.',code:'preparation_timeout'},504);
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),remainingMs);
  try{
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
    method:"POST",signal:controller.signal,
    headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","X-Title":"ASAF Trading Pro"},
-   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,stream:false})
+   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency"},stream:false})
   });
   if(!response.ok){
    return reply({error:response.status===429?"מכסת החינם של מודל ה-AI נוצלה; נסה מאוחר יותר.":"מודל ה-AI החינמי אינו זמין כרגע ("+response.status+")"},response.status===429?429:502);
