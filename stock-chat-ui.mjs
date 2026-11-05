@@ -1,3 +1,4 @@
+import {dataFreshness,quoteSummary} from './data-freshness.mjs';
 import {analysisReceipt} from './chart-analysis-context.mjs';
 import {shouldSendOnEnter,isChatNearBottom} from './chat-interaction.mjs';
 import {chartAttachment} from './chart-attachment.mjs';
@@ -55,9 +56,11 @@ function renderStatus(){
  if(!loaded){badge.textContent="אין נתוני גרף מחוברים. כשהפיד יחובר, הנרות יוצגו בגרף וישמשו לניתוח אוטומטי בעת שליחת שאלה.";return;}
  const now=normSymbol();
  badge.textContent=now===loaded.symbol?
- "✓ "+(loaded.source==="CoinLore"?"CoinLore בלבד · ניסוי מחקר פנימי · רענון REST לכל היותר פעם בדקה, לא פיד עסקאות":loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"מקור לא מאומת")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות"+(loaded.source==="CoinLore"?" | התקבלו: "+(loaded.receivedAt||"לא ידוע")+" | הנר האחרון עשוי להיות חלקי":""):
+ "✓ "+(loaded.source==="CoinLore"?"CoinLore בלבד · ניסוי מחקר פנימי · רענון REST לכל היותר פעם בדקה, לא פיד עסקאות":loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"מקור לא מאומת")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות"+(loaded.source==="CoinLore"?" | סגירת הנר: $"+loaded.context.close+" | "+quoteSummary(loaded)+" | "+dataFreshness(loaded)+" | הנר האחרון עשוי להיות חלקי":" | "+dataFreshness(loaded)):
  "⚠️ הנתונים שייכים לסימול "+loaded.symbol+" שהוזן, אבל הגרף הנבחר הוא "+now+". הנתונים לא ישמשו לניתוח הסימול האחר.";
 }
+// Update receipt age even when automatic provider refresh is disabled.
+setInterval(()=>{if(!document.hidden)renderStatus()},15000);
 function restore(){
  try{
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
