@@ -224,7 +224,10 @@ async function ask(q,extra={}){
   const edit=document.createElement('button');edit.type='button';edit.textContent='העתק את השאלה לעריכה';
   edit.addEventListener('click',()=>{if(message.value.trim()&&message.value.trim()!==question){if(!window.confirm('להחליף את הטיוטה הנוכחית בשאלה הזו?'))return}message.value=question;message.dispatchEvent(new Event('input'));message.focus()});
   waiting.append(edit);
-  if(preparedPayload){const retry=document.createElement('button');retry.type='button';retry.textContent='נסה שוב עם אותם נתונים';retry.addEventListener('click',()=>{if(chatBusy)return;ask(question,{...extra,retryPayload:preparedPayload})});waiting.append(retry)}
+  const retry=document.createElement('button');retry.type='button';
+  retry.textContent=preparedPayload?'נסה שוב עם אותם נתונים':'נסה שוב בבחירה הנוכחית';
+  retry.addEventListener('click',()=>{if(chatBusy)return;ask(question,preparedPayload?{...extra,retryPayload:preparedPayload}:extra)});
+  waiting.append(retry);
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
  }finally{
   clearTimeout(requestTimeout);

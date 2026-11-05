@@ -60,3 +60,24 @@ test('numeric chart analysis avoids an unnecessary vision request while an expli
  const visual=setup();visual.ctx.chartAttachment=o=>{options=o;return null};visual.ctx.$('chatAutoChart').checked=true;
  await visual.ctx.ask('מה רואים בתמונה?',{image:'data:image/png;base64,dGVzdA=='});assert.equal(options.auto,true);assert.equal(options.manual,'data:image/png;base64,dGVzdA==');
 });
+
+test('retry after unavailable auth rechecks login and keeps headline and a newer draft',async()=>{
+ const s=setup({unavailable:true,draft:'new draft'});
+ await s.ctx.ask('original question',{newsArticleId:'chosen'});
+ assert.equal(s.calls(),0);
+ const retry=s.bubbles[1].children[2];
+ assert.match(retry.textContent,/בבחירה הנוכחית/);
+ s.ctx.refreshAuth=async()=>{s.ctx.authState.checkAvailable=true};
+ retry.click();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(s.calls(),1);
+ assert.equal(s.payloads[0].message,'original question');
+ assert.equal(s.payloads[0].newsArticleId,'chosen');
+ assert.equal(s.message.value,'new draft');
+});
+
+test('retry while auth is still unavailable never sends an AI request',async()=>{
+ const s=setup({unavailable:true});await s.ctx.ask('keep me');
+ s.bubbles[1].children[2].click();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(s.calls(),0);assert.equal(s.message.value,'keep me');
+ assert.equal(s.ctx.chatBusy,false);
+});
