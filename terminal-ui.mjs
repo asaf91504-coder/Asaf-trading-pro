@@ -141,3 +141,24 @@ form.before(quickActions);
 const visibleMarketStatus=document.createElement('p');visibleMarketStatus.className='chart-load-status';visibleMarketStatus.setAttribute('role','status');$('charts').prepend(visibleMarketStatus);
 const syncMarketStatus=()=>visibleMarketStatus.textContent=$('marketFetchStatus').textContent;new MutationObserver(syncMarketStatus).observe($('marketFetchStatus'),{childList:true,subtree:true,characterData:true});syncMarketStatus();
 $('loadChart').addEventListener('click',()=>{selectTab('charts');$('marketFetch').click()});
+
+// Clear starting points; suggestions fill a draft and never send it automatically.
+const intro=document.createElement('p');intro.className='conversation-intro';
+intro.textContent='מה תרצה לבדוק היום? בחר מניה, בקש ניתוח או הוסף כלי לגרף.';
+chat.querySelector('h2').after(intro);
+quickActions.classList.add('conversation-prompts');
+for(const button of quickActions.querySelectorAll('button')){
+ button.onclick=()=>{
+  const input=$('chatInput'),suggestion=button.textContent;
+  if(input.value.trim()&&input.value.trim()!==suggestion&&!window.confirm('להחליף את הטיוטה בבקשה שנבחרה?'))return;
+  input.value=suggestion;input.dispatchEvent(new Event('input'));input.focus();
+ };
+}
+const stop=$('cancelChat');form.after(stop);stop.classList.add('conversation-stop');
+$('chatInput').placeholder='כתוב כאן מה תרצה לבדוק או לעשות בגרף…';
+const composerHint=document.createElement('p');composerHint.className='composer-hint';
+composerHint.textContent='ההצעות ממלאות טיוטה. רק לחיצה על ״שלח״ שולחת אותה.';
+quickActions.after(composerHint);
+const navLabels={charts:'גרפים',scanner:'סורק מניות',news:'חדשות',chat:'ASAF AI',risk:'מחשבון סיכון',watch:'מעקב'};
+for(const tab of document.querySelectorAll('.tabs [data-tab]'))tab.textContent=navLabels[tab.dataset.tab]||tab.textContent;
+$('journalLink').textContent='יומן מסחר';
