@@ -1,7 +1,7 @@
 import {filterCachedNews} from './news-search.mjs';
 import {authState,refreshAuth} from './auth-ui.mjs';
 import {normalizeSymbol,watchRecords,parseWorkspaceBackup,crossing} from './workspace-core.mjs';
-const $=id=>document.getElementById(id),watchKey='asaf_watch_v2';let watch=[];
+const $=id=>document.getElementById(id),watchKey='asaf_watch_v2';let watch=[];const watchQuotes=new Map();
 try{watch=watchRecords(JSON.parse(localStorage.getItem(watchKey)||localStorage.getItem('asaf_watch')||'["NASDAQ:AAPL","NASDAQ:NVDA","NASDAQ:MSFT"]'))}catch{}
 function download(name,type,text){const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 function persist(){try{localStorage.setItem(watchKey,JSON.stringify(watch));$('watchStatus').textContent='רשימת המעקב נשמרה במכשיר.'}catch{$('watchStatus').textContent='לא ניתן לשמור במכשיר. ייצא גיבוי לפני יציאה.'}render();window.dispatchEvent(new Event('asaf:watch-changed'))}
@@ -11,7 +11,7 @@ function render(){const host=$('watchRows');host.replaceChildren();const q=$('wa
   const heading=document.createElement('strong');heading.textContent=item.symbol;heading.dir='ltr';
   const note=document.createElement('textarea');note.value=item.note;note.placeholder='תזה, טריגר לבדיקה ומה יבטל אותו';note.maxLength=1000;note.rows=2;note.setAttribute('aria-label','הערות עבור '+item.symbol);note.onchange=()=>{item.note=note.value.trim();persist()};
   const label=document.createElement('label');label.textContent='רמת מחיר למעקב מקומי';const level=document.createElement('input');level.type='number';level.min='0.0001';level.step='any';level.value=item.level??'';level.setAttribute('aria-label','רמת מעקב עבור '+item.symbol);level.onchange=()=>{item.level=Number(level.value)>0?Number(level.value):null;persist()};label.append(level);
-  const actions=document.createElement('div');actions.className='row';for(const [title,action] of [['פתח גרף',()=>select(item.symbol)],['שאל AI',()=>select(item.symbol,'chat')],['הסר',()=>{watch=watch.filter(x=>x!==item);persist()}]]){const b=document.createElement('button');b.type='button';b.textContent=title;b.setAttribute('aria-label',title+' · '+item.symbol);b.onclick=action;actions.append(b)}card.append(heading,note,label,actions);host.append(card)
+  const actions=document.createElement('div');actions.className='row';for(const [title,action] of [['פתח גרף',()=>select(item.symbol)],['שאל AI',()=>select(item.symbol,'chat')],['הסר',()=>{watch=watch.filter(x=>x!==item);persist()}]]){const b=document.createElement('button');b.type='button';b.textContent=title;b.setAttribute('aria-label',title+' · '+item.symbol);b.onclick=action;actions.append(b)}const quote=document.createElement('div');quote.className='watch-quote';const data=watchQuotes.get(item.symbol),last=data?.bars?.at(-1),previous=data?.bars?.at(-2);if(last){const price=document.createElement('strong');price.textContent=last.close.toLocaleString('en-US',{maximumFractionDigits:6});price.dir='ltr';const stamp=document.createElement('small');stamp.textContent='סגירת נר · '+last.date+' · '+(data.source||'מקור לא ידוע');quote.append(price,stamp);if(previous?.close>0){const change=document.createElement('span'),pct=(last.close/previous.close-1)*100;change.textContent=(pct>=0?'+':'')+pct.toFixed(2)+'% מול הנר הקודם';change.dir='ltr';change.className=pct>=0?'quote-up':'quote-down';quote.append(change)}}else quote.textContent='— אין מחיר טעון';const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent=item.note?'הערות ורמת מעקב · נשמרה הערה':'הערות ורמת מעקב';details.append(summary,note,label);const share=document.createElement('button');share.type='button';share.textContent='שתף סטאפ';share.onclick=()=>window.dispatchEvent(new CustomEvent('asaf:compose-setup',{detail:{symbol:item.symbol}}));actions.append(share);card.append(heading,quote,actions,details);host.append(card)
  }
  $('watchCount').textContent=watch.length+' / 100 מניות';if(!count){const p=document.createElement('p');p.className='empty-cell';p.textContent=watch.length?'אין תוצאות לחיפוש.':'הוסף מניה ראשונה לרשימת המעקב.';host.append(p)}
 }
@@ -58,3 +58,5 @@ cloudLoad.onclick=()=>cloud('load');cloudSave.onclick=()=>cloud('save');syncRend
 $('newsForSymbol').onchange=renderNews;
 
 setInterval(()=>{if(!document.hidden&&document.querySelector('[data-tab="news"]')?.getAttribute('aria-selected')==='true')loadNews()},900000);
+
+window.addEventListener('asaf:dataset-ready',e=>{if(e.detail?.symbol){watchQuotes.set(e.detail.symbol,e.detail);render()}});window.addEventListener('asaf:dataset-cleared',()=>{watchQuotes.clear();render()});
