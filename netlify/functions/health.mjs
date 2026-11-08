@@ -1,3 +1,4 @@
+import {fundamentalsConfigured} from '../../server/market-fundamentals.mjs';
 import {publicNewsEnabled} from '../../server/public-news.mjs';
 import {mobileSessionConfigured} from '../../server/mobile-session.mjs';
 import {cryptoResearchConfigured} from '../../server/crypto-research.mjs';
@@ -7,7 +8,7 @@ import {googleConfigured} from "../../server/google-auth.mjs";
 import {publicMarketConfigured} from "./public-market.mjs";
 import {newsConfigured} from "../../server/news-core.mjs";
 // No network access, provider request, billing, or secrets are involved in this health check.
-const VERSION="2026-10-29-native-preparation-1";
+const VERSION="2026-11-08-provider-beta-1";
 const headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
 export default async function handler(request) {
   if(request.method!=="GET")return Response.json({error:"Method not allowed"},{status:405,headers});
@@ -18,6 +19,8 @@ export default async function handler(request) {
     nativeAppLoginEnabled:mobileSessionConfigured(),
     cryptoResearchEnabled:cryptoResearchConfigured(),
     cryptoResearchOwnerOnly:true,
+    marketFundamentalsEnabled:fundamentalsConfigured(),
+    marketDailyBarPolicy:'previous-daily-sessions',
     marketAnalysisEnabled:publicMarketConfigured()&&process.env.ASAF_MARKET_AI_LICENSE_CONFIRMED==='true',
     backgroundMarketRefreshConfigured:publicMarketConfigured()&&process.env.ASAF_BACKGROUND_REFRESH_ENABLED==='true',
     newsAnalysisEnabled:(newsConfigured()&&process.env.ASAF_NEWS_AI_LICENSE_CONFIRMED==='true'||publicNewsEnabled()&&!newsConfigured())&&storeConfigured(),

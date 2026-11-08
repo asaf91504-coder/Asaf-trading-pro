@@ -7,7 +7,7 @@ export async function analysisMarket(payload,{env=process.env,run=command,now=Da
  if(env.ASAF_MARKET_AI_LICENSE_CONFIRMED!=='true')throw new MarketError('ניתוח נתוני ספק ממתין לאישור רישוי AI ולהפעלת החיבור.');
  const snapshot=await readMarketSnapshot({selected:payload.symbol,interval:payload.interval||'1day',env,run,now,cachedOnly:true,maxAgeMs:15*60000});
  if(typeof payload.receivedAt!=='string'||payload.receivedAt!==snapshot.receivedAt)throw new MarketError('עותק הנתונים בשרת השתנה. טען מחדש את הגרף לפני הניתוח.',409);
- return {bars:snapshot.bars,meta:{source:'Twelve Data',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,delayMinutes:snapshot.delayMinutes,provenance:'server-provider-cache'}};
+ return {bars:snapshot.bars,meta:{source:'Twelve Data',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,exchangeTimezone:snapshot.exchangeTimezone,delayMinutes:snapshot.delayMinutes,provenance:'server-provider-cache'}};
 }
 export async function analysisNews(symbol,{env=process.env,run=command,now=Date.now(),articleId=null}={}){
  const missing={status:'unavailable',articles:[],earnings:'לא חובר ספק לדוחות או למועדי פרסום; אין להסיק נתונים עדכניים מהזיכרון.'};

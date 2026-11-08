@@ -1,12 +1,13 @@
+import {marketCapLabel} from './market-quality.mjs';
 import {patternStages} from './pattern-research.mjs';
 const percent=value=>Number.isFinite(value)?pretty(value)+'%':'לא זמין';
 const pretty=value=>Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:4}):'לא זמין';
 export function showScannerResearch(host,record,{onScenario,selectedPattern='any'}={}){
  host.replaceChildren();host.hidden=false;const data=record.research,title=document.createElement('h3'),close=document.createElement('button');title.textContent=record.symbol+' · מחקר תבניות על הנתונים שנטענו';close.type='button';close.textContent='סגור פרטי מחקר';close.onclick=()=>{host.hidden=true};host.append(title,close);
- const provenance=document.createElement('p');provenance.textContent=(record.source==='Twelve Data'?'Twelve Data · נתונים יומיים':'CSV שהועלה או הודבק · מקור לא מאומת')+' · נר אחרון '+record.summary.date+' · '+(data?.bars||0)+' נרות למחקר. הנר האחרון עשוי להיות חלקי. שווי שוק ודיווחי חברה לא נבדקו.';host.append(provenance);
+ const provenance=document.createElement('p');provenance.textContent=(record.source==='Twelve Data'?'Twelve Data · נתונים יומיים':'CSV שהועלה או הודבק · מקור לא מאומת')+' · נר אחרון '+record.summary.date+' · '+(data?.bars||0)+' נרות למחקר. '+(record.barPolicy==='previous-daily-sessions'?'יום המסחר הנוכחי מוחרג.':'הנר האחרון עשוי להיות חלקי.')+' '+marketCapLabel(record)+'. דיווחי חברה לא נבדקו.';host.append(provenance);
  if(!data?.available){const p=document.createElement('p');p.textContent=data?.reason||'מחקר התבניות אינו זמין.';host.append(p);return}
  const levels=document.createElement('p');levels.textContent='גבול תחתון ב־20 הנרות הקודמים: '+pretty(data.support20)+' · גבול עליון: '+pretty(data.resistance20)+' · רוחב הטווח ביחס לסגירה: '+percent(data.rangePercent20)+' · פער פתיחה: '+percent(data.gapOpenPercent);host.append(levels);
- const note=document.createElement('p');note.className='muted';note.textContent='אלו מועמדים לפי כללים הניתנים לבדיקה. יעד מדוד וסטופ ייחוס אינם תחזית או הוראת מסחר; אין הסתברות הצלחה מחושבת. המסננים אינם מאמתים את תנאי שווי השוק שלך.';host.append(note);
+ const note=document.createElement('p');note.className='muted';note.textContent='אלו מועמדים לפי כללים הניתנים לבדיקה. יעד מדוד וסטופ ייחוס אינם תחזית או הוראת מסחר; אין הסתברות הצלחה מחושבת. סף שווי השוק מחייב נתון ספק זמין בדולרים; זמן קבלתו מוצג בנפרד.';host.append(note);
  if(!data.candidates.length){const p=document.createElement('p');p.textContent='לא נמצא מועמד לפי הכללים בסדרה הזאת.';host.append(p)}
  for(const candidate of [...data.candidates].sort((a,b)=>Number(b.kind===selectedPattern)-Number(a.kind===selectedPattern))){const card=document.createElement('article');card.className='source-card';const h=document.createElement('h4');h.textContent=candidate.label+' · '+(patternStages[candidate.stage]||candidate.stage);card.append(h);
   const fields=[['רמת חצייה',candidate.trigger],['שפל / תמיכה של הטווח',candidate.support],['שיא / התנגדות של הטווח',candidate.resistance],['פער פתיחה (%)',candidate.gapPercent],['רוחב בולינגר (%)',candidate.widthPercent],['אחוזון רוחב',candidate.percentile]];

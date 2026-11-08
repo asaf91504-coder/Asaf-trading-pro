@@ -1,6 +1,6 @@
 import {patternLabels} from './pattern-research.mjs';
 export const scannerFields={
- scanMinPrice:{default:5,min:0,max:1e12},scanMinVolume:{default:1,min:0,max:1e9},scanMinATR:{default:0,min:0,max:10000},scanMinRSI:{default:0,min:0,max:100},scanMaxRSI:{default:100,min:0,max:100},scanMinADX:{default:25,min:0,max:100},scanMinMeasuredMove:{default:0,min:0,max:1000},scanMinScenarioRR:{default:0,min:0,max:100},
+ scanMinMarketCap:{default:1000000000,min:0,max:1e15},scanMinPrice:{default:5,min:0,max:1e12},scanMinVolume:{default:1,min:0,max:1e9},scanMinATR:{default:0,min:0,max:10000},scanMinRSI:{default:0,min:0,max:100},scanMaxRSI:{default:100,min:0,max:100},scanMinADX:{default:25,min:0,max:100},scanMinMeasuredMove:{default:0,min:0,max:1000},scanMinScenarioRR:{default:0,min:0,max:100},
  scanAbove20:{default:true},scanBreakout20:{default:false},scanRisingVolume:{default:false},scanRSIEnabled:{default:false},scanMACDSignal:{default:false},scanMACDPositive:{default:false},scanStochastic:{default:false},scanOBVRising:{default:false},scanADXEnabled:{default:false},scanPatternCrossed:{default:false},scanOnlyMatches:{default:false},
  scanScenarioSide:{default:'any',values:['any','long','short']},scanDIDirection:{default:'any',values:['any','up','down']},scanSupertrend:{default:'any',values:['any','up','down']},scanPattern:{default:'any',values:['any',...Object.keys(patternLabels)]},scanSort:{default:'atr',values:['atr','volume','symbol','scenario']}
 };
