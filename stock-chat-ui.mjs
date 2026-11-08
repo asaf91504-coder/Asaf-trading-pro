@@ -68,7 +68,11 @@ function restore(){
   if(saved&&(saved.source==="Twelve Data"||saved.source==='CoinLore'&&saved.internalResearchOnly===true&&cryptoResearchSymbol(saved.symbol)===saved.symbol&&cryptoIntervals.has(saved.interval))&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
     saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT);if(!new URLSearchParams(location.search).has("symbol"))chartSymbol.value=saved.symbol;
     chartRevision++;const meta={source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,...marketSnapshotMetadata(saved),...(saved.source==='CoinLore'?{internalResearchOnly:true,coverage:saved.coverage||'CoinLore aggregated crypto data',quote:saved.quote,latestBarMayBePartial:saved.latestBarMayBePartial===true}:{})};loaded={symbol:saved.symbol,bars:saved.bars,...meta,context:datasetContext(saved.symbol,saved.bars,meta)};
-    if(normSymbol()===saved.symbol)localChart.setData(saved.symbol,saved.bars);
+    if(normSymbol()===saved.symbol){
+      const selector=$('marketInterval');
+      if(Array.from(selector.options||[]).some(option=>option.value===loaded.interval))selector.value=loaded.interval;
+      localChart.setData(saved.symbol,saved.bars);
+    }
   }
  }catch{}
  renderStatus();
@@ -259,7 +263,7 @@ window.addEventListener('asaf:load-dataset',event=>{
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
  try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT);if(data.source==='CoinLore'&&(cryptoResearchSymbol(symbol)!==symbol||!cryptoIntervals.has(data.interval)))throw Error('סימול הקריפטו או טווח הזמן אינם נתמכים.');
  const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...marketSnapshotMetadata(data),...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
- chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
+ chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};if(Array.from($('marketInterval').options||[]).some(option=>option.value===interval))$('marketInterval').value=interval;localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
@@ -310,6 +314,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   if(!isCurrent()||signal?.aborted)throw new DOMException('Cancelled','AbortError');
   if(normSymbol()!==symbol||$('marketInterval').value!==interval)throw Error('הסימול או טווח הזמן השתנו בזמן הטעינה. שלח בקשה חדשה.');
   if(result.symbol!==(crypto?symbol:symbol.split(':').at(-1)))throw Error('הספק החזיר סימול שונה מהנבחר.');
+  if(result.interval!==interval)throw Error('הספק החזיר טווח נרות שונה מהנבחר.');
   if(crypto&&(!Number.isFinite(result.quote?.price)||result.quote.price<=0||result.quote.quoteTime!==null||result.quote.receivedAt!==result.receivedAt))throw Error('ציטוט הקריפטו אינו תקין.');
   if(crypto&&(result.source!=='CoinLore'||result.interval!==interval||result.internalResearchOnly!==true))throw Error('מקור הקריפטו או תחום הניסוי לא אומתו.');
   const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,...marketSnapshotMetadata(result),...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
@@ -377,6 +382,12 @@ const shortcut=$("chartChat");
 if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
  ask("תנתח את הגרף הנוכחי");
+});
+// A newly selected interval must never reuse old candles, even for the same symbol.
+$("marketInterval").addEventListener("change",()=>{
+ chartRevision++;resetRequest();loaded=null;localChart.clear();
+ try{sessionStorage.removeItem(key)}catch{}
+ renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));
 });
 chartSymbol.addEventListener("input",()=>{chartRevision++;rememberSymbol();$("chart").replaceChildren();resetRequest();renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));

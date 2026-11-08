@@ -63,3 +63,25 @@ test('stock load and session restore preserve daily policy, timezone and coverag
  assert.equal(f.context.loaded.context.latestBarMayBePartial,false);assert.equal(f.context.loaded.exchangeTimezone,'America/New_York');assert.equal(f.saved[0].coverage,'Prior daily sessions');
  const restored=fixture({symbol:'AAPL'});restored.context.sessionStorage.getItem=()=>JSON.stringify(f.saved[0]);restored.context.restore();assert.equal(restored.context.loaded.barPolicy,'previous-daily-sessions');assert.equal(restored.context.loaded.context.coverage,'Prior daily sessions');
 });
+
+test('weekly stock session restore aligns the selector with chart and AI metadata',async()=>{
+ const f=fixture({symbol:'SPY',interval:'1week',resultPatch:{symbol:'SPY',source:'Twelve Data',interval:'1week'}});
+ f.context.publicFeed=Promise.resolve({enabled:true});await f.context.loadMarketData();
+ const restored=fixture({symbol:'SPY',interval:'1day'});
+ restored.context.$('marketInterval').options=[{value:'1day'},{value:'1week'}];
+ restored.context.sessionStorage.getItem=()=>JSON.stringify(f.saved[0]);restored.context.restore();
+ assert.equal(restored.nodes.get('marketInterval').value,'1week');
+ assert.equal(restored.context.loaded.interval,'1week');assert.equal(restored.context.loaded.context.interval,'1week');
+ assert.equal(restored.rendered.length,1);
+});
+
+test('stock loader rejects wrong intervals and late responses after selection changes',async()=>{
+ for(const options of [
+  {resultPatch:{symbol:'AAPL',source:'Twelve Data',interval:'1h'}},
+  {resultPatch:{symbol:'AAPL',source:'Twelve Data'},duringFetch:ctx=>{ctx.$('marketInterval').value='1week';}}
+ ]){
+  const f=fixture({symbol:'AAPL',...options});f.context.publicFeed=Promise.resolve({enabled:true});
+  await assert.rejects(()=>f.context.loadMarketData(),/טווח/);
+  assert.equal(f.rendered.length,0);assert.equal(f.saved.length,0);assert.equal(f.context.loaded,null);
+ }
+});
