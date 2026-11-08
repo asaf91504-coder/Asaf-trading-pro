@@ -39,3 +39,7 @@ An existing scheduled task checks for a verified trial end date and warns three 
 - Mobile composer uses safe-area padding, bounded input height and a smaller minimum conversation height for keyboard space.
 - Production browser verified the chat command to enable MA20 returns a successful tool receipt. No real model response or licensed stock-feed analysis is claimed by this command.
 - Still pending: authenticated account journey and second-device restore, live provider/model acceptance, and real iPhone keyboard/rotation/pinch testing. Browser automation currently offers no phone viewport/device emulation.
+
+## Provider beta preparation — 2026-11-08
+
+See `PROVIDER-BETA.md` for current scope and activation requirements. It supersedes the earlier provider/scanner implementation notes: prior-session daily data, a gated Twelve Data statistics connector, a $1B market-cap filter and weighted shared credit limits are implemented. Real subscription acceptance, real AI/provider results and iPhone/two-account tests are still pending. No subscription was activated or credentials/configuration changed.

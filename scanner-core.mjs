@@ -1,3 +1,4 @@
+import {marketCapAvailable} from './market-quality.mjs';
 import {patternResearch,patternLabels} from './pattern-research.mjs';
 import {parseCSV,analyze} from './analyzer.mjs';
 import {indicatorSnapshot} from './chart-indicators.mjs';
@@ -15,8 +16,10 @@ export function scanBars(symbol,bars){
  const indicators=indicatorSnapshot(bars);
  return {symbol,bars,research:patternResearch(bars),summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram,stochasticK:indicators.stochastic1433.k,stochasticD:indicators.stochastic1433.d,obv:indicators.obv,obvPrevious:indicators.obvPrevious,adx14:indicators.dmi14.adx,plusDI14:indicators.dmi14.plusDI,minusDI14:indicators.dmi14.minusDI,supertrend:indicators.supertrend103.value,supertrendDirection:indicators.supertrend103.direction},symbolFrom:'provider'};
 }
-export function screenResult(record,{minPrice=5,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,adxEnabled=false,minADX=25,diDirection='any',supertrendDirection='any',pattern='any',scenarioSide='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
+export function screenResult(record,{minPrice=5,minMarketCap=0,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,adxEnabled=false,minADX=25,diDirection='any',supertrendDirection='any',pattern='any',scenarioSide='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
  const a=record.summary,reasons=[];
+ if(!Number.isFinite(minMarketCap)||minMarketCap<0)reasons.push('סף שווי השוק אינו תקין');
+ else if(minMarketCap>0){if(!marketCapAvailable(record))reasons.push('שווי שוק לא מאומת או פג תוקף');else if(record.fundamentals.marketCap<minMarketCap)reasons.push('שווי שוק מתחת ל־$'+minMarketCap.toLocaleString('en-US'))}
  if(a.close<=minPrice)reasons.push('מחיר אינו מעל '+minPrice);
  if(above20&&!a.aboveMA20)reasons.push('מתחת ל-MA20 או שווה לו');
  if(a.volumeRatio===null)reasons.push('מחזור חסר');

@@ -1,3 +1,4 @@
+import {marketSnapshotMetadata} from './market-quality.mjs';
 import {dataFreshness,quoteSummary} from './data-freshness.mjs';
 import {analysisReceipt} from './chart-analysis-context.mjs';
 import {shouldSendOnEnter,isChatNearBottom} from './chat-interaction.mjs';
@@ -38,7 +39,7 @@ function cryptoResearchSymbol(value){
  return null;
 }
 function datasetContext(symbol,bars,meta){
- return {...stockContext(symbol,bars,meta),source:meta.source,...(meta.source==='CoinLore'?{internalResearchOnly:true,coverage:meta.coverage||'CoinLore aggregated crypto data',quote:meta.quote,latestBarMayBePartial:meta.latestBarMayBePartial===true}:{} )};
+ return {...stockContext(symbol,bars,meta),...marketSnapshotMetadata(meta),source:meta.source,...(meta.source==='CoinLore'?{internalResearchOnly:true,coverage:meta.coverage||'CoinLore aggregated crypto data',quote:meta.quote,latestBarMayBePartial:meta.latestBarMayBePartial===true}:{} )};
 }
 function currentContext(){
  if(!loaded) return null;
@@ -51,7 +52,7 @@ function currentContext(){
 }
 function renderStatus(){
  const attribution=$("marketAttribution");
- if($('marketCoverage'))$('marketCoverage').textContent=loaded?.source==='CoinLore'?'CoinLore בלבד · קריפטו · ניסוי מחקר פנימי · רענון REST ידני, לא זרם עסקאות':['1day','1week'].includes(loaded?.interval)?'נתוני יום/EOD מאוחדים לפי הספק':'פיד תוך־יומי מזירות נבחרות, כ־5% ממחזור ארה״ב לפי הספק; המחזורים אינם מחזור כלל השוק';
+ if($('marketCoverage'))$('marketCoverage').textContent=loaded?.source==='CoinLore'?'CoinLore בלבד · קריפטו · ניסוי מחקר פנימי · רענון REST ידני, לא זרם עסקאות':loaded?.coverage||'כיסוי הנתונים לא אומת; יש לרענן את הגרף';
  if(attribution)attribution.hidden=!(loaded&&loaded.source==="Twelve Data"&&normSymbol()===loaded.symbol);
  if(!loaded){badge.textContent="אין נתוני גרף מחוברים. כשהפיד יחובר, הנרות יוצגו בגרף וישמשו לניתוח אוטומטי בעת שליחת שאלה.";return;}
  const now=normSymbol();
@@ -66,7 +67,7 @@ function restore(){
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
   if(saved&&(saved.source==="Twelve Data"||saved.source==='CoinLore'&&saved.internalResearchOnly===true&&cryptoResearchSymbol(saved.symbol)===saved.symbol&&cryptoIntervals.has(saved.interval))&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
     saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT);if(!new URLSearchParams(location.search).has("symbol"))chartSymbol.value=saved.symbol;
-    chartRevision++;const meta={source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,exchangeTimezone:saved.exchangeTimezone,...(saved.source==='CoinLore'?{internalResearchOnly:true,coverage:saved.coverage||'CoinLore aggregated crypto data',quote:saved.quote,latestBarMayBePartial:saved.latestBarMayBePartial===true}:{})};loaded={symbol:saved.symbol,bars:saved.bars,...meta,context:datasetContext(saved.symbol,saved.bars,meta)};
+    chartRevision++;const meta={source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,...marketSnapshotMetadata(saved),...(saved.source==='CoinLore'?{internalResearchOnly:true,coverage:saved.coverage||'CoinLore aggregated crypto data',quote:saved.quote,latestBarMayBePartial:saved.latestBarMayBePartial===true}:{})};loaded={symbol:saved.symbol,bars:saved.bars,...meta,context:datasetContext(saved.symbol,saved.bars,meta)};
     if(normSymbol()===saved.symbol)localChart.setData(saved.symbol,saved.bars);
   }
  }catch{}
@@ -81,7 +82,7 @@ let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
 let conversation=[];
 mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
-function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
+function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 function resetRequest(){lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
 $('cancelChat')?.addEventListener('click',()=>requestController?.abort());
 window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
@@ -257,7 +258,7 @@ window.addEventListener('asaf:load-dataset',event=>{
  const data=event.detail;if(!data||!['Twelve Data','CoinLore'].includes(data.source)||data.source==='CoinLore'&&data.internalResearchOnly!==true||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
  try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT);if(data.source==='CoinLore'&&(cryptoResearchSymbol(symbol)!==symbol||!cryptoIntervals.has(data.interval)))throw Error('סימול הקריפטו או טווח הזמן אינם נתמכים.');
- const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
+ const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...marketSnapshotMetadata(data),...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
  chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
@@ -311,7 +312,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   if(result.symbol!==(crypto?symbol:symbol.split(':').at(-1)))throw Error('הספק החזיר סימול שונה מהנבחר.');
   if(crypto&&(!Number.isFinite(result.quote?.price)||result.quote.price<=0||result.quote.quoteTime!==null||result.quote.receivedAt!==result.receivedAt))throw Error('ציטוט הקריפטו אינו תקין.');
   if(crypto&&(result.source!=='CoinLore'||result.interval!==interval||result.internalResearchOnly!==true))throw Error('מקור הקריפטו או תחום הניסוי לא אומתו.');
-  const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,exchangeTimezone:result.exchangeTimezone,...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
+  const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,...marketSnapshotMetadata(result),...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
   const context=datasetContext(symbol,bars,meta);
   chartRevision++;lastVisibleChart=null;loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);
   if(!crypto&&!memberMode)sessionStorage.setItem(privateAccessKey,passcode);

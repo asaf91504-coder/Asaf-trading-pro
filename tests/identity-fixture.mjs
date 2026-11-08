@@ -18,6 +18,7 @@ export function fixture(){
   }
   if(script.includes('account-version-change')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;db.set(k[0],v[2]);db.set(k[1],v[3]);return 1}
   if(script.includes('account-self-delete')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;if(v[2]==='1'&&db.get(k[4])===v[3])db.delete(k[4]);for(const i of [0,1,2,3,5,7,8,9])db.delete(k[i]);sets.get(k[6])?.delete(v[4]);sets.get(k[10])?.delete(v[4]);return 1}
+  if(script.includes('market-credit-reserve')){const cost=Number(v[4]);if(!allowed||k.some((key,i)=>Number(db.get(key)||0)+cost>Number(v[i])))return 0;for(const key of k)db.set(key,String(Number(db.get(key)||0)+cost));return 1}
   if(script.startsWith('for i=1,#KEYS')){if(!allowed||k.some((key,i)=>Number(db.get(key)||0)>=Number(v[i])))return 0;for(const key of k)db.set(key,String(Number(db.get(key)||0)+1));return 1}
   if(script.includes("then return redis.call('DEL'")){if(db.get(k[0])===v[0]){db.delete(k[0]);return 1}return 0}
   if(script.includes('local n=tonumber'))return allowed?1:0;

@@ -1,3 +1,4 @@
+import {marketSnapshotMetadata} from '../market-quality.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -11,7 +12,7 @@ const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,8,i+1)).t
 function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,resultPatch={},duringFetch}={}){
  const nodes=new Map(),requests=[],saved=[],ready=[],rendered=[];
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='symbol'?symbol:id==='marketInterval'?interval:'',textContent:'',disabled:false});return nodes.get(id)};
- const context={CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,lastFetchBySymbol:new Map(),status:node('chatStatus'),
+ const context={marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,lastFetchBySymbol:new Map(),status:node('chatStatus'),
   stockContext:(symbol,rows,meta)=>({symbol,bars:rows.length,date:rows.at(-1).date,source:'CSV',interval:meta.interval}),
   localChart:{setData(...args){rendered.push(args)}},sessionStorage:{setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
   publicFeed:{then(){throw Error('Stock feed gating must not be consulted for crypto')}},
@@ -54,4 +55,11 @@ test('chart and AI retain the same provider history beyond 200 candles',async()=
  const longer=Array.from({length:365},(_,i)=>({...bars[0],date:new Date(Date.UTC(2025,9,1+i)).toISOString().slice(0,10)}));
  const f=fixture({resultPatch:{bars:longer}});await f.context.loadMarketData({fromChat:true});
  assert.equal(f.context.loaded.bars.length,365);assert.equal(f.rendered[0][1].length,365);assert.equal(f.saved[0].bars.length,365);
+});
+
+test('stock load and session restore preserve daily policy, timezone and coverage',async()=>{
+ const f=fixture({symbol:'AAPL',resultPatch:{symbol:'AAPL',source:'Twelve Data',exchangeTimezone:'America/New_York',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,coverage:'Prior daily sessions'}});
+ f.context.publicFeed=Promise.resolve({enabled:true});await f.context.loadMarketData();
+ assert.equal(f.context.loaded.context.latestBarMayBePartial,false);assert.equal(f.context.loaded.exchangeTimezone,'America/New_York');assert.equal(f.saved[0].coverage,'Prior daily sessions');
+ const restored=fixture({symbol:'AAPL'});restored.context.sessionStorage.getItem=()=>JSON.stringify(f.saved[0]);restored.context.restore();assert.equal(restored.context.loaded.barPolicy,'previous-daily-sessions');assert.equal(restored.context.loaded.context.coverage,'Prior daily sessions');
 });
