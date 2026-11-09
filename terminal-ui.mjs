@@ -135,6 +135,13 @@ mountAssetSearch({host:command,open(symbol){$('symbol').value=symbol;$('symbol')
 const workspaceChat=document.createElement('button');workspaceChat.type='button';workspaceChat.className='workspace-chat-toggle';workspaceChat.textContent='✦ ASAF AI';workspaceChat.setAttribute('aria-expanded','false');command.append(workspaceChat);
 function toggleWorkspaceChat(open){document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
 workspaceChat.onclick=()=>toggleWorkspaceChat(!document.body.classList.contains('chart-chat-open'));
+// Reveal executed chart changes, including requests made from the full chat page.
+window.addEventListener('asaf:chart-actions',()=>{
+ selectTab('charts');
+ toggleWorkspaceChat(wide.matches);
+ // On phones, close the composer keyboard and sidebar so the result is visible.
+ $('localChartCanvas').focus({preventScroll:true});
+});
 const closeSidebar=document.createElement('button');closeSidebar.type='button';closeSidebar.className='chart-chat-close';closeSidebar.textContent='חזרה לגרף';closeSidebar.onclick=()=>toggleWorkspaceChat(false);conversationNav.append(closeSidebar);
 const quickActions=document.createElement('div');quickActions.className='chart-ai-prompts';quickActions.setAttribute('aria-label','בקשות ניתוח מהירות');
 for(const label of ['נתח את הגרף','מתח קווי מגמה','סמן תמיכות והתנגדויות','הוסף ממוצע 20 וממוצע 150']){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=()=>{$('chatInput').value=label;$('chatInput').focus()};quickActions.append(button)}

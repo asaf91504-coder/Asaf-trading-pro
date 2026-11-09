@@ -14,6 +14,17 @@ test('Bitcoin and Ethereum aliases select explicit CoinLore USD pairs without pr
 });
 
 const actions=text=>parseChartCommand(text).actions;
+test('the displayed trendline shortcut and common Hebrew phrasing execute local tools',()=>{
+ for(const text of ['מתח קווי מגמה','תמתח לי קווי מגמה','תמתח קו מגמה'])assert.deepEqual(actions(text),[{type:'trendlines'}],text);
+ assert.deepEqual(actions('אל תמתח קווי מגמה'),[]);
+ assert.equal(parseChartCommand('איך עובד קו מגמה?').recognized,false);
+});
+test('explicit Hebrew average lists retain every period and removal scope',()=>{
+ for(const text of ['שים ממוצעים 20 ו150','תוסיף ממוצעים נעים 20, 150','הוסף ממוצע 20 ו150'])assert.deepEqual(actions(text),[{type:'indicator',indicator:'MA20',enabled:true},{type:'indicator',indicator:'MA150',enabled:true}],text);
+ assert.deepEqual(actions('הסר ממוצעים 20 ו150'),[{type:'indicator',indicator:'MA20',enabled:false},{type:'indicator',indicator:'MA150',enabled:false}]);
+ assert.equal(parseChartCommand('מה ההבדל בין ממוצעים 20 ו150').recognized,false);
+ const unsupported=parseChartCommand('שים ממוצעים 21 ו150');assert.match(unsupported.message,/21/);assert.deepEqual(unsupported.actions,[{type:'indicator',indicator:'MA150',enabled:true}]);
+});
 test('Hebrew multi-intent request resolves known company and distinct chart actions',()=>{
  assert.deepEqual(actions('פתח אפל ותוסיף ממוצע 20 ותסמן תמיכות והתנגדויות וקווי מגמה'),[
   {type:'symbol',symbol:'NASDAQ:AAPL'}, {type:'indicator',indicator:'MA20',enabled:true}, {type:'levels',kind:'both'}, {type:'trendlines'}

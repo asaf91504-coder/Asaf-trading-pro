@@ -45,7 +45,9 @@ const boundary='[\\p{L}\\p{N}_]';
 function termRE(term){return new RegExp('(?<!'+boundary+')(?:ו|ב|ל|של)?'+escapeRE(term)+'(?!'+boundary+')','iu')}
 const companyMatchers=companies.map(([symbol,aliases])=>({symbol,matchers:aliases.map(termRE)}));
 const normalize=text=>text.normalize('NFKC').replace(/[״“”]/g,'"').replace(/[׳’]/g,"'").replace(/\s+/g,' ').trim();
-const commandRE=/(?:פתח|תפתח|הצג|תציג|תראה|תביא|תטען|טען|נתח|תנתח|נתחי|סמן|תסמן|שרטט|תשרטט|צייר|תצייר|הוסף|תוסיף|שים|תשים|הפעל|תפעיל|כבה|תכבה|הסר|תסיר|הסתר|תסתיר|הורד|תוריד|מחק|תמחק|נקה|תנקה|מצא|תמצא|זהה|תזהה|חפש|תחפש|בדוק|תבדוק|החלף|תחליף|שנה|תשנה|תעביר|תעשה|עשה|אני רוצה|אפשר (?:לראות|להוסיף|להציג|לסמן)|\b(?:open|show|load|analy[sz]e|draw|mark|add|enable|disable|remove|hide|clear|find|detect|check|switch|set|plot)\b)/iu;
+// Expand an explicit list of average periods without inferring unsupported values.
+const expandAverageList=text=>text.replace(/ממוצע(?:ים)?(?:\s+נע(?:ים)?)?\s*(?:של\s*)?(\d+(?:\s*(?:,\s*ו?|ו|and)\s*\d+)+)/giu,(_,periods)=>[...periods.matchAll(/\d+/g)].map(match=>'ממוצע '+match[0]).join(' ו'));
+const commandRE=/(?:פתח|תפתח|הצג|תציג|תראה|תביא|תטען|טען|נתח|תנתח|נתחי|סמן|תסמן|שרטט|תשרטט|מתח|תמתח|צייר|תצייר|הוסף|תוסיף|שים|תשים|הפעל|תפעיל|כבה|תכבה|הסר|תסיר|הסתר|תסתיר|הורד|תוריד|מחק|תמחק|נקה|תנקה|מצא|תמצא|זהה|תזהה|חפש|תחפש|בדוק|תבדוק|החלף|תחליף|שנה|תשנה|תעביר|תעשה|עשה|אני רוצה|אפשר (?:לראות|להוסיף|להציג|לסמן)|\b(?:open|show|load|analy[sz]e|draw|mark|add|enable|disable|remove|hide|clear|find|detect|check|switch|set|plot)\b)/iu;
 const explanatoryRE=/^(?:מה (?:זה|הם|היא|אומר)|מה ההבדל|איך (?:מחשבים|מזהים|עובד)|הסבר|תסביר|\b(?:what (?:is|are|does)|explain|how (?:does|do|to))\b)/iu;
 const offRE=/(?:הסר|תסיר|הסתר|תסתיר|כבה|תכבה|תוריד|הורד|בלי|ללא|\b(?:remove|hide|disable|off|without)\b)/iu;
 const negatedRE=/(?:אל\s+(?:ת|ל)|לא\s+(?:תוסיף|להוסיף|תסמן|לסמן|תפתח|לפתוח|תשנה|לשנות|תסיר|להסיר)|\b(?:do not|don't|dont|never)\b)/iu;
@@ -85,7 +87,7 @@ function uniqueActions(actions){
  */
 export function parseChartCommand(value,{currentSymbol=''}={}){
  if(typeof value!=='string'||value.length>6000)return {actions:[],recognized:false,message:'הבקשה ארוכה מדי או אינה טקסט.'};
- const text=normalize(value);if(!text)return {actions:[],recognized:false,message:''};
+ const text=expandAverageList(normalize(value));if(!text)return {actions:[],recognized:false,message:''};
  const command=commandRE.test(text);
  const reservedBare=new Set([...chartActionIndicators.map(id=>id.toUpperCase()),'RSI','ATR','ADX','AI','CSV','OHLC','OHLCV','OK','HELLO','HI','YES','NO','THANKS']);
  const bareKnownCompany=companies.some(([,aliases])=>aliases.some(alias=>alias.toLowerCase()===text.toLowerCase()));
@@ -123,7 +125,7 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  const supportMatch=/(?:תמיכ(?:ה|ות)|\bsupport(?:s)?\b)/iu.exec(text),resistanceMatch=/(?:התנגדו(?:ת|יות)|\bresistance(?:s)?\b)/iu.exec(text);
  const support=supportMatch&&!offRE.test(controlContext(text,supportMatch.index)),resistance=resistanceMatch&&!offRE.test(controlContext(text,resistanceMatch.index));
  if(!clear&&(support||resistance))actions.push({type:'levels',kind:support&&resistance?'both':support?'support':'resistance'});
- const trendMatch=/(?:קווי?\s*מגמה|\btrend\s*lines?\b)/iu.exec(text);
+ const trendMatch=/(?:קו(?:וי)?\s*מגמה|\btrend\s*lines?\b)/iu.exec(text);
  if(!clear&&trendMatch&&!offRE.test(controlContext(text,trendMatch.index)))actions.push({type:'trendlines'});
  let inverse=false;
  if(!clear)for(const [pattern,re] of patternMatchers){const match=re.exec(text);if(match&&!offRE.test(controlContext(text,match.index))){if(pattern==='head_shoulders'&&inverse)continue;actions.push({type:'pattern',pattern});if(pattern==='inverse_head_shoulders')inverse=true}}

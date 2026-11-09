@@ -36,3 +36,28 @@ test('clear AI marks does not fetch data or request manual drawing deletion',asy
 test('clear after analysis discards pending AI marks instead of adding them again',async()=>{
  const f=fixture();await executeChartActions([{type:'levels',kind:'both'},{type:'clear_annotations'}],f.tools);assert.deepEqual(f.rendered,[{type:'clear_annotations'}]);
 });
+
+test('adding an indicator or changing style loads missing candles before rendering',async()=>{
+ for(const actions of [
+  [{type:'indicator',indicator:'MA50',enabled:true}],
+  [{type:'style',style:'line'}],
+  [{type:'indicator',indicator:'MA20',enabled:true},{type:'indicator',indicator:'MA150',enabled:true}]
+ ]){
+  const f=fixture({missing:true});
+  f.tools.applyRender=items=>{assert.ok(f.tools.getData()?.bars.length);f.rendered.push(...items)};
+  const result=await executeChartActions(actions,f.tools);
+  assert.equal(f.fetches(),1);assert.equal(result.changed,true);assert.deepEqual(f.rendered,actions);
+  assert.match(result.messages.join(' '),/נתוני הספק נטענו/);
+ }
+});
+test('failed indicator fetch saves the preference but never claims a visible indicator',async()=>{
+ const f=fixture({missing:true,fetchFailure:true});
+ const result=await executeChartActions([{type:'indicator',indicator:'MA50',enabled:true}],f.tools);
+ assert.equal(f.fetches(),1);assert.equal(f.rendered.length,1);
+ assert.match(result.messages.join(' '),/אין ספק/);assert.match(result.messages.join(' '),/נשמרה העדפה להצגת MA50; אין עדיין נרות/);
+ assert.doesNotMatch(result.messages.join(' '),/הופעל MA50/);
+});
+test('hiding an indicator does not fetch data and loaded charts are reused',async()=>{
+ const missing=fixture({missing:true});await executeChartActions([{type:'indicator',indicator:'RSI14',enabled:false}],missing.tools);assert.equal(missing.fetches(),0);
+ const loaded=fixture();await executeChartActions([{type:'indicator',indicator:'MA50',enabled:true}],loaded.tools);assert.equal(loaded.fetches(),0);
+});

@@ -18,7 +18,7 @@ export async function executeChartActions(input,tools){
   else messages.push('המניה הפעילה: '+current+'.');
  }
  // Fetch exactly once, only when explicitly requested actions need missing data.
- const needsData=selected||actions.some(a=>['levels','trendlines','pattern'].includes(a.type));
+ const needsData=selected||actions.some(a=>['levels','trendlines','pattern','style'].includes(a.type)||a.type==='indicator'&&a.enabled);
  if(needsData&&!tools.getData()){
   try{await tools.fetchData();check();messages.push('נתוני הספק נטענו לגרף.');changed=true;}
   catch(error){check();messages.push('לא נטענו נתוני מניה: '+error.message);}
@@ -29,7 +29,8 @@ export async function executeChartActions(input,tools){
   if(['indicator','style','clear_annotations'].includes(action.type)){
    if(action.type==='clear_annotations')annotations=[];
    tools.applyRender([action]);changed=true;
-   messages.push(action.type==='indicator'?(action.enabled?'הופעל ':'הוסתר ')+action.indicator+'.':action.type==='style'?'סגנון הגרף עודכן ל־'+action.style+'.':'סימוני ה־AI נוקו; השרטוטים הידניים נשמרו.');
+   const hasCandles=!!tools.getData()?.bars?.length;
+   messages.push(action.type==='indicator'?(hasCandles?(action.enabled?'הופעל ':'הוסתר ')+action.indicator+'.':'נשמרה העדפה '+(action.enabled?'להצגת ':'להסתרת ')+action.indicator+'; אין עדיין נרות להצגה.'):action.type==='style'?(hasCandles?'סגנון הגרף עודכן ל־':'נשמרה העדפת סגנון ')+action.style+(hasCandles?'.':'; אין עדיין נרות להצגה.'):'סימוני ה־AI נוקו; השרטוטים הידניים נשמרו.');
    continue;
   }
   const data=tools.getData();
