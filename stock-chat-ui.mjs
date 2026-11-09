@@ -82,14 +82,22 @@ function restore(){
 const freeAiAccessKey="asaf_free_ai_code_v1";
 const aiStatus=$("freeAiStatus"),imageStatus=$("chatImageStatus");
 const imageInput=null; // Graph uploads are no longer part of the product.
-let pendingImage=null,chatBusy=false,requestController=null,conversationEpoch=0;
+let pendingImage=null,chatBusy=false,requestController=null,requestInvalidated=null,conversationEpoch=0;
 let conversation=[];
 mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
 function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
-function resetRequest(){lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true}
+// Changing the chart invalidates pending analysis, not the conversation itself.
+// Previous messages retain their own chartContext and are historical references.
+function resetRequest({clearHistory=false}={}){
+ const invalidate=requestInvalidated;requestInvalidated=null;
+ lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;
+ if(clearHistory)conversation=[];
+ invalidate?.({clearHistory});
+ pendingImage=null;form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if($('chatRequestState'))$('chatRequestState').textContent='';if($('chartCapturePanel'))$('chartCapturePanel').hidden=true;
+}
 $('cancelChat')?.addEventListener('click',()=>requestController?.abort());
-window.addEventListener('asaf:logout',()=>{resetRequest();log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
+window.addEventListener('asaf:logout',()=>{resetRequest({clearHistory:true});log.replaceChildren();sessionStorage.removeItem(freeAiAccessKey);});
 function setAiStatus(text){if(aiStatus)aiStatus.textContent=text}
 async function shrinkImage(source){
  const isFile=typeof File!=="undefined"&&source instanceof File;
@@ -144,6 +152,12 @@ async function ask(q,extra={}){
  let slowNotice=null;
  say("user",question);
  const waiting=say("bot","כותב תשובה…");
+ requestInvalidated=({clearHistory})=>{
+  clearTimeout(requestTimeout);clearTimeout(slowNotice);
+  if(clearHistory)return;
+  waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+'הבקשה נעצרה כי בחירת הגרף או הנתונים השתנתה. השיחה הקודמת נשמרה; אפשר לשלוח שוב על הבחירה החדשה.';
+  if(!message.value.trim()){message.value=question;message.dispatchEvent(new Event('input'))}
+ };
  try{
   await refreshAuth();
   if(epoch!==conversationEpoch)return;
@@ -157,12 +171,14 @@ async function ask(q,extra={}){
    localReceipt=answer||'לא זוהתה פעולה לביצוע. נסה לציין סימול וכלי גרף.';
    waiting.textContent=localReceipt;
    const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|למה|מדוע|האם|מה דעתך|analy[sz]e|analysis|explain|why)/iu.test(question);
-   if(!wantsAnalysis||!command.actions.length||!currentContext()){
+   // Explanations still go to the model when the feed is unavailable. The
+   // receipt describes what happened; absent candles must stay absent.
+   if(!wantsAnalysis){
     conversation.push({role:'user',content:question,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}},{role:'assistant',content:waiting.textContent,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}});conversation=conversation.slice(-24);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }
-   waiting.textContent+='\n\nכותב ניתוח על הנתונים שנבחרו…';
+   waiting.textContent+='\n\nמכין תשובה לשאלה שלך…';
   }
   if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
   let code=authState.enabled?"":sessionStorage.getItem(freeAiAccessKey)||"";
@@ -185,7 +201,7 @@ async function ask(q,extra={}){
     chartToolReceipt:localReceipt,
     symbol:activeData?.symbol||normSymbol(),
     source:activeData?.source||"none",
-    interval:activeData?.interval||"1day",
+    interval:activeData?.interval||$('marketInterval').value||"1day",
     receivedAt:activeData?.receivedAt||null,
     useServerMarket:activeData?.source==="Twelve Data",
     useServerCrypto:activeData?.source==="CoinLore",
@@ -248,11 +264,11 @@ async function ask(q,extra={}){
  }finally{
   clearTimeout(requestTimeout);
   clearTimeout(slowNotice);
-  if(epoch===conversationEpoch){chatBusy=false;requestController=null;submitButton.disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(requestState)requestState.textContent='';}
+  if(epoch===conversationEpoch){chatBusy=false;requestController=null;requestInvalidated=null;submitButton.disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(requestState)requestState.textContent='';}
  }
 }
 $('clearConversation')?.addEventListener('click',()=>{
- conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;conversation=[];pendingImage=null;log.replaceChildren();form.querySelector('button').disabled=false;if($('cancelChat'))$('cancelChat').disabled=true;if(imageInput)imageInput.value='';if(imageStatus)imageStatus.textContent='נתוני הגרף הזמינים מצורפים אוטומטית.';if($('chatRequestState'))$('chatRequestState').textContent='';say('bot','שיחה חדשה. נתוני הגרף שנבחרו נשארו זמינים.');
+ resetRequest({clearHistory:true});log.replaceChildren();if(imageStatus)imageStatus.textContent='נתוני הגרף הזמינים מצורפים אוטומטית.';say('bot','שיחה חדשה. נתוני הגרף שנבחרו נשארו זמינים.');
 });
 $('exportConversation')?.addEventListener('click',()=>{
  const text=[...log.querySelectorAll('.bubble')].map(el=>(el.classList.contains('user')?'אתה: ':'ASAF AI: ')+el.textContent).join('\n\n');
@@ -269,7 +285,7 @@ window.addEventListener('asaf:load-dataset',event=>{
 });
 $("forgetFreeAiCode")?.addEventListener("click",()=>{
  sessionStorage.removeItem(freeAiAccessKey);
- resetRequest();
+ resetRequest({clearHistory:true});
  setAiStatus("קוד הגישה הפרטי נשכח; יידרש בכניסה הבאה.");
 });
 $("offlineAnalysis")?.addEventListener("click",()=>{
