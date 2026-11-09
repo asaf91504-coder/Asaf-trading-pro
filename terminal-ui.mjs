@@ -65,7 +65,7 @@ function renderWatch(){
  if(!watchList.children.length){const p=document.createElement('p');p.textContent='הוסף מניות לרשימת המעקב שלך.';watchList.append(p)}
 }
 window.addEventListener('asaf:watch-changed',renderWatch);window.addEventListener('storage',renderWatch);$('symbol').addEventListener('input',()=>{context.textContent='אין נתוני גרף תואמים לסימול שנבחר.';renderWatch()});
-window.addEventListener('asaf:dataset-ready',e=>{const d=e.detail,last=d?.bars?.at(-1);if(!last)return;quotes.set(d.symbol,{close:last.close,date:last.date,source:d.source||'CSV'});context.textContent=d.symbol+' · '+(d.interval||'1day')+' · '+(d.source==='CoinLore'?'CoinLore · מחקר קריפטו':d.source==='Twelve Data'?'נתוני ספק':'נתונים מקומיים')+' · נר '+last.date+' · סגירת הנר: '+last.close+' · '+quoteSummary(d)+' · '+'התקבלו: '+(d.receivedAt||'לא ידוע')+' · '+d.bars.length+' נרות. יישלחו עם השאלה; אין צורך להעלות צילום.';renderWatch()});
+window.addEventListener('asaf:dataset-ready',e=>{const d=e.detail,last=d?.bars?.at(-1);if(!last)return;quotes.set(d.symbol,{close:last.close,date:last.date,source:d.source||'CSV'});context.textContent=d.symbol+' · '+(d.interval||'1day')+' · '+(d.source==='CoinLore'?'CoinLore · מחקר קריפטו':d.source==='Intrinio'?'Intrinio · ניסיון פנימי':d.source==='Twelve Data'?'נתוני ספק':'נתונים מקומיים')+' · נר '+last.date+' · סגירת הנר: '+last.close+' · '+quoteSummary(d)+' · '+'התקבלו: '+(d.receivedAt||'לא ידוע')+' · '+d.bars.length+' נרות. יישלחו עם השאלה; אין צורך להעלות צילום.';renderWatch()});
 window.addEventListener('asaf:dataset-cleared',()=>{quotes.clear();renderWatch();context.textContent='אין נתוני גרף מחוברים. לא ניתן לנתח מחיר עדכני בלי נתונים.'});
 renderWatch();
 const wide=matchMedia('(min-width: 901px)');
