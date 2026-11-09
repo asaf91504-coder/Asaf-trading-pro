@@ -15,7 +15,7 @@ export function stockContext(symbol,bars,meta={}) {
   const changePct=prev.close>0?(last.close-prev.close)/prev.close*100:null;
   const candleRange=last.high-last.low,body=Math.abs(last.close-(last.open??last.close));
   return {
-    ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,source:["Twelve Data","CoinLore"].includes(meta.source)?meta.source:"CSV",interval:typeof meta.interval==="string"?meta.interval:"1day",receivedAt:meta.receivedAt||null,exchangeTimezone:meta.exchangeTimezone||null,
+    ...m,symbol:String(symbol||"לא ידוע").slice(0,30),lastBar:last,source:["Twelve Data","CoinLore","Intrinio"].includes(meta.source)?meta.source:"CSV",interval:typeof meta.interval==="string"?meta.interval:"1day",receivedAt:meta.receivedAt||null,exchangeTimezone:meta.exchangeTimezone||null,
     dailyChangePercent:changePct===null?null:Math.round(changePct*100)/100,
     rangeLow20:rangeLow,priorHigh20:priorHigh,rangeHigh50,rangeLow50,
     candleDirection:last.open==null?"לא ידוע":last.close>last.open?"עולה":last.close<last.open?"יורד":"דוג'י",
@@ -39,7 +39,7 @@ export function answerStockQuestion(question, context=null) {
   const c=context;
   const fromProvider=c.source==="Twelve Data";
   const isIntraday=!["1day","1week","1month"].includes(c.interval);
-  const sourceText=c.source==="CoinLore"?"CoinLore בלבד · מחקר פנימי · הנר האחרון עשוי להיות חלקי":fromProvider?"Twelve Data, נתונים שעשויים להיות מעוכבים":"קובץ CSV שהועלה";
+  const sourceText=c.source==="Intrinio"?"Intrinio · נרות יומיים מותאמים · ניסיון פנימי":c.source==="CoinLore"?"CoinLore בלבד · מחקר פנימי · הנר האחרון עשוי להיות חלקי":fromProvider?"Twelve Data, נתונים שעשויים להיות מעוכבים":"קובץ CSV שהועלה";
   const timeframe=isIntraday?" (טווח "+c.interval+"; הממוצעים ופריצת 20 מתייחסים לנרות, לא לימים)":"";
   const title=`📈 ${c.symbol} | נר אחרון ${c.date} | ${c.bars} נרות | מקור: ${sourceText}${timeframe}`;
   const trend=`מגמה: סגירה ${fmt(c.close)}, MA20 ${fmt(c.sma20)} (${c.aboveMA20?"מעליו":"מתחתיו"}), MA150 ${fmt(c.sma150)} (${yes(c.aboveMA150)} מעליו).`;

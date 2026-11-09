@@ -1,3 +1,4 @@
+import {intrinioConfigured} from '../../server/intrinio-research.mjs';
 import {fundamentalsConfigured} from '../../server/market-fundamentals.mjs';
 import {publicNewsEnabled} from '../../server/public-news.mjs';
 import {mobileSessionConfigured} from '../../server/mobile-session.mjs';
@@ -17,6 +18,8 @@ export default async function handler(request) {
     version:VERSION,
     googleAuthEnabled:googleConfigured(),
     nativeAppLoginEnabled:mobileSessionConfigured(),
+    intrinioResearchEnabled:intrinioConfigured(),
+    intrinioResearchOwnerOnly:true,
     cryptoResearchEnabled:cryptoResearchConfigured(),
     cryptoResearchOwnerOnly:true,
     marketFundamentalsEnabled:fundamentalsConfigured(),

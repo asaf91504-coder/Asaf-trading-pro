@@ -14,7 +14,8 @@ function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='symbol'?symbol:id==='marketInterval'?interval:'',textContent:'',disabled:false});return nodes.get(id)};
  const context={marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,lastFetchBySymbol:new Map(),status:node('chatStatus'),
   stockContext:(symbol,rows,meta)=>({symbol,bars:rows.length,date:rows.at(-1).date,source:'CSV',interval:meta.interval}),
-  localChart:{setData(...args){rendered.push(args)}},sessionStorage:{setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
+  localChart:{setData(...args){rendered.push(args)}},sessionStorage:{removeItem(){},setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
+  intrinioFeed:Promise.resolve({enabled:false}),
   publicFeed:{then(){throw Error('Stock feed gating must not be consulted for crypto')}},
   fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body),options});if(duringFetch)duringFetch(context);return {ok:status<400,status,json:async()=>({symbol:'COINLORE:BTCUSD',bars,source:'CoinLore',interval,receivedAt:'2026-10-29T10:00:00Z',latestBarTime:bars.at(-1).date,quote:{price:222.5,receivedAt:'2026-10-29T10:00:00Z',quoteTime:null},internalResearchOnly:true,coverage:'CoinLore aggregated crypto data',latestBarMayBePartial:true,...resultPatch})}}
  };
@@ -83,5 +84,17 @@ test('stock loader rejects wrong intervals and late responses after selection ch
   const f=fixture({symbol:'AAPL',...options});f.context.publicFeed=Promise.resolve({enabled:true});
   await assert.rejects(()=>f.context.loadMarketData(),/טווח/);
   assert.equal(f.rendered.length,0);assert.equal(f.saved.length,0);assert.equal(f.context.loaded,null);
+ }
+});
+
+
+test('Intrinio daily trial routes through authenticated owner endpoint and is never labeled Twelve Data or saved in session storage',async()=>{
+ const f=fixture({symbol:'AAPL',resultPatch:{source:'Intrinio',symbol:'AAPL',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,coverage:'Intrinio adjusted EOD'}});
+ f.context.intrinioFeed=Promise.resolve({enabled:true});f.context.publicFeed=Promise.resolve({enabled:false});
+ await f.context.loadMarketData({fromChat:true});assert.equal(f.requests[0].url,'/.netlify/functions/intrinio-research');assert.equal(f.context.loaded.source,'Intrinio');assert.equal(f.context.loaded.context.source,'Intrinio');assert.equal(f.context.loaded.context.latestBarMayBePartial,false);assert.match(f.context.marketStatus.textContent,/Intrinio/);assert.doesNotMatch(f.context.marketStatus.textContent,/Twelve Data/);assert.equal(f.saved.length,0);
+});
+test('Intrinio trial rejects unsupported intervals and untrusted source without changing chart',async()=>{
+ for(const options of [{interval:'1week'},{resultPatch:{source:'Twelve Data',symbol:'AAPL'}}]){
+ const f=fixture({symbol:'AAPL',...options});f.context.intrinioFeed=Promise.resolve({enabled:true});f.context.publicFeed=Promise.resolve({enabled:false});await assert.rejects(()=>f.context.loadMarketData());assert.equal(f.rendered.length,0);
  }
 });
