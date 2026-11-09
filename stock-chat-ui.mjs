@@ -57,7 +57,7 @@ function renderStatus(){
  if(!loaded){badge.textContent="אין נתוני גרף מחוברים. כשהפיד יחובר, הנרות יוצגו בגרף וישמשו לניתוח אוטומטי בעת שליחת שאלה.";return;}
  const now=normSymbol();
  badge.textContent=now===loaded.symbol?
- "✓ "+(loaded.source==="CoinLore"?"CoinLore בלבד · ניסוי מחקר פנימי · רענון REST לכל היותר פעם בדקה, לא פיד עסקאות":loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":"מקור לא מאומת")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות"+(loaded.source==="CoinLore"?" | סגירת הנר: $"+loaded.context.close+" | "+quoteSummary(loaded)+" | "+dataFreshness(loaded)+" | הנר האחרון עשוי להיות חלקי":" | "+dataFreshness(loaded)):
+ "✓ "+(loaded.source==="CoinLore"?"CoinLore בלבד · ניסוי מחקר פנימי · רענון REST לכל היותר פעם בדקה, לא פיד עסקאות":loaded.source==="Twelve Data"?"ספק Twelve Data (ייתכן עיכוב)":loaded.source==="Intrinio"?"Intrinio · נרות יומיים · ניסיון פנימי":"מקור לא מאומת")+" | "+loaded.symbol+" | "+loaded.interval+" | נר אחרון: "+loaded.context.date+" | "+loaded.context.bars+" נרות"+(loaded.source==="CoinLore"?" | סגירת הנר: $"+loaded.context.close+" | "+quoteSummary(loaded)+" | "+dataFreshness(loaded)+" | הנר האחרון עשוי להיות חלקי":" | "+dataFreshness(loaded)):
  "⚠️ הנתונים שייכים לסימול "+loaded.symbol+" שהוזן, אבל הגרף הנבחר הוא "+now+". הנתונים לא ישמשו לניתוח הסימול האחר.";
 }
 // Update receipt age even when automatic provider refresh is disabled.
@@ -205,6 +205,7 @@ async function ask(q,extra={}){
     receivedAt:activeData?.receivedAt||null,
     useServerMarket:activeData?.source==="Twelve Data",
     useServerCrypto:activeData?.source==="CoinLore",
+    useServerIntrinio:activeData?.source==="Intrinio",
     includeNews:extra.newsArticleId?true:$("chatIncludeNews")?.checked===true,
     newsArticleId:extra.newsArticleId||null,
     bars:recentAIBars(activeData?.bars),
@@ -279,7 +280,7 @@ window.addEventListener('asaf:load-dataset',event=>{
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
  try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT);if(data.source==='CoinLore'&&(cryptoResearchSymbol(symbol)!==symbol||!cryptoIntervals.has(data.interval)))throw Error('סימול הקריפטו או טווח הזמן אינם נתמכים.');
  const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...marketSnapshotMetadata(data),...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
- chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};if(Array.from($('marketInterval').options||[]).some(option=>option.value===interval))$('marketInterval').value=interval;localChart.setData(symbol,bars);try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
+ chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};if(Array.from($('marketInterval').options||[]).some(option=>option.value===interval))$('marketInterval').value=interval;localChart.setData(symbol,bars);try{if(data.source==='Intrinio')sessionStorage.removeItem(key);else sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
@@ -293,6 +294,7 @@ $("offlineAnalysis")?.addEventListener("click",()=>{
  say("bot","🧮 ניתוח מתמטי מקומי (ללא AI):\\n"+answerStockQuestion("תנתח את הגרף ואת המגמה",context));
 });
 const lastFetchBySymbol=new Map();
+const intrinioFeed=fetch('/.netlify/functions/intrinio-research',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
 const publicFeed=fetch('/.netlify/functions/public-market',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
 publicFeed.then(c=>{const option=$('marketAutoRefresh');if(option)option.disabled=!c.enabled;if(authState.enabled)$('marketForgetCode').hidden=true});
 async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
@@ -300,12 +302,13 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
  if(!symbol)throw Error("נא להזין סימול מניה תחילה.");
  const interval=$("marketInterval").value,fetchKey=symbol+"|"+interval;
  if(crypto&&!cryptoIntervals.has(interval))throw Error('בניסוי הקריפטו זמין טווח 1day בלבד. בחר טווח נתמך; הטווח לא שונה אוטומטית.');
- const memberMode=authState.enabled;
+ const memberMode=authState.enabled,intrinio=!crypto&&memberMode&&(await intrinioFeed).enabled===true;
+ if(intrinio&&interval!=='1day')throw Error('ניסיון Intrinio תומך כרגע בנרות יומיים בלבד. בחר 1day.');
  if(crypto){
   if(!authState.authenticated)throw Error('יש להיכנס לחשבון בעל הפרויקט לפני טעינת נתוני ניסוי הקריפטו.');
  }else{
   const feed=await publicFeed;
-  if((memberMode||fromChat)&&!feed.enabled)throw Error('נתוני השוק טרם חוברו. ממתינים לספק ולאישור רישוי; לא ניתן להציג גרף או לסמן רמות ללא נרות.');
+  if((memberMode||fromChat)&&!feed.enabled&&!intrinio)throw Error('נתוני השוק טרם חוברו. ממתינים לספק ולאישור רישוי; לא ניתן להציג גרף או לסמן רמות ללא נרות.');
   if(memberMode&&!authState.authenticated)throw Error('יש להיכנס לחשבון לפני טעינת נתונים.');
   if(fromChat&&!memberMode)throw Error('טעינה בצ׳אט זמינה רק דרך חיבור הנתונים של האתר.');
  }
@@ -321,7 +324,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
  marketButton.disabled=true;
  marketStatus.textContent=crypto?'טוען נרות מ־CoinLore לניסוי מחקר פנימי של בעל הפרויקט…':'מתחבר לספק הנתונים (בקשה מפורשת בלבד)…';
  try{
-  const response=await fetch(crypto?'/.netlify/functions/crypto-research':memberMode?'/.netlify/functions/public-market':'/.netlify/functions/market',{
+  const response=await fetch(crypto?'/.netlify/functions/crypto-research':intrinio?'/.netlify/functions/intrinio-research':memberMode?'/.netlify/functions/public-market':'/.netlify/functions/market',{
    method:'POST',signal,credentials:'same-origin',headers:{'Content-Type':'application/json',...(!crypto&&!memberMode?{'x-asaf-market-access':passcode}:{})},body:JSON.stringify({symbol,interval})
   });
   let result;try{result=await response.json()}catch{throw Error('פונקציית הנתונים החזירה תשובה לא תקינה.');}
@@ -333,14 +336,15 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   if(result.interval!==interval)throw Error('הספק החזיר טווח נרות שונה מהנבחר.');
   if(crypto&&(!Number.isFinite(result.quote?.price)||result.quote.price<=0||result.quote.quoteTime!==null||result.quote.receivedAt!==result.receivedAt))throw Error('ציטוט הקריפטו אינו תקין.');
   if(crypto&&(result.source!=='CoinLore'||result.interval!==interval||result.internalResearchOnly!==true))throw Error('מקור הקריפטו או תחום הניסוי לא אומתו.');
-  const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':'Twelve Data',interval,receivedAt:result.receivedAt,...marketSnapshotMetadata(result),...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
+  if(intrinio&&(result.source!=='Intrinio'||result.internalResearchOnly!==true))throw Error('מקור Intrinio לא אומת.');
+  const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':intrinio?'Intrinio':'Twelve Data',...(intrinio?{internalResearchOnly:true}:{} ),interval,receivedAt:result.receivedAt,...marketSnapshotMetadata(result),...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
   const context=datasetContext(symbol,bars,meta);
   chartRevision++;lastVisibleChart=null;loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);
   if(!crypto&&!memberMode)sessionStorage.setItem(privateAccessKey,passcode);
-  try{sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
+  try{if(intrinio)sessionStorage.removeItem(key);else sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
   lastFetchBySymbol.set(fetchKey,Date.now());renderStatus();datasetReady();
   marketStatus.textContent=crypto?'✓ CoinLore בלבד · ניסוי מחקר פנימי · '+symbol+' · '+interval+' · נר אחרון: '+result.latestBarTime+' · התקבלו: '+result.receivedAt+' · ציטוט נפרד: $'+result.quote.price+' (זמן עסקה אינו ידוע) · רענון REST לכל היותר פעם בדקה, ללא זרם עסקאות; הנר האחרון עשוי להיות חלקי.':
-   '✓ נר אחרון: '+result.latestBarTime+' | '+(result.exchange||'בורסה לא ידועה')+' | אזור זמן: '+(result.exchangeTimezone||'לא ידוע')+' | מקור Twelve Data'+(result.cached?' (מטמון)':'')+' | '+(result.coverage||'כיסוי לא הוצהר')+(Number.isFinite(result.delayMinutes)?' | עיכוב מוצהר: '+result.delayMinutes+' דקות':'; נתונים עשויים להיות מעוכבים.');
+   '✓ נר אחרון: '+result.latestBarTime+' | '+(result.exchange||'בורסה לא ידועה')+' | אזור זמן: '+(result.exchangeTimezone||'לא ידוע')+' | מקור '+(intrinio?'Intrinio':'Twelve Data')+(result.cached?' (מטמון)':'')+' | '+(result.coverage||'כיסוי לא הוצהר')+(Number.isFinite(result.delayMinutes)?' | עיכוב מוצהר: '+result.delayMinutes+' דקות':intrinio?' | נתוני סוף יום, לא מחיר חי':'; נתונים עשויים להיות מעוכבים.');
   status.textContent='הגרף המקורי והצ׳אט מציגים כעת את אותם '+bars.length+' נרות. אפשר לבקש בצ׳אט ניתוח וסימונים.';
   if(!fromChat)say('bot',crypto?'נטענו '+bars.length+' נרות של '+symbol+' מ־CoinLore בלבד לניסוי מחקר פנימי. נר אחרון: '+result.latestBarTime+'. זהו צילום מצב REST ולא פיד עסקאות רציף; הנר האחרון עשוי להיות חלקי.':'📡 קיבלתי '+bars.length+' נרות של '+symbol+' בטווח '+interval+'. נר אחרון: '+result.latestBarTime+'.');
   if(!fromChat)document.querySelector('[data-tab="charts"]').click();
@@ -350,7 +354,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
 }
 marketButton.addEventListener("click",()=>loadMarketData().catch(error=>{marketStatus.textContent=error.message}));
 setInterval(()=>{if($('marketAutoRefresh')?.checked&&!document.hidden&&authState.authenticated&&!marketButton.disabled)marketButton.click()},61000);
-window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false;if(loaded?.source==='CoinLore'){chartRevision++;loaded=null;localChart.clear();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'))}});
+window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false;if(['CoinLore','Intrinio'].includes(loaded?.source)){chartRevision++;loaded=null;localChart.clear();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'))}});
 $("marketForgetCode").addEventListener("click",()=>{
  sessionStorage.removeItem(privateAccessKey);
  marketStatus.textContent="קוד הגישה הזמני נשכח מהמכשיר.";

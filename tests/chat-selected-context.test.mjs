@@ -17,6 +17,9 @@ test('without candles, the model receives the current selection separately from 
    history:[{role:'user',content:'Explain AAPL'},{role:'assistant',content:'AAPL historical example: 100',chartContext:{symbol:'AAPL',interval:'1day',receivedAt:'2026-10-01T10:00:00Z'}}]
   })}));
   assert.equal(response.status,200);assert.equal(calls,1);assert.equal(sent.model,'openrouter/free');
+  assert.match(sent.messages[0].content,/ההתמחות המרכזית שלך היא שוקי ההון/);
+  assert.match(sent.messages[0].content,/גם בנושאים אחרים/);
+  assert.doesNotMatch(sent.messages[0].content,/אל תספק עצות בנושאים שאינם שוק ההון/);
   const current=sent.messages.at(-1).content;
   assert.match(current,/SELECTED_CHART.*client selection only/s);assert.match(current,/"symbol":"NVDA"/);assert.match(current,/"interval":"1week"/);
   assert.match(current,/No verified OHLCV/);assert.doesNotMatch(current,/AAPL|100/);
