@@ -297,6 +297,17 @@ const lastFetchBySymbol=new Map();
 const intrinioFeed=fetch('/.netlify/functions/intrinio-research',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
 const publicFeed=fetch('/.netlify/functions/public-market',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
 publicFeed.then(c=>{const option=$('marketAutoRefresh');if(option)option.disabled=!c.enabled;if(authState.enabled)$('marketForgetCode').hidden=true});
+Promise.all([intrinioFeed,publicFeed]).then(([intrinio,publicMarket])=>{
+ if(intrinio.enabled){
+  $('marketProviderTitle').textContent='Intrinio · ניסיון פנימי למנהל';
+  $('marketProviderDescription').textContent='נרות יומיים קודמים של מניות ארה״ב, מותאמים לפיצולים ולדיבידנדים. הטעינה ידנית ובחשבון בעל הפרויקט בלבד; אלה נתוני סוף יום, לא מחיר חי.';
+  $('marketProviderScope').textContent=intrinio.aiAnalysisEnabled?'ניתוח AI של נתוני Intrinio מופעל למנהל, בכפוף לזמינות השירות.':'הגרף והאינדיקטורים המקומיים זמינים לאחר טעינה. העברת נתוני Intrinio למודל AI חיצוני עדיין כבויה.';
+ }else if(publicMarket.enabled){
+  $('marketProviderTitle').textContent='חיבור נתוני שוק · הספק מוגדר';
+  $('marketProviderScope').textContent='היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
+ }
+ if(marketStatus.textContent==='בודק את הגדרת ספק הנתונים…')marketStatus.textContent=intrinio.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'ספק הנתונים מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
+});
 async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
  const requested=normSymbol(),crypto=cryptoResearchSymbol(requested),symbol=crypto||requested;
  if(!symbol)throw Error("נא להזין סימול מניה תחילה.");
