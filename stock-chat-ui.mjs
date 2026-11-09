@@ -10,6 +10,7 @@ import {stockContext,answerStockQuestion} from "./market-chat.mjs";
 import {initLocalChart} from "./local-chart.mjs";
 import {parseChartCommand,requestsChartControl} from './chat-chart-actions.mjs';
 import {executeChartActions} from './chart-command-controller.mjs';
+import {requestsChartAnalysis,hasAnalysisCandles} from './chart-analysis-request.mjs';
 
 const $=id=>document.getElementById(id);
 const log=$("chatLog"),message=$("chatInput"),badge=$("chatDataStatus");
@@ -146,7 +147,7 @@ async function ask(q,extra={}){
  const requestState=$('chatRequestState');
  if(requestState)requestState.textContent='מכין את החיבור ונתוני הגרף…';
  const activeController=new AbortController();requestController=activeController;
- let preparedPayload=extra.retryPayload||null,localReceipt=extra.retryPayload?.chartToolReceipt||'';
+ let preparedPayload=extra.retryPayload||null,localReceipt=extra.retryPayload?.chartToolReceipt||'',commandLoadAttempted=false;
  let timedOut=false;
  let requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},30000);
  let slowNotice=null;
@@ -166,13 +167,14 @@ async function ask(q,extra={}){
   const command=!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(question,{currentSymbol:normSymbol()}):null;
   if(command?.recognized){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
+   commandLoadAttempted=result.dataLoadAttempted===true;
    if(epoch!==conversationEpoch)return;
    const answer=[command.message,...result.messages].filter(Boolean).join('\n');
    localReceipt=answer||'לא זוהתה פעולה לביצוע. נסה לציין סימול וכלי גרף.';
    waiting.textContent=localReceipt;
    const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|למה|מדוע|האם|מה דעתך|analy[sz]e|analysis|explain|why)/iu.test(question);
-   // Explanations still go to the model when the feed is unavailable. The
-   // receipt describes what happened; absent candles must stay absent.
+   // Conceptual explanations can proceed without candles. Actual chart
+   // analysis below must have matching data before contacting the model.
    if(!wantsAnalysis){
     conversation.push({role:'user',content:question,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}},{role:'assistant',content:waiting.textContent,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}});conversation=conversation.slice(-24);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
@@ -181,14 +183,40 @@ async function ask(q,extra={}){
    waiting.textContent+='\n\nמכין תשובה לשאלה שלך…';
   }
   if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
+  const analyzeChart=!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(question,{command});
+  if(analyzeChart){
+   if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value)){
+    if(commandLoadAttempted)throw Error('אין עדיין נרות תואמים לניתוח. טעינת הנתונים לא הצליחה; לא נשלחה בקשה למודל.');
+    waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+'טוען את נרות הגרף לפני הניתוח…';
+    await loadMarketData({fromChat:true,signal:activeController.signal,isCurrent:()=>epoch===conversationEpoch});
+   }
+   if(epoch!==conversationEpoch)return;
+   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
+   if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))throw Error('לא התקבלו נרות תואמים לגרף הנבחר; לא נשלחה בקשה למודל.');
+   localReceipt=[localReceipt,'הגרף של '+loaded.symbol+' מוכן: '+loaded.bars.length+' נרות · '+loaded.source+' · '+loaded.interval+' · נר אחרון: '+loaded.bars.at(-1).date+'.'].filter(Boolean).join('\n');
+  }
+  const context=currentContext();
+  const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
+  // The server independently enforces this gate. Check before screenshots or
+  // payload preparation so an unavailable analysis has a useful local result.
+  if(activeData?.source==='Intrinio'||preparedPayload?.source==='Intrinio'||preparedPayload?.useServerIntrinio===true){
+   const policy=await intrinioFeed;
+   if(epoch!==conversationEpoch)return;
+   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
+   if(policy.aiAnalysisEnabled!==true){
+    waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+'ניתוח AI של נתוני Intrinio עדיין אינו פעיל: ממתינים לאישור הספק להעברת הנתונים למודל חיצוני. לא נשלחה בקשה למודל.\n\nאפשר לצפות בגרף, להוסיף ממוצעים ולסמן תמיכות והתנגדויות באמצעות הכלים המקומיים. אלה נתוני סוף יום, לא מחיר חי.';
+    if(activeData){const open=document.createElement('button');open.type='button';open.textContent='הצג את הגרף שנטען';open.addEventListener('click',()=>window.dispatchEvent(new Event('asaf:chart-actions')));waiting.append(open)}
+    setAiStatus('נתוני הגרף זמינים; ניתוח AI של Intrinio ממתין לאישור הספק.');
+    return;
+   }
+  }
+  if(analyzeChart)window.dispatchEvent(new Event('asaf:chart-actions'));
   let code=authState.enabled?"":sessionStorage.getItem(freeAiAccessKey)||"";
   if(!authState.enabled&&!code){
    code=prompt("הכנס קוד גישה פרטי ל-AI החינמי (לא API key):")||"";
    if(!code)throw Error("כדי לקבל תשובות AI אמיתיות, יש להפעיל חיבור OpenRouter החינמי ב-Netlify ולהכניס קוד גישה.");
   }
   if(!authState.enabled&&code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
-  const context=currentContext();
-  const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let image=null;
   const candidate=chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);

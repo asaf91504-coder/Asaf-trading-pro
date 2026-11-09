@@ -6,7 +6,7 @@ const kinds={cup_handle:'cupHandle',inverse_head_shoulders:'inverseHeadShoulders
 // model-supplied price coordinates can enter this boundary.
 export async function executeChartActions(input,tools){
  const actions=validateChartActions(input),messages=[];
- let changed=false,annotations=[];
+ let changed=false,annotations=[],dataLoadAttempted=false;
  const check=()=>{if(tools.signal?.aborted||tools.isCurrent?.()===false)throw new DOMException('Cancelled','AbortError')};
  check();
  const symbols=actions.filter(a=>a.type==='symbol');
@@ -20,6 +20,7 @@ export async function executeChartActions(input,tools){
  // Fetch exactly once, only when explicitly requested actions need missing data.
  const needsData=selected||actions.some(a=>['levels','trendlines','pattern','style'].includes(a.type)||a.type==='indicator'&&a.enabled);
  if(needsData&&!tools.getData()){
+  dataLoadAttempted=true;
   try{await tools.fetchData();check();messages.push('נתוני הספק נטענו לגרף.');changed=true;}
   catch(error){check();messages.push('לא נטענו נתוני מניה: '+error.message);}
  }
@@ -49,5 +50,5 @@ export async function executeChartActions(input,tools){
   tools.applyRender([{type:'annotations',items:annotations}]);changed=true;
   messages.push('סומנו '+annotations.length+' סימוני מחקר על הגרף. תבניות הן מועמדות לבדיקה, לא אישור לפריצה או תחזית.');
  }
- return {changed,messages:[...new Set(messages)].filter(Boolean)};
+ return {changed,dataLoadAttempted,messages:[...new Set(messages)].filter(Boolean)};
 }

@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {parseChartCommand} from '../chat-chart-actions.mjs';
 import {isChatNearBottom} from '../chat-interaction.mjs';
 import {recentAIBars} from '../chart-data.mjs';
+import {requestsChartAnalysis,hasAnalysisCandles} from '../chart-analysis-request.mjs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const askSource=source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')"));
 function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
@@ -13,8 +14,87 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const message=element();message.value=draft;const button=element();
  const ctx={log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
  ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
+ ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
+ ctx.$('marketInterval').value='1day';ctx.window.dispatchEvent=()=>{};
+ ctx.intrinioFeed=Promise.resolve({enabled:false,aiAnalysisEnabled:false});
+ ctx.loadMarketData=async()=>{ctx.loaded=analysisData(ctx.normSymbol());ctx.currentContext=()=>ctx.loaded.context;return ctx.loaded};
+ ctx.localChart.settings=()=>({style:'candles',indicators:[]});
  vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,payloads,calls:()=>calls};
 }
+
+function analysisData(symbol='AAPL',source='Twelve Data'){
+ const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,9,1+i)).toISOString().slice(0,10),open:100,high:102,low:99,close:101,volume:1000}));
+ return {symbol,source,interval:'1day',bars,receivedAt:'2026-11-09T20:00:00Z',context:{date:bars.at(-1).date}};
+}
+
+test('analyze-chart button loads candles once and sends the exact displayed snapshot',async()=>{
+ const s=setup();let loads=0,shown=0,payload;
+ s.ctx.normSymbol=()=> 'NASDAQ:NVDA';
+ s.ctx.window.dispatchEvent=event=>{if(event.type==='asaf:chart-actions')shown++};
+ s.ctx.loadMarketData=async options=>{loads++;assert.equal(options.fromChat,true);assert.equal(options.isCurrent(),true);assert.equal(options.signal.aborted,false);s.ctx.loaded=analysisData('NASDAQ:NVDA');s.ctx.currentContext=()=>s.ctx.loaded.context;return s.ctx.loaded};
+ s.ctx.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'ניתוח על הנתונים שנטענו'})}};
+ await s.ctx.ask('נתח את הגרף');
+ assert.equal(loads,1);assert.equal(shown,1);assert.equal(payload.symbol,'NASDAQ:NVDA');assert.equal(payload.source,'Twelve Data');assert.equal(payload.useServerMarket,true);assert.equal(payload.receivedAt,s.ctx.loaded.receivedAt);assert.deepEqual(payload.bars,s.ctx.loaded.bars);assert.match(s.bubbles[1].textContent,/30 נרות/);
+});
+
+test('matching candles are reused but wrong-symbol or wrong-interval data is loaded again',async()=>{
+ for(const existing of [analysisData(),analysisData('NVDA'),{...analysisData(),interval:'1week'}]){
+  const s=setup();let loads=0;const load=s.ctx.loadMarketData;s.ctx.loaded=existing;s.ctx.currentContext=()=>s.ctx.loaded.context;
+  s.ctx.loadMarketData=async options=>{loads++;return load(options)};
+  await s.ctx.ask('נתח את הגרף');
+  assert.equal(loads,existing.symbol==='AAPL'&&existing.interval==='1day'?0:1);assert.equal(s.payloads[0].symbol,'AAPL');assert.equal(s.payloads[0].interval,'1day');
+ }
+});
+
+test('blocked Intrinio analysis loads the chart, explains the restriction and never captures or sends it',async()=>{
+ const s=setup();let loads=0,shown=0;
+ s.ctx.loadMarketData=async()=>{loads++;s.ctx.loaded=analysisData('AAPL','Intrinio');s.ctx.currentContext=()=>s.ctx.loaded.context;return s.ctx.loaded};
+ s.ctx.intrinioFeed=Promise.resolve({enabled:true,aiAnalysisEnabled:false});
+ s.ctx.chartAttachment=()=>{throw Error('Restricted chart must not be captured')};
+ s.ctx.window.dispatchEvent=()=>shown++;
+ await s.ctx.ask('נתח את הגרף');
+ assert.equal(loads,1);assert.equal(s.calls(),0);assert.match(s.bubbles[1].textContent,/ממתינים לאישור הספק/);assert.match(s.bubbles[1].textContent,/נתוני סוף יום/);assert.equal(s.ctx.conversation.length,0);assert.equal(s.ctx.chatBusy,false);assert.equal(shown,0);
+ const open=s.bubbles[1].children[0];assert.equal(open.textContent,'הצג את הגרף שנטען');open.click();assert.equal(shown,1);
+});
+
+test('confirmed Intrinio configuration retains provenance and server-cache flags',async()=>{
+ const s=setup();s.ctx.loaded=analysisData('AAPL','Intrinio');s.ctx.currentContext=()=>s.ctx.loaded.context;s.ctx.intrinioFeed=Promise.resolve({enabled:true,aiAnalysisEnabled:true});
+ await s.ctx.ask('נתח את הגרף');assert.equal(s.calls(),1);assert.equal(s.payloads[0].source,'Intrinio');assert.equal(s.payloads[0].useServerIntrinio,true);assert.equal(s.payloads[0].useServerMarket,false);assert.equal(s.payloads[0].receivedAt,s.ctx.loaded.receivedAt);
+});
+
+test('provider failures stop analysis before the model and an explicit retry can load again',async()=>{
+ const s=setup(),load=s.ctx.loadMarketData;let loads=0;
+ s.ctx.loadMarketData=async()=>{loads++;throw Error('הספק אינו זמין')};
+ await s.ctx.ask('נתח את הגרף');assert.equal(s.calls(),0);assert.equal(loads,1);assert.equal(s.message.value,'נתח את הגרף');assert.match(s.bubbles[1].textContent,/הספק אינו זמין/);
+ s.ctx.loadMarketData=load;s.bubbles[1].children[2].click();await new Promise(resolve=>setImmediate(resolve));assert.equal(s.calls(),1);assert.equal(s.payloads[0].bars.length,30);
+});
+
+test('a failed symbol-command fetch is not silently repeated by analysis preparation',async()=>{
+ const s=setup();s.ctx.parseChartCommand=parseChartCommand;
+ s.ctx.runChatActions=async()=>({changed:false,dataLoadAttempted:true,messages:['טעינת הספק נכשלה']});
+ s.ctx.loadMarketData=async()=>{throw Error('Duplicate provider request')};
+ await s.ctx.ask('תנתח AAPL');assert.equal(s.calls(),0);assert.match(s.bubbles[1].textContent,/טעינת הנתונים לא הצליחה/);assert.doesNotMatch(s.bubbles[1].textContent,/Duplicate/);
+});
+
+test('chart analysis respects authentication and rejects stale or cancelled loading',async()=>{
+ const anon=setup();anon.ctx.authState.authenticated=false;let loads=0;anon.ctx.loadMarketData=async()=>loads++;
+ await anon.ctx.ask('נתח את הגרף');assert.equal(loads,0);assert.equal(anon.calls(),0);
+ for(const stale of [true,false]){
+  const s=setup();s.ctx.loadMarketData=async()=>{if(stale)s.ctx.conversationEpoch++;else s.ctx.requestController.abort()};
+  await s.ctx.ask('נתח את הגרף');assert.equal(s.calls(),0);assert.equal(s.ctx.conversation.length,0);
+ }
+});
+
+test('lessons, news questions and snapshot retries do not fetch candles automatically',async()=>{
+ for(const [question,extra] of [['איך מנתחים גרף?',{}],['שלום',{}],['נתח את הגרף',{newsArticleId:'article'}],['נתח את הגרף',{retryPayload:{message:'נתח את הגרף',symbol:'AAPL',source:'Twelve Data',chartRevision:0}}]]){
+  const s=setup();s.ctx.loadMarketData=async()=>{throw Error('Unexpected market request')};await s.ctx.ask(question,extra);assert.equal(s.calls(),1,question);
+ }
+});
+
+test('a restricted saved retry is blocked even after clearing displayed data',async()=>{
+ const s=setup();await s.ctx.ask('נתח את הגרף',{retryPayload:{source:'Intrinio',useServerIntrinio:true,symbol:'AAPL',bars:analysisData().bars}});
+ assert.equal(s.calls(),0);assert.match(s.bubbles[1].textContent,/ממתינים לאישור הספק/);
+});
 
 function mountLifecycle(s){
  const c=s.ctx,events=new Map();
