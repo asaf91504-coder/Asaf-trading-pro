@@ -30,3 +30,19 @@ test('cleared or switched charts cannot forward restricted historical messages t
   assert.equal(response.status,200);assert.equal(s.models.length,1);const sent=JSON.stringify(s.models[0].messages);assert.doesNotMatch(sent,/restricted-derived-values/);assert.match(sent,/general-learning-context/);
  },options);
 });
+
+test('verified chart analysis always writes a computed entry/stop section from the server snapshot',async()=>{
+ await scenario(async s=>{
+  const response=await s.send({...s.payload,message:'תנתח AAPL'}),data=await response.json();
+  assert.equal(response.status,200);assert.equal(data.tradeScenario.available,true);assert.equal(data.tradeScenario.entry,102.75);assert.equal(data.tradeScenario.stop,98.25);
+  assert.match(data.answer,/נקודת כניסה מותנית: 102.75/);assert.match(data.answer,/סטופ־לוס לתרחיש: 98.25/);assert.doesNotMatch(data.answer,/999999/);
+  assert.match(s.models[0].messages.at(-1).content,/entryStopScenario/);
+ });
+});
+test('client-supplied provenance cannot unlock numeric entry/stop and general conversation stays natural',async()=>{
+ await scenario(async s=>{
+  const payload={message:'נתח את הגרף',symbol:'AAPL',source:'CSV',provenance:'server-intrinio-cache',latestBarMayBePartial:false,bars:null};
+  const response=await s.send(payload),data=await response.json();assert.equal(response.status,200);assert.equal(data.tradeScenario.available,false);assert.match(data.answer,/נקודת כניסה: לא זמינה/);assert.match(data.answer,/סטופ־לוס: לא זמין/);
+  const general=await (await s.send({...payload,message:'שלום, מה נשמע?'})).json();assert.equal(general.tradeScenario,null);assert.equal(general.answer,'Analysis');
+ },{licensed:false});
+});

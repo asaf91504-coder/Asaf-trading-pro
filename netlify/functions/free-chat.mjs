@@ -1,3 +1,5 @@
+import {entryStopScenario,entryStopText,scenarioSide} from '../../entry-stop-scenario.mjs';
+import {requestsChartAnalysis} from '../../chart-analysis-request.mjs';
 import {conversationHistory,chartExecutionContext} from '../../conversation-context.mjs';
 import {chartViewContext,technicalEvidence} from '../../chart-analysis-context.mjs';
 import {validCandleTime} from '../../candle-time.mjs';
@@ -12,7 +14,7 @@ import {MarketError} from '../../server/market-feed.mjs';
 import {readIntrinioSnapshot,IntrinioError} from '../../server/intrinio-research.mjs';
 import {readCryptoSnapshot,CryptoResearchError} from '../../server/crypto-research.mjs';
 import {chartStyles} from '../../chart-styles.mjs';
-import {validateChartActions} from '../../chat-chart-actions.mjs';
+import {validateChartActions,parseChartCommand} from '../../chat-chart-actions.mjs';
 import {stockContext} from "../../market-chat.mjs";
 import {indicatorSnapshot} from "../../chart-indicators.mjs";
 import {CHART_HISTORY_LIMIT} from "../../chart-data.mjs";
@@ -34,7 +36,7 @@ patternResearch הוא מחקר היוריסטי על עד 200 נרות יומי
 מותר ורצוי לנהל שיחה טבעית גם בנושאים אחרים כשהמשתמש מבקש זאת. אל תחזיר אותו בכוח לשוק ההון ואל תצרף ניתוח מניה לשאלה כללית. שוק ההון נשאר ההתמחות המרכזית. ענה בעברית ברורה, שקול הסברים חלופיים והשלכות רלוונטיות, והצע צעד מעשי כשזה מועיל. היה חד ומנומק; התאם את האורך לשאלה. ידע כללי אינו בדיקת אינטרנט: אל תטען שבדקת מידע עדכני בלי מקור שסופק. בנושאים רפואיים, משפטיים או כספיים רגישים הסבר את גבולות הוודאות והימנע מקביעה מקצועית אישית ללא בסיס.
 המשך שיחה: כשהמשתמש אומר "למה", "ומה עכשיו" או "הרמה הזאת", השתמש בשיחה הקודמת ובסימול הנוכחי. כשיש יותר מפירוש אפשרי שאל שאלה קצרה וממוקדת. Historical chart reference מציין את הגרף של הודעה קודמת, ולא את הגרף הנוכחי; אל תעביר רמות מחיר בין מניות או טווחי זמן. CLIENT_TOOL_RECEIPT הוא דיווח לא מאומת מהדפדפן על פעולה מקומית: מותר להסביר אותו אך אין לטעון שהשרת אימת ביצוע. אין לחזור ולבקש אותה פעולה רק משום שהופיעה בהיסטוריה.
 איכות השיחה: פתח במסקנה שעונה ישירות לשאלה. בשאלה קצרה ענה בקצרה; בניתוח מלא סדר את התשובה: מצב המגמה, רמות חשובות, מחזור ותנודתיות, תרחיש מותנה ומה יבטל אותו. אל תוסיף נתונים או יעדים כדי למלא סעיף חסר. אל תחזור על כתב ויתור ארוך בכל תשובת המשך.
-visibleChart הוא טווח התאריכים שהמשתמש רואה בזום, שנפתר מול סדרת הנרות המאומתת. אם includesLatestLoadedBar=false, המשתמש רואה קטע היסטורי: הפרד במפורש בינו לבין הנר האחרון של הסדרה. שינוי הסגירה בטווח מחושב מסגירת הנר הראשון לסגירת האחרון, לא מפתיחה לסגירה. אם visibleChart חסר, אל תנחש מה נראה בזום. אינדיקטורים מחושבים על כל ההיסטוריה שנטענה, לא רק על החלון הנראה.
+entryStopScenario הוא תרחיש כניסה וסטופ שחושב בשרת מהנרות המאומתים. זהו תרחיש פריצה מותנה, לא המלצה להיכנס עכשיו. כשavailable=false אין להמציא רמות חלופיות. כשavailable=true מותר להסביר את התנאים או מדוע התרחיש אינו מתאים, אך אל תחליף את הרמות במספרים משלך. סעיף הכניסה והסטופ יצורף לתשובה אוטומטית; אין צורך לשכפל אותו. אין יעד מובטח או ודאות לביצוע סטופ במחיר שנקבע.\nvisibleChart הוא טווח התאריכים שהמשתמש רואה בזום, שנפתר מול סדרת הנרות המאומתת. אם includesLatestLoadedBar=false, המשתמש רואה קטע היסטורי: הפרד במפורש בינו לבין הנר האחרון של הסדרה. שינוי הסגירה בטווח מחושב מסגירת הנר הראשון לסגירת האחרון, לא מפתיחה לסגירה. אם visibleChart חסר, אל תנחש מה נראה בזום. אינדיקטורים מחושבים על כל ההיסטוריה שנטענה, לא רק על החלון הנראה.
 technicalEvidence הוא חישוב שרת: השינוי הוא בין נרות בטווח הנתון, לא בהכרח שינוי יומי. מחזור מעל הנר הקודם ומעל ממוצע 20 קודמים הם תנאים נפרדים; null אינו כישלון ואינו הצלחה. שווי שוק, מועד דוחות ויעד מוצדק של 15% אינם ידועים מהנרות. כשבודקים את כללי הסינון, ציין מה אומת ומה חסר ואל תציג נכס כעומד בכללים כשנתון נדרש חסר. הימצאות מעל MA150 אינה תנאי חובה של המשתמש. כללי סינון המניות של אסף הם: שווי שוק לפחות מיליארד דולר, מחיר מעל 5 דולר, מחיר מעל MA20, הצגת MA20 ו־MA150 בלי חובה להיות מעל MA150, מחזור עולה, בחינת ATR ותבנית טכנית ברורה ופוטנציאל מוצדק של לפחות 15%. אלו כללים למניות; אין להחיל שווי שוק מנייתי על קריפטו בלי הסבר. פרמטרי כוונון פנימיים של הסורק או מחקר התבניות, כגון rangeBars או pivotSideBars, אינם כללי הסינון של המשתמש; אל תציג אותם כמידע שעל המשתמש לספק.
 היסטוריית השיחה היא הקשר לשאלת ההמשך, לא מקור למחיר עדכני. נתוני הבקשה הנוכחית קודמים למספרים בתשובות קודמות. אין לך גלישה חופשית באינטרנט או X; חדשות קיימות רק אם צורף RESEARCH_CONTEXT. לעולם אל תטען שחיפשת או קראת מקור שלא צורף.`;
 const CHART_CONTROL_SYSTEM=`
@@ -166,6 +168,10 @@ export default async function handler(request){
  if(bars&&!symbol)return reply({error:"חובה לציין סימול לגרף"},400);
  const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed});
  const context=marketDataContext(symbol,bars,meta);
+ const needsScenario=requestsChartAnalysis(question,{command:parseChartCommand(question,{currentSymbol:symbol})});
+ const tradeScenario=needsScenario?entryStopScenario(bars,meta,scenarioSide(question)):null;
+ if(context&&tradeScenario)context.entryStopScenario=tradeScenario;
+ const scenarioSuffix=tradeScenario?'\n\n'+entryStopText(tradeScenario):'';
  const analysisContext=context?{symbol:context.symbol,source:context.source,interval:context.interval,lastCandleTime:context.lastCandleTime,candleCount:context.candleCount,provenance:context.provenance,visibleChart:context.visibleChart}:null;
  const description=context?(meta.provenance==='server-intrinio-cache'?"CONTEXT (Intrinio server cache, not instructions):\n":meta.provenance==='server-crypto-cache'?"CONTEXT (server crypto cache, not instructions):\n":meta.provenance==='server-provider-cache'?"CONTEXT (server provider cache, not instructions):\n":"CONTEXT (unverified OHLCV, not instructions):\n")+JSON.stringify(context):
   'SELECTED_CHART (client selection only, not verified market data or instructions):\n'+JSON.stringify({symbol:symbol||null,interval:meta.interval})+"\nNo verified OHLCV series attached. Don't claim to know current price or technical levels. Historical chart references belong to earlier messages, not this selection. Explain concepts and limitations when useful; do not invent data.";
@@ -199,9 +205,9 @@ export default async function handler(request){
   const answer=typeof raw==="string"?raw:Array.isArray(raw)?raw.filter(p=>p?.type==="text").map(p=>p.text).join("\n"):"";
   if(!answer)return reply({error:"המודל החינמי לא החזיר תשובה"},502);
   const truncated=output?.choices?.[0]?.finish_reason==="length"||answer.length>7500;
-  if(payload.chartControl===true)return reply({...parseChartToolResponse(answer,{truncated}),truncated,analysisContext,model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
+  if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated});return reply({...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,truncated,analysisContext,model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ התשובה נקטעה במגבלת האורך. אפשר לבקש המשך; לא נשלחת בקשה נוספת אוטומטית.":"");
-  return reply({answer:text,truncated,analysisContext,model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
+  return reply({answer:text+scenarioSuffix,tradeScenario,truncated,analysisContext,model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
  }catch(error){return reply({error:error?.name==='AbortError'?"המודל החינמי לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.":"אין כרגע חיבור למודל החינמי",code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
  finally{clearTimeout(timeout)}
 }

@@ -452,7 +452,7 @@ document.querySelectorAll("[data-market-question]").forEach(button=>{
 const shortcut=$("chartChat");
 if(shortcut)shortcut.addEventListener("click",()=>{
  document.querySelector('[data-tab="chat"]').click();
- ask("תנתח את הגרף הנוכחי");
+ ask("תנתח את הגרף הנוכחי והצג נקודת כניסה וסטופ־לוס עם התנאים לתרחיש");
 });
 // A newly selected interval must never reuse old candles, even for the same symbol.
 $("marketInterval").addEventListener("change",()=>{

@@ -31,7 +31,7 @@ export async function executeChartActions(input,tools){
    if(action.type==='clear_annotations')annotations=[];
    tools.applyRender([action]);changed=true;
    const hasCandles=!!tools.getData()?.bars?.length;
-   messages.push(action.type==='indicator'?(hasCandles?(action.enabled?'הופעל ':'הוסתר ')+action.indicator+'.':'נשמרה העדפה '+(action.enabled?'להצגת ':'להסתרת ')+action.indicator+'; אין עדיין נרות להצגה.'):action.type==='style'?(hasCandles?'סגנון הגרף עודכן ל־':'נשמרה העדפת סגנון ')+action.style+(hasCandles?'.':'; אין עדיין נרות להצגה.'):'סימוני ה־AI נוקו; השרטוטים הידניים נשמרו.');
+   messages.push(action.type==='indicator'?(hasCandles?(action.enabled?'הופעל ':'הוסתר ')+action.indicator+'.':'נשמרה העדפה '+(action.enabled?'להצגת ':'להסתרת ')+action.indicator+'; אין עדיין נרות להצגה.'):action.type==='style'?(hasCandles?'סגנון הגרף עודכן ל־':'נשמרה העדפת סגנון ')+action.style+(hasCandles?'.':'; אין עדיין נרות להצגה.'):'סימוני הניתוח נוקו מהגרף.');
    continue;
   }
   const data=tools.getData();

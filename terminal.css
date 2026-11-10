@@ -202,3 +202,8 @@
 /* Safe inline emphasis keeps long mixed Hebrew/Latin answers readable. */
 .terminal-app .bubble strong{font-weight:700;color:inherit}
 .terminal-app .bubble code{font-family:ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#0002;border-radius:4px;padding:1px 4px}
+
+/* Chat is the sole chart editing surface, on desktop and phones. */
+.chart-workbench-body{grid-template-columns:minmax(0,1fr)}
+.chart-config[hidden],#referenceChart[hidden]{display:none!important}
+.terminal-app .chart-chat-only{min-height:44px;white-space:normal}

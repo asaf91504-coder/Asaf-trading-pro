@@ -36,10 +36,10 @@ test('lost capture releases only owning pointer and a new gesture can start',()=
  s.send('lostpointercapture');assert.equal(s.context.drag,null);
  s.send('pointerdown',{pointerId:3,clientX:100});s.send('pointermove',{pointerId:3,clientX:110});assert.equal(s.context.offset,11);
 });
-test('drawing ignores secondary touch and still completes with primary clicks',()=>{
+test('chart clicks only navigate even when legacy drawing state is present',()=>{
  const s=setup({drawing:true});s.send('pointerdown',{isPrimary:false,pointerId:2});assert.equal(s.context.firstPoint,null);
- s.send('pointerdown');assert.ok(s.context.firstPoint);assert.equal(s.context.drag,null);
- s.send('pointerdown',{clientX:70});assert.equal(s.context.lines.length,1);assert.equal(s.context.drawing,false);
+ s.send('pointerdown');assert.equal(s.context.firstPoint,null);assert.ok(s.context.drag);
+ s.send('pointerup');s.send('pointerdown',{clientX:70});assert.equal(s.context.lines.length,0);
 });
 test('non-left mouse button does not begin a drag or draw',()=>{
  const s=setup({drawing:true});s.send('pointerdown',{button:2});assert.equal(s.context.firstPoint,null);assert.equal(s.context.drag,null);
