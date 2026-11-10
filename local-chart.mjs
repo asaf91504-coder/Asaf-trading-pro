@@ -49,6 +49,7 @@ export function validateChartRenderActions(actions,bars=[]){
 // Original Canvas renderer. Never fetches data or invents a live price.
 export function initLocalChart(){
  const $=id=>document.getElementById(id),panel=$('localChartPanel'),canvas=$('localChartCanvas'),select=$('localChartRange'),title=$('localChartTitle'),tooltip=$('localChartTooltip'),ctx=canvas.getContext('2d');
+ const writeCanvasText=(text,...args)=>ctx.fillText(window.asafTranslate?.(String(text))??text,...args);
  canvas.setAttribute('aria-label',chartAccessibleLabel());
  let bars=[],symbol='',count=60,offset=0,geometry=null,hover=null,drag=null,aiAnnotations=[];
  let indicators=chartIndicators([]),heikin=null;
@@ -100,9 +101,9 @@ export function initLocalChart(){
   const x=i=>left+(i-view.start+.5)*step,y=v=>top+(max-v)/(max-min)*(bottom-top);
   geometry={...view,width,height,left,right,top,bottom,step,min,max,x,y};
   ctx.font='11px system-ui';ctx.textBaseline='middle';ctx.textAlign='left';
-  for(const price of priceTicks(min,max)){const py=y(price);ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText(label(price),width-right+5,py)}
+  for(const price of priceTicks(min,max)){const py=y(price);ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.fillStyle=colors.text;writeCanvasText(label(price),width-right+5,py)}
   const timeTicks=Math.max(2,Math.min(6,Math.floor(plotWidth/110)));
-  for(let tick=0;tick<timeTicks;tick++){const index=view.start+Math.round(tick*(view.count-1)/(timeTicks-1)),px=x(index);ctx.strokeStyle=colors.grid;ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,volBottom);ctx.stroke();ctx.fillStyle=colors.text;ctx.textAlign=tick===0?'left':tick===timeTicks-1?'right':'center';ctx.fillText(chartTimeLabel(bars[index].date,bars[view.start].date.slice(0,10)===bars[view.end-1].date.slice(0,10)),px,height-12)}
+  for(let tick=0;tick<timeTicks;tick++){const index=view.start+Math.round(tick*(view.count-1)/(timeTicks-1)),px=x(index);ctx.strokeStyle=colors.grid;ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,volBottom);ctx.stroke();ctx.fillStyle=colors.text;ctx.textAlign=tick===0?'left':tick===timeTicks-1?'right':'center';writeCanvasText(chartTimeLabel(bars[index].date,bars[view.start].date.slice(0,10)===bars[view.end-1].date.slice(0,10)),px,height-12)}
   ctx.textAlign='left';
   const maxVol=Math.max(1,...visible.map(b=>b.volume||0));
   const lineStyle=['line','area','baseline'].includes(style);
@@ -124,7 +125,7 @@ export function initLocalChart(){
    path();ctx.strokeStyle=colors.up;ctx.lineWidth=2;ctx.stroke();
   }
   function series(values,color,scale,lineWidth=1.5){ctx.strokeStyle=color;ctx.lineWidth=lineWidth;ctx.beginPath();let started=false;for(let i=view.start;i<view.end;i++){const value=values[i];if(!Number.isFinite(value)){started=false;continue}if(started)ctx.lineTo(x(i),scale(value));else{ctx.moveTo(x(i),scale(value));started=true}}ctx.stroke()}
-  if($('chartVolumeProfile').checked){const profile=estimatedVolumeProfile(bars.slice(view.start,view.end));ctx.save();ctx.beginPath();ctx.rect(left,top,plotWidth,bottom-top);ctx.clip();if(profile.available){const peak=Math.max(...profile.bins.map(b=>b.volume)),extent=plotWidth*.20;for(const bucket of profile.bins){const w=extent*bucket.volume/peak;ctx.fillStyle=bucket.low>=profile.valueAreaLow&&bucket.high<=profile.valueAreaHigh?'#38bdf85c':'#64748b44';ctx.fillRect(width-right-w,y(bucket.high),w,Math.max(1,y(bucket.low)-y(bucket.high)))}ctx.strokeStyle='#f59e0b';ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(left,y(profile.poc));ctx.lineTo(width-right,y(profile.poc));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fbbf24';ctx.font='10px system-ui';ctx.fillText('Estimated POC '+label(profile.poc),left+5,Math.max(top+12,y(profile.poc)-8))}else{ctx.fillStyle=colors.text;ctx.fillText('Volume profile unavailable: missing volume',left+5,top+14)}ctx.restore()}
+  if($('chartVolumeProfile').checked){const profile=estimatedVolumeProfile(bars.slice(view.start,view.end));ctx.save();ctx.beginPath();ctx.rect(left,top,plotWidth,bottom-top);ctx.clip();if(profile.available){const peak=Math.max(...profile.bins.map(b=>b.volume)),extent=plotWidth*.20;for(const bucket of profile.bins){const w=extent*bucket.volume/peak;ctx.fillStyle=bucket.low>=profile.valueAreaLow&&bucket.high<=profile.valueAreaHigh?'#38bdf85c':'#64748b44';ctx.fillRect(width-right-w,y(bucket.high),w,Math.max(1,y(bucket.low)-y(bucket.high)))}ctx.strokeStyle='#f59e0b';ctx.setLineDash([2,4]);ctx.beginPath();ctx.moveTo(left,y(profile.poc));ctx.lineTo(width-right,y(profile.poc));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#fbbf24';ctx.font='10px system-ui';writeCanvasText('Estimated POC '+label(profile.poc),left+5,Math.max(top+12,y(profile.poc)-8))}else{ctx.fillStyle=colors.text;writeCanvasText('Volume profile unavailable: missing volume',left+5,top+14)}ctx.restore()}
   for(const [key,id,color] of overlays)if($(id).checked)series(indicators[key],color,y);
   for(const [name,pane] of Object.entries(panes)){
    const keys=name==='rsi'?['rsi14']:name==='macd'?['macd','macdSignal','macdHistogram']:name==='stochastic'?['stochasticK','stochasticD']:name==='obv'?['obv']:name==='adx'?['adx14','plusDI14','minusDI14']:['atr14'];
@@ -136,12 +137,12 @@ export function initLocalChart(){
    ctx.font='10px system-ui';ctx.textAlign='left';
    const ticks=bounded?(name==='rsi'?[30,70]:name==='adx'?[20,25,50]:[20,80]):name==='macd'?[low,0,high]:[0,high];
    if(name==='rsi'){ctx.fillStyle='#11293a66';ctx.fillRect(left,scale(70),plotWidth,scale(30)-scale(70))}
-   for(const v of ticks){ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(left,scale(v));ctx.lineTo(width-right,scale(v));ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText(label(v),width-right+5,scale(v))}ctx.setLineDash([]);
+   for(const v of ticks){ctx.strokeStyle=colors.grid;ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(left,scale(v));ctx.lineTo(width-right,scale(v));ctx.stroke();ctx.fillStyle=colors.text;writeCanvasText(label(v),width-right+5,scale(v))}ctx.setLineDash([]);
    if(name==='macd'){for(let i=view.start;i<view.end;i++){const v=indicators.macdHistogram[i];if(!Number.isFinite(v))continue;const w=Math.max(1,Math.min(12,step*.6));ctx.fillStyle=v>=0?colors.up:colors.down;ctx.globalAlpha=.55;ctx.fillRect(x(i)-w/2,Math.min(scale(v),scale(0)),w,Math.max(1,Math.abs(scale(v)-scale(0))));ctx.globalAlpha=1}series(indicators.macd,'#60a5fa',scale);series(indicators.macdSignal,'#fb923c',scale)}
    else if(name==='adx'){series(indicators.adx14,'#fbbf24',scale,2);series(indicators.plusDI14,colors.up,scale);series(indicators.minusDI14,colors.down,scale)}
    else if(name==='stochastic'){series(indicators.stochasticK,'#60a5fa',scale);series(indicators.stochasticD,'#fb923c',scale)}else series(indicators[keys[0]],name==='rsi'?'#c4b5fd':'#fbbf24',scale);
-   ctx.fillStyle=colors.text;const current=indicators[keys[0]][view.end-1];ctx.fillText((name==='rsi'?'RSI14':name==='macd'?'MACD 12/26/9 · blue MACD / orange signal':name==='stochastic'?'Slow Stochastic 14/3/3 · blue %K / orange %D':name==='obv'?'OBV · zero at first loaded bar':name==='adx'?'ADX14 gold · +DI green / -DI red':'ATR14 Wilder')+'  '+(current===null?'—':label(current)),left,pane.top-12);
-   if(!values.length)ctx.fillText(name==='obv'?'Missing volume':name==='stochastic'?'Insufficient OHLC history or zero range':'Insufficient history',left,pane.top+30);
+   ctx.fillStyle=colors.text;const current=indicators[keys[0]][view.end-1];writeCanvasText((name==='rsi'?'RSI14':name==='macd'?'MACD 12/26/9 · blue MACD / orange signal':name==='stochastic'?'Slow Stochastic 14/3/3 · blue %K / orange %D':name==='obv'?'OBV · zero at first loaded bar':name==='adx'?'ADX14 gold · +DI green / -DI red':'ATR14 Wilder')+'  '+(current===null?'—':label(current)),left,pane.top-12);
+   if(!values.length)writeCanvasText(name==='obv'?'Missing volume':name==='stochastic'?'Insufficient OHLC history or zero range':'Insufficient history',left,pane.top+30);
   }
   // Drawings are anchored to bar indices/prices, so panning preserves their coordinates.
   ctx.save();ctx.beginPath();ctx.rect(left,top,plotWidth,bottom-top);ctx.clip();
@@ -154,13 +155,13 @@ export function initLocalChart(){
    points.forEach((point,index)=>{if(index)ctx.lineTo(x(point.index),y(point.price));else ctx.moveTo(x(point.index),y(point.price))});ctx.stroke();ctx.setLineDash([]);
    const nearest=points.find(point=>point.index>=view.start&&point.index<view.end)||points[0],anchor={index:Math.max(view.start,Math.min(view.end-1,nearest.index)),price:nearest.price},text='AI · מועמד · '+annotation.label;ctx.font='11px system-ui';ctx.textAlign='left';
    const textWidth=Math.min(plotWidth-8,ctx.measureText(text).width),tx=Math.max(left+4,Math.min(width-right-textWidth-4,x(anchor.index))),ty=Math.max(top+12,Math.min(bottom-10,y(anchor.price)-9));
-   ctx.fillStyle='#0b1626ed';ctx.fillRect(tx-3,ty-9,textWidth+6,18);ctx.fillStyle='#fde68a';ctx.fillText(text,tx,ty,Math.max(1,plotWidth-8));
+   ctx.fillStyle='#0b1626ed';ctx.fillRect(tx-3,ty-9,textWidth+6,18);ctx.fillStyle='#fde68a';writeCanvasText(text,tx,ty,Math.max(1,plotWidth-8));
   }
   const last=visible.at(-1);ctx.strokeStyle=last.close>=last.open?colors.up:colors.down;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(left,y(last.close));ctx.lineTo(width-right,y(last.close));ctx.stroke();ctx.restore();ctx.setLineDash([]);
   ctx.fillStyle=last.close>=last.open?colors.up:colors.down;
-  ctx.fillRect(width-right,y(last.close)-10,right,20);ctx.fillStyle='#ffffff';ctx.font='bold 11px system-ui';ctx.textAlign='left';ctx.fillText(label(last.close),width-right+4,y(last.close),right-6);
+  ctx.fillRect(width-right,y(last.close)-10,right,20);ctx.fillStyle='#ffffff';ctx.font='bold 11px system-ui';ctx.textAlign='left';writeCanvasText(label(last.close),width-right+4,y(last.close),right-6);
 
-  ctx.textAlign='left';ctx.font='11px system-ui';ctx.fillStyle=colors.text;ctx.fillText(symbol+' · '+view.count+' candles'+(style==='heikin'?' · Heikin Ashi (averaged)':offset?' · Historical':''),left,13,plotWidth);
+  ctx.textAlign='left';ctx.font='11px system-ui';ctx.fillStyle=colors.text;writeCanvasText(symbol+' · '+view.count+' candles'+(style==='heikin'?' · Heikin Ashi (averaged)':offset?' · Historical':''),left,13,plotWidth);
   const selectedBar=bars[includeHover&&hover&&hover.index>=view.start&&hover.index<view.end?hover.index:view.end-1];
   const ohlc=$('chartOHLC');if(ohlc){ohlc.textContent=selectedBar.date+'   O '+(selectedBar.open==null?'—':label(selectedBar.open))+'   H '+label(selectedBar.high)+'   L '+label(selectedBar.low)+'   C '+label(selectedBar.close);ohlc.dataset.direction=selectedBar.close>=(selectedBar.open??selectedBar.close)?'up':'down'}
 
@@ -168,8 +169,8 @@ export function initLocalChart(){
   if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){const px=x(hover.index),py=hover.y;ctx.save();ctx.strokeStyle='#91a7bd';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,height-22);ctx.moveTo(left,py);ctx.lineTo(width-right,py);ctx.stroke();ctx.restore();const b=bars[hover.index];tooltip.textContent=b.date+' | O '+(b.open==null?'—':label(b.open))+' H '+label(b.high)+' L '+label(b.low)+' C '+label(b.close)+' | Vol '+(b.volume==null?'—':label(b.volume))+' | '+[['RSI14','rsi14'],['ATR14','atr14'],['MACD','macd'],['Signal','macdSignal'],['Histogram','macdHistogram'],['BB upper','bbUpper'],['BB lower','bbLower'],['Stoch %K','stochasticK'],['Stoch %D','stochasticD'],['OBV','obv'],['ADX14','adx14'],['+DI','plusDI14'],['-DI','minusDI14'],['Supertrend 10/3','supertrend'],['VWAP','vwap'],['Tenkan9','tenkan'],['Kijun26','kijun']].map(([name,key])=>name+' '+(indicators[key][hover.index]===null?'—':label(indicators[key][hover.index]))).join(' | ')}
   if(includeHover&&hover&&hover.index>=view.start&&hover.index<view.end){
    const py=hover.y,price=max-(py-top)/(bottom-top)*(max-min),px=x(hover.index),date=bars[hover.index].date;
-   ctx.fillStyle='#363c4a';ctx.fillRect(width-right,py-10,right,20);ctx.fillStyle='#fff';ctx.font='11px system-ui';ctx.textAlign='left';ctx.fillText(label(price),width-right+4,py,right-6);
-   const dateWidth=Math.min(plotWidth,ctx.measureText(date).width+16),dateX=Math.max(left,Math.min(width-right-dateWidth,px-dateWidth/2));ctx.fillStyle='#363c4a';ctx.fillRect(dateX,height-23,dateWidth,22);ctx.fillStyle='#fff';ctx.fillText(date,dateX+8,height-12,dateWidth-16);
+   ctx.fillStyle='#363c4a';ctx.fillRect(width-right,py-10,right,20);ctx.fillStyle='#fff';ctx.font='11px system-ui';ctx.textAlign='left';writeCanvasText(label(price),width-right+4,py,right-6);
+   const dateWidth=Math.min(plotWidth,ctx.measureText(date).width+16),dateX=Math.max(left,Math.min(width-right-dateWidth,px-dateWidth/2));ctx.fillStyle='#363c4a';ctx.fillRect(dateX,height-23,dateWidth,22);ctx.fillStyle='#fff';writeCanvasText(date,dateX+8,height-12,dateWidth-16);
   }
   let custom=select.querySelector('[data-custom]');if(![...select.options].some(o=>!o.dataset.custom&&+o.value===view.count)){if(!custom){custom=document.createElement('option');custom.dataset.custom='true';select.append(custom)}custom.value=String(view.count);custom.textContent=String(view.count)}else custom?.remove();select.value=String(view.count);
   $('chartPrev').disabled=view.start===0;$('chartNext').disabled=offset===0;

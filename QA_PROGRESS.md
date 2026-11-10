@@ -6,7 +6,7 @@ Updated: 2026-11-10
 
 - Repository: asaf91504-coder/Asaf-trading-pro, branch main.
 - Production: https://joyful-seahorse-967889.netlify.app/
-- 539 Node tests pass, including source restrictions on chat history, safe
+- 542 Node tests pass, including source restrictions on chat history, safe
   emphasis rendering, analysis intent, chart preparation, authentication,
   cancellation, retry snapshots and provider metadata.
 - The 10 anonymous deployment checks passed after the chat-formatting update. These cover
@@ -78,6 +78,20 @@ Updated: 2026-11-10
 - These were simulated login transitions; no real account was signed out,
   no model/provider calls were made, and physical iPhone testing remains open.
 
+## 2026-11-10: Google and account transitions use fresh auth checks
+
+- Reproduced with the actual auth and Google UI modules in a mocked DOM/network:
+  a pending pre-login status check could make successful Google sign-in appear
+  to fail; pre-transition checks could also leave the UI signed in after
+  logout-all or account deletion. Server authentication was not bypassed.
+- Confirmed Google sign-in, logout-all and deletion now request a fresh auth
+  check, using the existing revision protection against obsolete responses.
+- All three new regressions failed before the change and passed afterward.
+  All 542 Node tests pass; ten anonymous live deployment/security checks passed
+  before deployment. No real account was signed in, signed out or deleted.
+- No model/provider requests, billing or license changes. Physical-device and
+  real Google login acceptance remain unverified in this pass.
+
 ## Known limits and next checks
 
 - Intrinio external-AI permission remains disabled pending verified permission.
@@ -96,3 +110,22 @@ Updated: 2026-11-10
   checks before deploying. Do not manufacture changes when the checks pass.
 - Keep test artifacts free of secrets, personal account details and real
   provider data. Record actual verification limits rather than assumed passes.
+
+## 2026-11-10: Ten-language interface release
+
+- Added language selection across application pages with local catalogs for
+  English, Spanish, Arabic, French, German, Portuguese, Russian, Simplified
+  Chinese and Japanese alongside Hebrew (1,458 strings per catalog).
+- Browser testing reproduced an untranslated textarea placeholder; adjusted
+  attribute translation while leaving textarea values and user messages intact.
+- Added regressions for switching/restoring languages, RTL/LTR, dynamic UI,
+  failed catalog requests, blocked storage, complete catalogs and unchanged
+  symbols/prices. Mocked free-chat coverage verifies the response-language
+  instruction without changing free-only routing or data-use restrictions.
+- Browser preview verified English/Spanish/Arabic selection, translated primary
+  chat controls/greeting and preservation of a mixed-language draft. This was
+  desktop browser testing, not a physical mobile-device test.
+- Ten anonymous live availability/security checks passed before release.
+  No live model/provider call, paid change or Intrinio permission change.
+- Remaining: native-speaker review, physical iPhone acceptance, live multilingual
+  AI acceptance and any server/interpolated messages outside the local catalog.

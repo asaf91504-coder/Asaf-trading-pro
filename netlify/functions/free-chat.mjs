@@ -1,3 +1,4 @@
+import {responseLanguageInstruction} from '../../interface-language.mjs';
 import {entryStopScenario,entryStopText,scenarioSide} from '../../entry-stop-scenario.mjs';
 import {requestsChartAnalysis} from '../../chart-analysis-request.mjs';
 import {conversationHistory,chartExecutionContext} from '../../conversation-context.mjs';
@@ -195,7 +196,7 @@ export default async function handler(request){
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
    method:"POST",signal:controller.signal,
    headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","X-Title":"ASAF Trading Pro"},
-   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency"},stream:false})
+   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency"},stream:false})
   });
   if(!response.ok){
    return reply({error:response.status===429?"מכסת החינם של מודל ה-AI נוצלה; נסה מאוחר יותר.":"מודל ה-AI החינמי אינו זמין כרגע ("+response.status+")"},response.status===429?429:502);
