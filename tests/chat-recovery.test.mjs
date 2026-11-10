@@ -139,6 +139,14 @@ test('unavailable auth fails closed but retains prompt',async()=>{
  const s=setup({unavailable:true});await s.ctx.ask('keep me');assert.equal(s.calls(),0);assert.equal(s.message.value,'keep me');assert.match(s.bubbles[1].textContent,/לא ניתן לבדוק/);
 });
 
+test('missing login offers the actual account dialog without losing the question',async()=>{
+ const s=setup();s.ctx.authState.authenticated=false;let opened=0;
+ s.ctx.document.querySelector=selector=>{assert.equal(selector,'.terminal-account-button');return {click(){opened++}}};
+ await s.ctx.ask('מהו ניתוח גרף?');assert.equal(s.calls(),0);assert.equal(s.message.value,'מהו ניתוח גרף?');
+ assert.doesNotMatch(s.bubbles[1].textContent,/מעל הצ׳אט/);
+ const login=s.bubbles[1].children.at(-1);assert.equal(login.textContent,'פתח התחברות');login.click();assert.equal(opened,1);assert.equal(s.message.value,'מהו ניתוח גרף?');assert.equal(s.calls(),0);
+});
+
 test('explicit retry preserves original request including symbol and headline',async()=>{
  const s=setup();await s.ctx.ask('headline question',{newsArticleId:'chosen'});assert.equal(s.calls(),1);s.ctx.normSymbol=()=> 'MSFT';const retry=s.bubbles[1].children[2];retry.click();await new Promise(resolve=>setImmediate(resolve));assert.equal(s.calls(),2);assert.deepEqual(s.payloads[1],s.payloads[0]);assert.equal(s.payloads[1].symbol,'AAPL');assert.equal(s.payloads[1].newsArticleId,'chosen');
 });

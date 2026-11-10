@@ -6,10 +6,10 @@ Updated: 2026-11-10
 
 - Repository: asaf91504-coder/Asaf-trading-pro, branch main.
 - Production: https://joyful-seahorse-967889.netlify.app/
-- 523 Node tests pass, including source restrictions on chat history, safe
+- 524 Node tests pass, including source restrictions on chat history, safe
   emphasis rendering, analysis intent, chart preparation, authentication,
   cancellation, retry snapshots and provider metadata.
-- The 10 anonymous deployment checks passed before this update. These cover
+- The 10 anonymous deployment checks passed after the chat-formatting update. These cover
   health, security headers, protected routes and rejected cross-origin writes.
   They do not prove model availability, provider freshness or mobile usability.
 
@@ -23,6 +23,8 @@ Updated: 2026-11-10
   requests when not permitted, including after changing or clearing charts.
 - Educational and explicitly negated analysis requests do not automatically
   fetch candles. Existing genuine chart-analysis preparation remains intact.
+- A missing sign-in keeps the question and offers a direct button to the
+  actual account dialog, replacing the obsolete instruction to look above chat.
 
 ## Known limits and next checks
 
@@ -32,6 +34,8 @@ Updated: 2026-11-10
   end-to-end AI availability merely because the route responds or tests pass.
 - Real iPhone acceptance remains open: keyboard, reading position, portrait /
   landscape rotation, zoom, and opening the chart from the chat panel.
+- The current browser has no authenticated session. Anonymous chat recovery
+  was verified; a live model response was not verified during this pass.
 - Check mixed-provider conversation continuity, news headline expiration,
   authentication recovery and scanner behavior when relevant changes occur.
 - Scheduled checks must inspect current main and deployment state, preserve
