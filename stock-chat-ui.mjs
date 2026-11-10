@@ -185,7 +185,7 @@ async function ask(q,extra={}){
    }
    waiting.textContent+='\n\nמכין תשובה לשאלה שלך…';
   }
-  if(authState.enabled&&!authState.authenticated)throw Error("יש להיכנס לחשבון באזור הכניסה מעל הצ׳אט.");
+  if(authState.enabled&&!authState.authenticated)throw Object.assign(Error("יש להיכנס לחשבון כדי לקבל תשובת AI. השאלה שלך נשמרה."),{code:'sign_in_required'});
   const analyzeChart=!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(question,{command});
   if(analyzeChart){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value)){
@@ -297,6 +297,10 @@ async function ask(q,extra={}){
   retry.textContent=preparedPayload?'נסה שוב עם אותם נתונים':'נסה שוב בבחירה הנוכחית';
   retry.addEventListener('click',()=>{if(chatBusy)return;ask(question,preparedPayload?{...extra,retryPayload:preparedPayload}:extra)});
   waiting.append(retry);
+  if(e.code==='sign_in_required'){
+   const login=document.createElement('button');login.type='button';login.textContent='פתח התחברות';
+   login.addEventListener('click',()=>document.querySelector('.terminal-account-button')?.click());waiting.append(login);
+  }
   setAiStatus("החיבור ל-AI אינו פעיל או נחסם — התשובה לא הוחלפה בטקסט מוכן.");
  }finally{
   clearTimeout(requestTimeout);
