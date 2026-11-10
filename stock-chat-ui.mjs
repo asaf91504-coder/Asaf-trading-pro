@@ -166,7 +166,8 @@ async function ask(q,extra={}){
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
-  const command=!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(question,{currentSymbol:normSymbol()}):null;
+  const intentQuestion=window.asafCanonicalPrompt?.(question)||question;
+  const command=!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
   if(command?.recognized){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
    commandLoadAttempted=result.dataLoadAttempted===true;
@@ -174,7 +175,7 @@ async function ask(q,extra={}){
    const answer=[command.message,...result.messages].filter(Boolean).join('\n');
    localReceipt=answer||'לא זוהתה פעולה לביצוע. נסה לציין סימול וכלי גרף.';
    waiting.textContent=localReceipt;
-   const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|למה|מדוע|האם|מה דעתך|analy[sz]e|analysis|explain|why)/iu.test(question);
+   const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|למה|מדוע|האם|מה דעתך|analy[sz]e|analysis|explain|why)/iu.test(intentQuestion);
    // Conceptual explanations can proceed without candles. Actual chart
    // analysis below must have matching data before contacting the model.
    if(!wantsAnalysis){
@@ -186,7 +187,7 @@ async function ask(q,extra={}){
    waiting.textContent+='\n\nמכין תשובה לשאלה שלך…';
   }
   if(authState.enabled&&!authState.authenticated)throw Object.assign(Error("יש להיכנס לחשבון כדי לקבל תשובת AI. השאלה שלך נשמרה."),{code:'sign_in_required'});
-  const analyzeChart=!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(question,{command});
+  const analyzeChart=!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(intentQuestion,{command});
   if(analyzeChart){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value)){
     if(commandLoadAttempted)throw Error('אין עדיין נרות תואמים לניתוח. טעינת הנתונים לא הצליחה; לא נשלחה בקשה למודל.');
@@ -229,7 +230,8 @@ async function ask(q,extra={}){
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   preparedPayload=preparedPayload||{
     message:question,
-    chartControl:!extra.newsArticleId&&!localReceipt&&requestsChartControl(question),
+    language:document.documentElement?.lang||"he",
+    chartControl:!extra.newsArticleId&&!localReceipt&&requestsChartControl(intentQuestion),
     chartRevision,
     chartToolReceipt:localReceipt,
     symbol:activeData?.symbol||normSymbol(),
@@ -271,6 +273,7 @@ async function ask(q,extra={}){
    else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;waiting.textContent+='\n\nתוצאת הביצוע בפועל:\n'+execution.messages.join('\n');}catch(error){if(error.name==='AbortError')throw error;waiting.textContent+='\nלא בוצעו כלים מהתשובה: '+error.message;}}
   }
 
+  waiting.translate=false;
   const completedAnswer=waiting.textContent;
   renderChatText(waiting,completedAnswer);
 

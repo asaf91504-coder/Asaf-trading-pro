@@ -110,3 +110,22 @@ Updated: 2026-11-10
   checks before deploying. Do not manufacture changes when the checks pass.
 - Keep test artifacts free of secrets, personal account details and real
   provider data. Record actual verification limits rather than assumed passes.
+
+## 2026-11-10: Ten-language interface release
+
+- Added language selection across application pages with local catalogs for
+  English, Spanish, Arabic, French, German, Portuguese, Russian, Simplified
+  Chinese and Japanese alongside Hebrew (1,458 strings per catalog).
+- Browser testing reproduced an untranslated textarea placeholder; adjusted
+  attribute translation while leaving textarea values and user messages intact.
+- Added regressions for switching/restoring languages, RTL/LTR, dynamic UI,
+  failed catalog requests, blocked storage, complete catalogs and unchanged
+  symbols/prices. Mocked free-chat coverage verifies the response-language
+  instruction without changing free-only routing or data-use restrictions.
+- Browser preview verified English/Spanish/Arabic selection, translated primary
+  chat controls/greeting and preservation of a mixed-language draft. This was
+  desktop browser testing, not a physical mobile-device test.
+- Ten anonymous live availability/security checks passed before release.
+  No live model/provider call, paid change or Intrinio permission change.
+- Remaining: native-speaker review, physical iPhone acceptance, live multilingual
+  AI acceptance and any server/interpolated messages outside the local catalog.

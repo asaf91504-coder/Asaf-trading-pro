@@ -14,7 +14,7 @@ button.onclick=async()=>{button.disabled=true;slot.replaceChildren();status.clas
  window.google.accounts.id.initialize({client_id:begin.clientId,nonce:begin.nonce,auto_select:false,callback:async result=>{
   slot.replaceChildren();status.textContent='מאמת כניסה…';try{const signed=await post({action:'signin',nonce:begin.nonce,credential:result.credential});await refreshAuth({fresh:true});if(!authState.authenticated)throw Error('לא ניתן לאמת כניסה כרגע. נסה שוב.');status.textContent=welcomeMessage(signed.displayName,signed.created===true);status.classList.add('welcome-message');status.dir='auto';await refreshAccount()}catch(e){status.textContent=e.message}finally{button.disabled=false}
  }});
- window.google.accounts.id.renderButton(slot,{theme:'outline',size:'large',text:linking?'continue_with':'signin_with',locale:'he',width:260});status.textContent=linking?'בחר את חשבון Google עם אותו אימייל כדי לקשר אותו לחשבון הקיים.':'לחץ על הכפתור של Google כדי לבחור חשבון. הבקשה תקפה ל־5 דקות.';
+ window.google.accounts.id.renderButton(slot,{theme:'outline',size:'large',text:linking?'continue_with':'signin_with',locale:document.documentElement?.lang||'he',width:260});status.textContent=linking?'בחר את חשבון Google עם אותו אימייל כדי לקשר אותו לחשבון הקיים.':'לחץ על הכפתור של Google כדי לבחור חשבון. הבקשה תקפה ל־5 דקות.';
  button.disabled=false;
  }catch(e){status.textContent=e.message;button.disabled=false}};
 
