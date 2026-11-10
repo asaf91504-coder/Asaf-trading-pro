@@ -8,7 +8,8 @@ function loadGoogle(){
  return scriptPromise;
 }
 async function post(body){const r=await fetch('/.netlify/functions/google-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});const data=await r.json();if(!r.ok)throw Error(data.error||'הכניסה נכשלה');return data}
-async function setup(){try{const r=await fetch('/.netlify/functions/google-auth',{cache:'no-store',signal:AbortSignal.timeout(6000)});if(!r.ok)throw Error();const c=await r.json();button.disabled=!c.enabled;status.textContent=c.enabled?(c.signupEnabled?'אפשר להיכנס או לפתוח חשבון עם Google.':'אפשר להיכנס עם Google לחשבון מקושר. הרשמה חדשה טרם נפתחה.'):'כניסה עם Google בהכנה — מחכים להשלמת הגדרת החיבור.'}catch{button.disabled=true;status.textContent='לא ניתן לבדוק את חיבור Google כרגע.'}}
+// A failed capability check must not trap the user; begin still enforces server configuration.
+async function setup(){try{const r=await fetch('/.netlify/functions/google-auth',{cache:'no-store',signal:AbortSignal.timeout(6000)});if(!r.ok)throw Error();const c=await r.json();button.disabled=!c.enabled;status.textContent=c.enabled?(c.signupEnabled?'אפשר להיכנס או לפתוח חשבון עם Google.':'אפשר להיכנס עם Google לחשבון מקושר. הרשמה חדשה טרם נפתחה.'):'כניסה עם Google בהכנה — מחכים להשלמת הגדרת החיבור.'}catch{button.disabled=false;status.textContent='לא ניתן לבדוק את חיבור Google כרגע.'}}
 button.onclick=async()=>{button.disabled=true;slot.replaceChildren();status.classList.remove('welcome-message');status.removeAttribute('dir');try{
  const linking=authState.authenticated;const begin=await post({action:'begin'});await loadGoogle();
  window.google.accounts.id.initialize({client_id:begin.clientId,nonce:begin.nonce,auto_select:false,callback:async result=>{
