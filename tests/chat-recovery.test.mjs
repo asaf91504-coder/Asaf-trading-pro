@@ -294,3 +294,24 @@ test('an unavailable chart command can be explained but still cannot bypass mode
  anonymous.ctx.runChatActions=async()=>({messages:['הופעל MA20.']});await anonymous.ctx.ask('הוסף MA20 ותסביר למה');
  assert.equal(anonymous.calls(),0);assert.match(anonymous.bubbles[1].textContent,/להיכנס לחשבון/);
 });
+
+test('gateway HTML errors preserve the question and snapshot without falsely requiring a redeploy',async()=>{
+ for(const status of [502,503,504]){
+  const s=setup();let calls=0;
+  s.ctx.fetch=async()=>{calls++;return {ok:false,status,json:async()=>{throw new SyntaxError('Unexpected token <')}}};
+  await s.ctx.ask('בדוק את הגרף שנבחר',{newsArticleId:'retained-headline'});
+  assert.equal(calls,1);assert.equal(s.message.value,'בדוק את הגרף שנבחר');assert.equal(s.button.disabled,false);
+  assert.doesNotMatch(s.bubbles[1].textContent,/לא נפרסה|GitHub/);
+  assert.match(s.bubbles[1].textContent,new RegExp('HTTP '+status));
+  assert.equal(s.bubbles[1].children[2].textContent,'נסה שוב עם אותם נתונים');
+ }
+});
+
+test('invalid successful JSON and cancellation during response parsing retain distinct recovery messages',async()=>{
+ for(const cancelled of [false,true]){
+  const s=setup();s.ctx.fetch=async()=>({ok:true,status:200,json:async()=>{if(cancelled)throw new DOMException('Cancelled','AbortError');throw new SyntaxError('bad JSON')}});
+  await s.ctx.ask('שאלה שמורה');assert.equal(s.message.value,'שאלה שמורה');assert.equal(s.ctx.chatBusy,false);
+  assert.match(s.bubbles[1].textContent,cancelled?/הבקשה בוטלה/:/תשובה לא תקינה/);
+  assert.doesNotMatch(s.bubbles[1].textContent,/לא נפרסה|GitHub/);
+ }
+});

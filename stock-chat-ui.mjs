@@ -252,7 +252,10 @@ async function ask(q,extra={}){
   if(requestState)requestState.textContent='הנתונים נשלחו — ממתין לניתוח…';
   slowNotice=setTimeout(()=>{if(epoch===conversationEpoch&&!activeController.signal.aborted&&requestState)requestState.textContent='המודל עדיין מעבד את הבקשה. אפשר להמתין או לבטל; אין צורך לשלוח שוב.'},20000);
   const response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
-  let data;try{data=await response.json()}catch{throw Error("פונקציית AI לא נפרסה ל-Netlify. צריך לחבר את GitHub ולפרוס את האתר.")}
+  let data;try{data=await response.json()}catch(error){
+   if(error.name==='AbortError')throw error;
+   throw Error(response.ok?'התקבלה תשובה לא תקינה משירות ה-AI. השאלה נשמרה; אפשר לנסות שוב.':'שירות ה-AI החזיר שגיאת חיבור (HTTP '+response.status+'). השאלה נשמרה; אפשר לנסות שוב.');
+  }
   if(!response.ok){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
    throw Error(data.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
