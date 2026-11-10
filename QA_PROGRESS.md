@@ -6,7 +6,7 @@ Updated: 2026-11-10
 
 - Repository: asaf91504-coder/Asaf-trading-pro, branch main.
 - Production: https://joyful-seahorse-967889.netlify.app/
-- 535 Node tests pass, including source restrictions on chat history, safe
+- 537 Node tests pass, including source restrictions on chat history, safe
   emphasis rendering, analysis intent, chart preparation, authentication,
   cancellation, retry snapshots and provider metadata.
 - The 10 anonymous deployment checks passed after the chat-formatting update. These cover
@@ -44,11 +44,24 @@ Updated: 2026-11-10
   Invalid successful JSON has a separate message; aborts during body parsing
   retain the cancellation message. Existing draft/snapshot recovery is retained,
   with no automatic model retry.
-- Validation: regression failed before the fix, then all 535 Node tests passed
+- Validation: regression failed before the fix, then all 537 Node tests passed
   after installing locked dependencies in a fresh checkout. Ten anonymous live
   availability/security checks passed on 2026-11-10 before deployment.
 - Gateway/abort cases were simulated in code, not induced on production.
   No live model call, provider fetch or physical-device test was performed.
+
+## 2026-11-10: news selection follows the active stock
+
+- Reproduced in a DOM fixture: filtered AAPL headlines remained visible after
+  selecting NVDA, including when reopening the already-loaded news tab.
+- Fixed by refiltering the existing snapshot on symbol input and on returning
+  to news. The free-text query is preserved; selection changes add no network
+  request. A missing symbol match shows the existing explicit empty state.
+- Both regression scenarios failed before the fix; all 537 Node tests pass.
+  The 10 anonymous production availability/security checks passed before this
+  deployment. No AI/provider request or real-device test was performed.
+- This confirms event wiring and rendered fixture content; it does not establish
+  live headline coverage, authenticated AI output, or iPhone behavior.
 
 ## Known limits and next checks
 
