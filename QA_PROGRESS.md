@@ -147,3 +147,14 @@ Updated: 2026-11-10
   or Play Store binary and no physical iPhone/Android device was tested here.
 - No model/provider request, paid change, licensing flag or Intrinio permission
   change was made.
+
+## 2026-11-10: Preserve translated draft intents across language switches
+
+- Reproduced in the actual language UI module with a DOM fixture: a translated
+  draft lost its canonical intent when another language replaced the reverse
+  catalog. The visible draft survived but chat command recognition could fail.
+- Retain mappings from successfully loaded languages for the current page
+  session, including when switching back to Hebrew. Draft text stays unchanged.
+- The new regression failed before the fix; all 555 code tests pass afterward.
+  This is simulated DOM verification, not a physical-device or live AI test.
+  No provider/model requests or licensing changes were made.
