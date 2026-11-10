@@ -6,6 +6,7 @@ import {parseChartCommand} from '../chat-chart-actions.mjs';
 import {isChatNearBottom} from '../chat-interaction.mjs';
 import {recentAIBars} from '../chart-data.mjs';
 import {requestsChartAnalysis,hasAnalysisCandles} from '../chart-analysis-request.mjs';
+import {historyForModel} from '../conversation-context.mjs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const askSource=source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')"));
 function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
@@ -15,6 +16,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const ctx={log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
  ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
+ ctx.historyForModel=historyForModel;ctx.renderChatText=(el,text)=>{el.textContent=text};
  ctx.$('marketInterval').value='1day';ctx.window.dispatchEvent=()=>{};
  ctx.intrinioFeed=Promise.resolve({enabled:false,aiAnalysisEnabled:false});
  ctx.loadMarketData=async()=>{ctx.loaded=analysisData(ctx.normSymbol());ctx.currentContext=()=>ctx.loaded.context;return ctx.loaded};
@@ -26,6 +28,21 @@ function analysisData(symbol='AAPL',source='Twelve Data'){
  const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,9,1+i)).toISOString().slice(0,10),open:100,high:102,low:99,close:101,volume:1000}));
  return {symbol,source,interval:'1day',bars,receivedAt:'2026-11-09T20:00:00Z',context:{date:bars.at(-1).date}};
 }
+
+test('local tool history retains Intrinio source after chart changes or data clearing',async()=>{
+ const s=setup();s.ctx.parseChartCommand=parseChartCommand;s.ctx.loaded=analysisData('AAPL','Intrinio');
+ s.ctx.runChatActions=async()=>({changed:true,messages:['סימון מקומי מהנתונים']});
+ await s.ctx.ask('הוסף MA20');assert.equal(s.calls(),0);assert.ok(s.ctx.conversation.every(m=>m.chartContext.source==='Intrinio'));
+ s.ctx.loaded=null;s.ctx.conversation.push({role:'user',content:'שאלה כללית על למידה',chartContext:{source:'none'}});
+ await s.ctx.ask('שלום');assert.equal(s.calls(),1);assert.equal(s.payloads[0].history.length,1);assert.equal(s.payloads[0].history[0].content,'שאלה כללית על למידה');assert.equal(s.ctx.conversation.length,3);
+});
+
+test('display formatting does not overwrite the original conversational answer or its source',async()=>{
+ const s=setup();s.ctx.loaded=analysisData();s.ctx.currentContext=()=>s.ctx.loaded.context;
+ s.ctx.renderChatText=(el,text)=>{el.textContent=text.replaceAll('**','')};
+ s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:'זה **הסבר** עם הדגשה'})});
+ await s.ctx.ask('הסבר');assert.equal(s.bubbles[1].textContent,'זה הסבר עם הדגשה');assert.equal(s.ctx.conversation.at(-1).content,'זה **הסבר** עם הדגשה');assert.equal(s.ctx.conversation.at(-1).chartContext.source,'Twelve Data');
+});
 
 test('analyze-chart button loads candles once and sends the exact displayed snapshot',async()=>{
  const s=setup();let loads=0,shown=0,payload;

@@ -12,3 +12,9 @@ test('history is bounded, newest-first retained, roles restricted and truncation
 test('execution receipt is bounded and labelled unverified rather than an instruction',()=>{
  assert.equal(chartExecutionContext(null),'');assert.match(chartExecutionContext('הופעל MA20'),/unverified.*הופעל MA20/s);assert.ok(chartExecutionContext('x'.repeat(10000)).length<6200);
 });
+
+test('restricted historical text is excluded by default without deleting unrelated turns',()=>{
+ const input=[{role:'assistant',content:'restricted-derived-level',chartContext:{symbol:'NVDA',source:'Intrinio'}},{role:'user',content:'a general question',chartContext:{source:'none'}}];
+ const history=conversationHistory(input);assert.equal(history.length,1);assert.equal(history[0].content,'a general question');assert.equal(input.length,2);
+ const allowed=conversationHistory(input,{allowIntrinio:true});assert.equal(allowed.length,2);assert.match(allowed[0].content,/Intrinio/);
+});
