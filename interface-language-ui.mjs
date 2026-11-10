@@ -1,5 +1,5 @@
 import {languageNames,languageCode,languageDirection,savedLanguage,saveLanguage,createTranslator} from './interface-language.mjs';
-const originals=new WeakMap(),attributeOriginals=new WeakMap();
+const originals=new WeakMap(),attributeOriginals=new WeakMap(),canonicalPrompts=new Map();
 const excluded='script,style,noscript,code,pre,[contenteditable], [translate="no"],.bubble.user,#newsFeed .source-card a,.conversation-archive-preview,#researchRows .source-card a,#researchRows .source-card p,#journalRows td:last-child,#communityFeed h3,#communityFeed .setup-thesis,#communityFeed small';
 let translate=text=>text,selected='he',revision=0;
 const nativeConfirm=window.confirm.bind(window),nativePrompt=window.prompt.bind(window);
@@ -19,7 +19,7 @@ const observer=new MutationObserver(records=>{observer.disconnect();for(const re
 function observe(){observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','alt']})}
 async function applyLanguage(value){const code=languageCode(value),request=++revision;select.disabled=true;status.textContent='';try{
  let catalog={};if(code!=='he'){const response=await fetch('./locales/'+code+'.json',{signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('language');catalog=await response.json();if(!catalog||Array.isArray(catalog)||typeof catalog!=='object')throw Error('catalog')}
- if(request!==revision)return;translate=createTranslator(catalog);const reverse=new Map(Object.entries(catalog).map(([source,translated])=>[translated,source]));window.asafCanonicalPrompt=question=>reverse.get(question)||question;window.asafTranslate=translate;selected=code;document.documentElement.lang=code;document.documentElement.dir=languageDirection(code);try{saveLanguage(window.localStorage,code)}catch{};select.value=code;observer.disconnect();scan(document.body);observe();window.dispatchEvent(new CustomEvent('asaf:language',{detail:{language:code}}));window.dispatchEvent(new Event('asaf:layout'));
+ if(request!==revision)return;translate=createTranslator(catalog);for(const [source,translated] of Object.entries(catalog))canonicalPrompts.set(translated,source);window.asafCanonicalPrompt=question=>canonicalPrompts.get(question)||question;window.asafTranslate=translate;selected=code;document.documentElement.lang=code;document.documentElement.dir=languageDirection(code);try{saveLanguage(window.localStorage,code)}catch{};select.value=code;observer.disconnect();scan(document.body);observe();window.dispatchEvent(new CustomEvent('asaf:language',{detail:{language:code}}));window.dispatchEvent(new Event('asaf:layout'));
  }catch{if(request===revision){select.value=selected;status.textContent='Language unavailable. Try again. / טעינת השפה נכשלה; נסה שוב.'}}finally{if(request===revision)select.disabled=false}}
 select.addEventListener('change',()=>applyLanguage(select.value));
 let initial='he';try{initial=savedLanguage(window.localStorage)}catch{}observe();applyLanguage(initial);

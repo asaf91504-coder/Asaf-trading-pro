@@ -19,6 +19,16 @@ function fixture(){
  const ctx={...language,AbortSignal,Event,CustomEvent:class extends Event{constructor(t,o){super(t);this.detail=o.detail}},document:{body,documentElement:{lang:'he',dir:'rtl'},createElement:tag=>new Node(tag),querySelector:()=>header},window:{localStorage:storage,confirm:()=>true,prompt:()=>'',dispatchEvent:e=>events.push(e.type)},MutationObserver:class{constructor(callback){observer=callback}disconnect(){}observe(){}},fetch:async url=>{if(fail)throw Error('offline');return {ok:true,json:async()=>url.includes('/ar.')?{'חדשות':'أخبار','כתוב כאן':'اكتب هنا'}:{'חדשות':'News','כתוב כאן':'Write here'}}}};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {ctx,body,nav,input,user,Node,memory,events,observe:r=>observer(r),fail:()=>{fail=true},block:()=>{blocked=true}};
 }
+test('a translated draft retains its canonical intent after changing language',async()=>{
+ const f=fixture();await f.ctx.applyLanguage('en');f.input.value='Write here';
+ assert.equal(f.ctx.window.asafCanonicalPrompt(f.input.value),'כתוב כאן');
+ await f.ctx.applyLanguage('ar');
+ assert.equal(f.input.value,'Write here');
+ assert.equal(f.ctx.window.asafCanonicalPrompt(f.input.value),'כתוב כאן');
+ await f.ctx.applyLanguage('he');
+ assert.equal(f.ctx.window.asafCanonicalPrompt(f.input.value),'כתוב כאן');
+ assert.equal(f.ctx.window.asafCanonicalPrompt('NVDA 123.45'),'NVDA 123.45');
+});
 test('language switch updates existing and new UI, preserves drafts/user text and restores Hebrew',async()=>{
  const f=fixture();await f.ctx.applyLanguage('en');assert.equal(f.nav.textContent,'News');assert.equal(f.input.getAttribute('placeholder'),'Write here');assert.equal(f.input.value,'My NVDA draft');assert.equal(f.user.textContent,'חדשות NVDA');assert.equal(f.ctx.document.documentElement.dir,'ltr');assert.equal(f.memory.get('asaf_interface_language_v1'),'en');
  const later=new f.Node('button');later.textContent='חדשות';f.body.append(later);f.observe([{type:'childList',addedNodes:[later]}]);assert.equal(later.textContent,'News');
