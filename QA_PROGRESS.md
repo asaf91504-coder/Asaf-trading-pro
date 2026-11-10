@@ -158,3 +158,19 @@ Updated: 2026-11-10
 - The new regression failed before the fix; all 555 code tests pass afterward.
   This is simulated DOM verification, not a physical-device or live AI test.
   No provider/model requests or licensing changes were made.
+
+## 2026-11-10: Google sign-in retry after initial network failure
+
+- Reproduced with the actual Google UI module: an offline request, HTTP 503,
+  or invalid JSON during the initial capability check permanently disabled the
+  sign-in button until the page was reloaded.
+- Keep the existing sign-in button available after that check fails so the user
+  can retry explicitly. A confirmed disabled configuration still disables the
+  button; the server continues to validate every begin/sign-in request.
+- All three failure regressions failed before the fix and now pass, including
+  recovery through button rendering without granting authentication. There is
+  no automatic retry. All 559 code tests pass.
+- Ten anonymous live availability/security checks passed before release. The
+  failure/recovery scenarios used mocked network/DOM responses, not real Google
+  accounts or a physical device. Real-device and Google login acceptance remain
+  open. No model/provider calls, paid changes or license changes were made.
