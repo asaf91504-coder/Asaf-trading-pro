@@ -12,3 +12,7 @@ test('analysis data must match symbol and interval and include enough actual can
  assert.equal(hasAnalysisCandles(data,'NVDA','1day'),true);
  for(const [value,symbol,interval] of [[null,'NVDA','1day'],[data,'AAPL','1day'],[data,'NVDA','1week'],[{...data,bars:[]},'NVDA','1day']])assert.equal(hasAnalysisCandles(value,symbol,interval),false);
 });
+
+test('educational questions and explicit refusals do not trigger a chart fetch',()=>{
+ for(const question of ['אל תנתח את הגרף','אני לא רוצה לנתח את הגרף','לא לנתח מניה עכשיו','מהו ניתוח גרף?','מה זה ניתוח מניה?','הסבר לי ניתוח גרף','תסביר מהו ניתוח טכני של מניה',"don't analyze this chart",'do not analyze the stock','what is chart analysis?'])assert.equal(requestsChartAnalysis(question),false,question);
+});

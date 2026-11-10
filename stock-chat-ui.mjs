@@ -11,6 +11,8 @@ import {initLocalChart} from "./local-chart.mjs";
 import {parseChartCommand,requestsChartControl} from './chat-chart-actions.mjs';
 import {executeChartActions} from './chart-command-controller.mjs';
 import {requestsChartAnalysis,hasAnalysisCandles} from './chart-analysis-request.mjs';
+import {historyForModel} from './conversation-context.mjs';
+import {renderChatText} from './chat-text.mjs';
 
 const $=id=>document.getElementById(id);
 const log=$("chatLog"),message=$("chatInput"),badge=$("chatDataStatus");
@@ -176,7 +178,8 @@ async function ask(q,extra={}){
    // Conceptual explanations can proceed without candles. Actual chart
    // analysis below must have matching data before contacting the model.
    if(!wantsAnalysis){
-    conversation.push({role:'user',content:question,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}},{role:'assistant',content:waiting.textContent,chartContext:{symbol:normSymbol(),interval:loaded?.interval,receivedAt:loaded?.receivedAt}});conversation=conversation.slice(-24);
+    const chartContext={symbol:normSymbol(),source:loaded?.symbol===normSymbol()?loaded.source:'none',interval:loaded?.interval,receivedAt:loaded?.receivedAt};
+    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:waiting.textContent,chartContext});conversation=conversation.slice(-24);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }
@@ -197,10 +200,12 @@ async function ask(q,extra={}){
   }
   const context=currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
+  let allowIntrinioHistory=false;
   // The server independently enforces this gate. Check before screenshots or
   // payload preparation so an unavailable analysis has a useful local result.
   if(activeData?.source==='Intrinio'||preparedPayload?.source==='Intrinio'||preparedPayload?.useServerIntrinio===true){
    const policy=await intrinioFeed;
+   allowIntrinioHistory=policy.aiAnalysisEnabled===true;
    if(epoch!==conversationEpoch)return;
    if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
    if(policy.aiAnalysisEnabled!==true){
@@ -239,7 +244,7 @@ async function ask(q,extra={}){
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
-    history:conversation.slice(-24)
+    history:historyForModel(conversation.slice(-24),{allowIntrinio:allowIntrinioHistory})
   };
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
@@ -263,9 +268,12 @@ async function ask(q,extra={}){
    else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;waiting.textContent+='\n\nתוצאת הביצוע בפועל:\n'+execution.messages.join('\n');}catch(error){if(error.name==='AbortError')throw error;waiting.textContent+='\nלא בוצעו כלים מהתשובה: '+error.message;}}
   }
 
+  const completedAnswer=waiting.textContent;
+  renderChatText(waiting,completedAnswer);
+
   if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 
-  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:waiting.textContent,chartContext:{symbol:preparedPayload.symbol,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
+  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   conversation=conversation.slice(-24);
   if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
   if(followAnswer)log.scrollTop=log.scrollHeight;

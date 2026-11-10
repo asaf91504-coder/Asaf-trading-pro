@@ -23,3 +23,10 @@ test('Intrinio external AI stays blocked without plan rights or owner access',as
 test('Intrinio mismatched snapshots and mixed flags stop before model inference',async()=>{
  await scenario(async s=>{assert.equal((await s.send({...s.payload,receivedAt:'old'})).status,409);assert.equal((await s.send({...s.payload,useServerMarket:true})).status,400);assert.equal((await s.send({...s.payload,useServerIntrinio:false})).status,400);assert.equal(s.models.length,0)});
 });
+
+test('cleared or switched charts cannot forward restricted historical messages to the model',async()=>{
+ for(const options of [{licensed:false},{licensed:true,admin:false}])await scenario(async s=>{
+  const response=await s.send({message:'Explain diversification conceptually',symbol:'',source:'none',bars:null,history:[{role:'assistant',content:'restricted-derived-values',chartContext:{symbol:'AAPL',source:'Intrinio'}},{role:'user',content:'general-learning-context',chartContext:{source:'none'}}]});
+  assert.equal(response.status,200);assert.equal(s.models.length,1);const sent=JSON.stringify(s.models[0].messages);assert.doesNotMatch(sent,/restricted-derived-values/);assert.match(sent,/general-learning-context/);
+ },options);
+});

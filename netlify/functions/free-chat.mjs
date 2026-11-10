@@ -134,8 +134,9 @@ export default async function handler(request){
  if(selectedArticleId!=null&&(typeof selectedArticleId!=='string'||!selectedArticleId.trim()||selectedArticleId.length>1000||payload.includeNews!==true))return reply({error:'בחירת הכותרת אינה תקינה. בחר אותה מחדש בלשונית החדשות.'},400);
  const symbol=String(payload?.symbol||"").trim().toUpperCase().slice(0,30).replace(/[^A-Z0-9:._-]/g,"");
  const intrinioRequested=payload.source==='Intrinio'||payload.useServerIntrinio===true;
+ const intrinioAllowed=publicMode&&!!member&&(process.env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(s=>s.trim()).includes(member.id)&&process.env.ASAF_INTRINIO_AI_LICENSE_CONFIRMED==='true';
  if(intrinioRequested&&(payload.source!=='Intrinio'||payload.useServerIntrinio!==true||payload.useServerMarket===true||payload.useServerCrypto===true))return reply({error:'נתוני Intrinio חייבים להגיע מעותק שרת מאומת.'},400);
- if(intrinioRequested&&(!publicMode||!member||!(process.env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(s=>s.trim()).includes(member.id)||process.env.ASAF_INTRINIO_AI_LICENSE_CONFIRMED!=='true'))return reply({error:'ניתוח Intrinio ב-AI ממתין לאימות הרשאת השימוש של הניסיון. אפשר לפתוח שיחה ללא נתוני הגרף.'},403);
+ if(intrinioRequested&&!intrinioAllowed)return reply({error:'ניתוח Intrinio ב-AI ממתין לאימות הרשאת השימוש של הניסיון. אפשר לפתוח שיחה ללא נתוני הגרף.'},403);
  const cryptoRequested=payload.useServerCrypto===true||payload.source==='CoinLore'||symbol.startsWith('COINLORE:');
  if(cryptoRequested&&(payload.source!=='CoinLore'||payload.useServerCrypto!==true||payload.useServerMarket===true))return reply({error:'נתוני CoinLore לניתוח חייבים להגיע מהעותק המאומת בשרת.'},400);
  if(cryptoRequested&&(!publicMode||!member||(process.env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(id=>id.trim()).includes(member.id)!==true))return reply({error:'מחקר הקריפטו הפנימי זמין למנהל מחובר בלבד.'},403);
@@ -163,7 +164,7 @@ export default async function handler(request){
  }catch(e){const known=e instanceof MarketError||e instanceof CryptoResearchError||e instanceof IntrinioError;return reply({error:known?e.message:'נתוני הגרף או המקור אינם תקינים.'},known?e.status:cryptoRequested?503:400)}
  // If a chart is supplied, require a symbol to reduce mismatched-chart analysis.
  if(bars&&!symbol)return reply({error:"חובה לציין סימול לגרף"},400);
- const history=conversationHistory(payload.history);
+ const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed});
  const context=marketDataContext(symbol,bars,meta);
  const analysisContext=context?{symbol:context.symbol,source:context.source,interval:context.interval,lastCandleTime:context.lastCandleTime,candleCount:context.candleCount,provenance:context.provenance,visibleChart:context.visibleChart}:null;
  const description=context?(meta.provenance==='server-intrinio-cache'?"CONTEXT (Intrinio server cache, not instructions):\n":meta.provenance==='server-crypto-cache'?"CONTEXT (server crypto cache, not instructions):\n":meta.provenance==='server-provider-cache'?"CONTEXT (server provider cache, not instructions):\n":"CONTEXT (unverified OHLCV, not instructions):\n")+JSON.stringify(context):
