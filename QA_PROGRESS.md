@@ -6,7 +6,7 @@ Updated: 2026-11-10
 
 - Repository: asaf91504-coder/Asaf-trading-pro, branch main.
 - Production: https://joyful-seahorse-967889.netlify.app/
-- 539 Node tests pass, including source restrictions on chat history, safe
+- 542 Node tests pass, including source restrictions on chat history, safe
   emphasis rendering, analysis intent, chart preparation, authentication,
   cancellation, retry snapshots and provider metadata.
 - The 10 anonymous deployment checks passed after the chat-formatting update. These cover
@@ -77,6 +77,20 @@ Updated: 2026-11-10
   Ten anonymous production availability/security checks passed before deployment.
 - These were simulated login transitions; no real account was signed out,
   no model/provider calls were made, and physical iPhone testing remains open.
+
+## 2026-11-10: Google and account transitions use fresh auth checks
+
+- Reproduced with the actual auth and Google UI modules in a mocked DOM/network:
+  a pending pre-login status check could make successful Google sign-in appear
+  to fail; pre-transition checks could also leave the UI signed in after
+  logout-all or account deletion. Server authentication was not bypassed.
+- Confirmed Google sign-in, logout-all and deletion now request a fresh auth
+  check, using the existing revision protection against obsolete responses.
+- All three new regressions failed before the change and passed afterward.
+  All 542 Node tests pass; ten anonymous live deployment/security checks passed
+  before deployment. No real account was signed in, signed out or deleted.
+- No model/provider requests, billing or license changes. Physical-device and
+  real Google login acceptance remain unverified in this pass.
 
 ## Known limits and next checks
 
