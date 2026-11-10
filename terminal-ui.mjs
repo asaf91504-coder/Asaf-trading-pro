@@ -22,8 +22,7 @@ dataButton.onclick=()=>{selectTab('charts');dataTools.open=!dataTools.open;if(da
 // Collapsible statistics and indicators leave the actual chart room to breathe.
 const metrics=$('chartMetrics'),method=metrics.nextElementSibling;
 const stats=document.createElement('details');stats.className='terminal-chart-stats';const statsSummary=document.createElement('summary');statsSummary.textContent='ערכי אינדיקטורים ושיטת החישוב';metrics.before(stats);stats.append(statsSummary,metrics,method);
-const tools=$('localChartPanel').querySelector('.chart-tools'),toolDetails=document.createElement('details'),toolSummary=document.createElement('summary');toolDetails.className='terminal-indicators';toolSummary.textContent='אינדיקטורים וסגנון גרף';tools.before(toolDetails);toolDetails.append(toolSummary,tools);
-$('localChartCanvas').after(stats);stats.after($('chartPreciseDrawingDetails'));
+$('localChartCanvas').after(stats);
 const chat=$('chat');chat.querySelector('h2').textContent='ASAF AI';
 const context=document.createElement('p');context.id='terminalAIContext';context.className='terminal-ai-context';context.setAttribute('role','status');context.textContent='אין נתוני גרף מחוברים. הניתוח ישתמש בגרף הפתוח כשיהיו נתונים.';
 const auto=document.createElement('label');auto.className='terminal-auto-chart';auto.innerHTML='<input id="chatAutoChart" type="checkbox" checked> צרף את הגרף הפתוח אוטומטית';
@@ -74,11 +73,7 @@ for(const tab of document.querySelectorAll('[data-tab]'))tab.addEventListener('c
 
 window.dispatchEvent(new Event('asaf:request-dataset'));
 
-// Keep navigation and drawing actions close to the chart, independent of indicator settings.
-const drawingToolbar=document.createElement('div');drawingToolbar.className='terminal-drawing-toolbar';drawingToolbar.setAttribute('role','group');drawingToolbar.setAttribute('aria-label','כלי ציור ופרשנות לגרף');
-for(const id of ['chartDrawingTool','drawingText','drawingRR','drawingChannelWidth']){const input=$(id);drawingToolbar.append(input.closest('label'))}
-for(const id of ['chartTrend','chartUndo','chartRedo','chartClearLines'])drawingToolbar.append($(id));
-toolDetails.after(drawingToolbar);
+// Viewing controls remain available; chart editing is requested in the conversation.
 const focusButton=document.createElement('button');focusButton.type='button';focusButton.className='terminal-focus-button';focusButton.textContent='הסתר AI · הרחב גרף';focusButton.setAttribute('aria-pressed','false');header.append(focusButton);
 function chartFocus(enabled){document.body.classList.toggle('terminal-chart-focus',enabled);focusButton.setAttribute('aria-pressed',String(enabled));focusButton.textContent=enabled?'הצג AI לצד הגרף':'הסתר AI · הרחב גרף';window.dispatchEvent(new Event('asaf:layout'))}
 focusButton.onclick=()=>chartFocus(!document.body.classList.contains('terminal-chart-focus'));
@@ -96,11 +91,8 @@ if(!new URL(location.href).searchParams.has('tab'))selectTab('chat');
 const chartPanel=$('localChartPanel'),chartNav=$('localChartRange').closest('.row');
 chartNav.classList.add('chart-navigation-strip');
 const chartTop=document.createElement('div');chartTop.className='chart-workbench-top';
-chartPanel.prepend(chartTop);chartTop.append($('localChartTitle'),toolDetails);
-toolSummary.textContent='ƒx אינדיקטורים';
-const drawingDetails=document.createElement('details');drawingDetails.className='chart-drawing-menu';
-const drawingSummary=document.createElement('summary');drawingSummary.textContent='כלי ציור';
-drawingDetails.append(drawingSummary,drawingToolbar);chartTop.append(drawingDetails);
+chartPanel.prepend(chartTop);chartTop.append($('localChartTitle'));
+const chartChatOnly=document.createElement('button');chartChatOnly.type='button';chartChatOnly.id='chartChatOnly';chartChatOnly.className='primary chart-chat-only';chartChatOnly.textContent='דבר עם הצ׳אט על הגרף';chartTop.append(chartChatOnly);
 const fullscreen=$('chartFullscreen');chartTop.append(fullscreen);
 $('localChartCanvas').after(chartNav);
 const notes=document.createElement('details');notes.className='chart-notes';
@@ -108,24 +100,14 @@ const notesTitle=document.createElement('summary');notesTitle.textContent='מי�
 for(const node of [...chartPanel.children])if(node.matches('p'))notes.append(node);
 chartPanel.append(notes);
 
-// A dedicated drawing rail and a compact quote strip keep the canvas central.
+// The chart has a single conversation entry point, with no manual drawing rail.
 const chartBody=document.createElement('div');chartBody.className='chart-workbench-body';
-const drawingRail=document.createElement('div');drawingRail.className='chart-drawing-rail';drawingRail.setAttribute('role','group');drawingRail.setAttribute('aria-label','כלי ציור מהירים');
 const chartViewport=document.createElement('div');chartViewport.className='chart-viewport';
 const quoteLine=document.createElement('div');quoteLine.id='chartOHLC';quoteLine.className='chart-ohlc';quoteLine.dir='ltr';quoteLine.setAttribute('aria-label','נתוני הנר הנבחר');
-const canvas=$('localChartCanvas');canvas.before(chartBody);chartBody.append(drawingRail,chartViewport);chartViewport.append(quoteLine,canvas);
-const railButtons=[];
-for(const [tool,icon,label] of [['navigate','↖','ניווט וסמן'],['trend','╱','קו מגמה'],['horizontal','━','קו מחיר אופקי'],['vertical','┃','קו אנכי'],['rectangle','▭','מלבן'],['fibonacci','≋','פיבונאצ׳י'],['arrow','↗','חץ'],['measure','↔','מדידת שינוי']]){
- const button=document.createElement('button');button.type='button';button.textContent=icon;button.title=label;button.setAttribute('aria-label',label);button.dataset.tool=tool;button.setAttribute('aria-pressed',String(tool==='navigate'));
- button.onclick=()=>{const active=$('chartTrend').getAttribute('aria-pressed')==='true';if(tool==='navigate'){if(active)$('chartTrend').click()}else{if(active)$('chartTrend').click();$('chartDrawingTool').value=tool;$('chartDrawingTool').dispatchEvent(new Event('change'));$('chartTrend').click()}canvas.focus();syncRail()};drawingRail.append(button);railButtons.push(button);
-}
-function syncRail(){const active=$('chartTrend').getAttribute('aria-pressed')==='true',tool=active?$('chartDrawingTool').value:'navigate';for(const button of railButtons)button.setAttribute('aria-pressed',String(button.dataset.tool===tool))}
-new MutationObserver(syncRail).observe($('chartTrend'),{attributes:true,attributeFilter:['aria-pressed']});$('chartDrawingTool').addEventListener('change',syncRail);
-const undoQuick=document.createElement('button');undoQuick.type='button';undoQuick.textContent='↶';undoQuick.title='בטל ציור אחרון';undoQuick.setAttribute('aria-label','בטל ציור אחרון');undoQuick.onclick=()=>$('chartUndo').click();drawingRail.append(undoQuick);
-const syncUndo=()=>undoQuick.disabled=$('chartUndo').disabled;new MutationObserver(syncUndo).observe($('chartUndo'),{attributes:true,attributeFilter:['disabled']});syncUndo();
+const canvas=$('localChartCanvas');canvas.before(chartBody);chartBody.append(chartViewport);chartViewport.append(quoteLine,canvas);
 const quickRanges=document.createElement('div');quickRanges.className='chart-quick-ranges';quickRanges.setAttribute('role','group');quickRanges.setAttribute('aria-label','מספר נרות בתצוגה');
 for(const value of ['30','60','120','200']){const button=document.createElement('button');button.type='button';button.textContent=value;button.setAttribute('aria-label','הצג '+value+' נרות');button.onclick=()=>{$('localChartRange').value=value;$('localChartRange').dispatchEvent(new Event('change'))};quickRanges.append(button)}chartNav.prepend(quickRanges);
-const advancedChart=document.createElement('details');advancedChart.className='chart-advanced-footer';const chartFooterSummary=document.createElement('summary');chartFooterSummary.textContent='נתוני נרות, ציור מדויק וייצוא';advancedChart.append(chartFooterSummary);
+const advancedChart=document.createElement('details');advancedChart.className='chart-advanced-footer';const chartFooterSummary=document.createElement('summary');chartFooterSummary.textContent='נתוני נרות וייצוא';advancedChart.append(chartFooterSummary);
 for(const node of [...chartPanel.children])if(node!==chartTop&&node!==chartBody&&node!==chartNav)advancedChart.append(node);chartPanel.append(advancedChart);
 
 const exactRange=document.createElement('div');exactRange.className='row';const rangeLabel=chartNav.querySelector('label[for="localChartRange"]');if(rangeLabel)exactRange.append(rangeLabel);exactRange.append($('localChartRange'));advancedChart.append(exactRange);
@@ -135,6 +117,7 @@ mountAssetSearch({host:command,open(symbol){$('symbol').value=symbol;$('symbol')
 const workspaceChat=document.createElement('button');workspaceChat.type='button';workspaceChat.className='workspace-chat-toggle';workspaceChat.textContent='✦ ASAF AI';workspaceChat.setAttribute('aria-expanded','false');command.append(workspaceChat);
 function toggleWorkspaceChat(open){document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
 workspaceChat.onclick=()=>toggleWorkspaceChat(!document.body.classList.contains('chart-chat-open'));
+chartChatOnly.onclick=()=>{chartFocus(false);toggleWorkspaceChat(true);if(!$('chatInput').value.trim())$('chatInput').value='נתח את הגרף והצג נקודת כניסה וסטופ־לוס עם התנאים לתרחיש';$('chatInput').dispatchEvent(new Event('input'));$('chatInput').focus()};
 // Reveal executed chart changes, including requests made from the full chat page.
 window.addEventListener('asaf:chart-actions',()=>{
  selectTab('charts');
@@ -144,7 +127,7 @@ window.addEventListener('asaf:chart-actions',()=>{
 });
 const closeSidebar=document.createElement('button');closeSidebar.type='button';closeSidebar.className='chart-chat-close';closeSidebar.textContent='חזרה לגרף';closeSidebar.onclick=()=>toggleWorkspaceChat(false);conversationNav.append(closeSidebar);
 const quickActions=document.createElement('div');quickActions.className='chart-ai-prompts';quickActions.setAttribute('aria-label','בקשות ניתוח מהירות');
-for(const label of ['נתח את הגרף','מתח קווי מגמה','סמן תמיכות והתנגדויות','הוסף ממוצע 20 וממוצע 150']){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=()=>{$('chatInput').value=label;$('chatInput').focus()};quickActions.append(button)}
+for(const label of ['נתח את הגרף עם נקודת כניסה וסטופ־לוס','מתח קווי מגמה','סמן תמיכות והתנגדויות','הוסף ממוצע 20 וממוצע 150']){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=()=>{$('chatInput').value=label;$('chatInput').focus()};quickActions.append(button)}
 form.before(quickActions);
 const visibleMarketStatus=document.createElement('p');visibleMarketStatus.className='chart-load-status';visibleMarketStatus.setAttribute('role','status');$('charts').prepend(visibleMarketStatus);
 const syncMarketStatus=()=>visibleMarketStatus.textContent=$('marketFetchStatus').textContent;new MutationObserver(syncMarketStatus).observe($('marketFetchStatus'),{childList:true,subtree:true,characterData:true});syncMarketStatus();

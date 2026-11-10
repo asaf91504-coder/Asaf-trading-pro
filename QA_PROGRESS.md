@@ -6,7 +6,7 @@ Updated: 2026-11-10
 
 - Repository: asaf91504-coder/Asaf-trading-pro, branch main.
 - Production: https://joyful-seahorse-967889.netlify.app/
-- 524 Node tests pass, including source restrictions on chat history, safe
+- 533 Node tests pass, including source restrictions on chat history, safe
   emphasis rendering, analysis intent, chart preparation, authentication,
   cancellation, retry snapshots and provider metadata.
 - The 10 anonymous deployment checks passed after the chat-formatting update. These cover
@@ -15,16 +15,26 @@ Updated: 2026-11-10
 
 ## Changes in this pass
 
-- Model replies and archived replies render bold emphasis and inline code as
-  DOM text, without parsing model-provided HTML, media or executable links.
-- Completed replies keep their original text and chart source in conversation
-  history. Local chart tool turns also retain their provider source.
-- Client and server exclude restricted Intrinio history from external model
-  requests when not permitted, including after changing or clearing charts.
-- Educational and explicitly negated analysis requests do not automatically
-  fetch candles. Existing genuine chart-analysis preparation remains intact.
-- A missing sign-in keeps the question and offers a direct button to the
-  actual account dialog, replacing the obsolete instruction to look above chat.
+- Customer chart editing is now chat-only. Manual drawing selectors, the quick
+  drawing rail, anchor forms, pointer drawing, undo/redo drawing shortcuts and
+  manual indicator menus are removed. Pan, zoom, timeframe and fullscreen remain.
+- Old manual drawings stay in storage without being restored to the chart.
+  Allowlisted chat annotations and indicator/style changes remain supported.
+- A chart conversation button opens the existing chat and prepares an editable
+  analysis draft. It never sends automatically or overwrites a nonempty draft.
+- Chart analyses include a deterministic entry and stop section. The scenario
+  is a prior-20-bar breakout with a 0.25 ATR14 buffer, invalidation beyond the
+  opposite range edge, and a required close/retest condition. It is a reference
+  scenario, not a personalized trade recommendation or an executed order.
+- Numeric levels require source provenance resolved by the server. Potentially
+  partial latest bars are excluded; insufficient/unverified data show explicitly
+  unavailable entry and stop fields. General conversation gets no trade section.
+- Source licensing, authentication, owner restrictions, quotas and free-only
+  model routing remain unchanged. Intrinio inference remains blocked unless
+  independently authorized by the existing license gate.
+- Regression tests cover navigation without manual drawing, legacy-storage
+  isolation, working chat annotations, long/short geometry, partial bars,
+  invalid data, educational intents and server response integration.
 
 ## Known limits and next checks
 

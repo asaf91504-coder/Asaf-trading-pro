@@ -24,12 +24,13 @@ test('annotations must refer to current exact dates and positive finite prices, 
  assert.throws(()=>validateChartRenderActions([{type:'style',style:'heikin'}],bars.map(bar=>({...bar,open:null}))));
 });
 
-function chartFixture(){
+function chartFixture({savedDrawings}={}){
  const nodes=new Map(),storage=new Map(),painted=[];
  const ctx=new Proxy({measureText:text=>({width:text.length*5}),fillText:text=>painted.push(text)}, {get:(target,key)=>key in target?target[key]:(()=>{})});
  function element(){return {value:'',checked:false,hidden:false,children:[],style:{},dataset:{},options:[{value:'60',dataset:{}},{value:'120',dataset:{}}],classList:{contains:()=>false},setAttribute(name,value){this[name]=value},addEventListener(){},append(...children){this.children.push(...children)},replaceChildren(){this.children=[]},closest(){return {hidden:false}},querySelector(){return null},remove(){},getBoundingClientRect(){return {width:800,left:0,top:0}},getContext(){return ctx}}}
  const $=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)};
  $('chartStyle').value='candles';$('chartDrawingTool').value='trend';$('localChartRange').value='60';
+ if(savedDrawings)storage.set('asaf_chart_drawings_v1',JSON.stringify(savedDrawings));
  const prior={document:globalThis.document,window:globalThis.window,localStorage:globalThis.localStorage,requestAnimationFrame:globalThis.requestAnimationFrame};
  globalThis.document={getElementById:$,createElement:element};globalThis.window={addEventListener(){},devicePixelRatio:1,innerHeight:900};
  globalThis.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)};globalThis.requestAnimationFrame=()=>{};
@@ -68,5 +69,15 @@ test('a new analysis fits every annotation date into one padded viewport without
   const fittedRange=match[0];chart.applyActions([{type:'indicator',indicator:'MA20',enabled:true}]);assert.ok($('localChartCanvas')['aria-label'].includes(fittedRange),'indicator-only action preserves viewport');
   chart.applyActions([{type:'annotations',items:[{...annotation,points:[{date:history[0].date,price:100},{date:history.at(-1).date,price:100}]}]}]);
   assert.match($('localChartCanvas')['aria-label'],/200 נרות מוצגים מתוך 200/);assert.match($('localChartCanvas')['aria-label'],new RegExp(history[0].date+' עד '+history.at(-1).date));
+ }finally{fixture.restore()}
+});
+
+test('legacy manual drawings remain stored but never reappear in the chat-only chart',()=>{
+ const savedDrawings={'NASDAQ:AAPL':{lines:[[{date:bars[0].date,price:100,tool:'text',text:'LEGACY_MANUAL_NOTE'},{date:bars[1].date,price:101}]]}};
+ const fixture=chartFixture({savedDrawings});try{
+  fixture.chart.setData('NASDAQ:AAPL',bars);fixture.chart.redraw();
+  assert.equal(fixture.painted.includes('LEGACY_MANUAL_NOTE'),false);
+  assert.equal(fixture.storage.get('asaf_chart_drawings_v1'),JSON.stringify(savedDrawings));
+  fixture.chart.applyActions([{type:'annotations',items:[annotation]}]);assert.ok(fixture.painted.includes('AI · מועמד · תמיכה אפשרית'));
  }finally{fixture.restore()}
 });
