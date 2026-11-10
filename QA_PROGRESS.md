@@ -129,3 +129,21 @@ Updated: 2026-11-10
   No live model/provider call, paid change or Intrinio permission change.
 - Remaining: native-speaker review, physical iPhone acceptance, live multilingual
   AI acceptance and any server/interpolated messages outside the local catalog.
+
+## 2026-11-10: Native mobile build includes interface languages
+
+- Reproduced in a fresh `main` checkout: the bundled iOS/Android asset builder
+  included the language selector modules but omitted `interface-language.css`
+  and every `locales/*.json` catalog. Selecting any non-Hebrew language in a
+  native build therefore failed locally even though the deployed website worked.
+- The native allowlist now packages the language stylesheet and all nine
+  translated catalogs. Each catalog remains an explicit public file; the build
+  still refuses symlinks, server paths, bare imports and repository-wide copies.
+- The regression fixture failed before the change because the English catalog
+  and language stylesheet were absent. It now checks both files and the native
+  asset manifest. All 554 code tests pass, including the native build tests.
+- The production website's ten anonymous availability/security checks passed
+  before deployment. This validates build contents in code; no signed App Store
+  or Play Store binary and no physical iPhone/Android device was tested here.
+- No model/provider request, paid change, licensing flag or Intrinio permission
+  change was made.

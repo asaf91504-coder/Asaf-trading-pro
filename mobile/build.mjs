@@ -4,7 +4,8 @@ import {fileURLToPath,pathToFileURL} from 'node:url';
 
 const directory=path.dirname(fileURLToPath(import.meta.url));
 const pages=['index.html','journal.html','activate.html','data-privacy.html','accessibility.html','terms.html','help.html','offline.html'];
-const styles=['workspace.css','terminal.css','app.css','accessibility.css'];
+const styles=['workspace.css','terminal.css','app.css','accessibility.css','interface-language.css'];
+const localeFiles=['en.json','es.json','ar.json','fr.json','de.json','pt.json','ru.json','zh.json','ja.json'];
 const imports=source=>[...source.matchAll(/(?:\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?|\bimport\s*\()\s*['"]([^'"]+)['"]/g)].map(match=>match[1]);
 function localFile(value){
  const clean=value.split(/[?#]/)[0].replace(/^\.\//,'').replace(/^\//,'');
@@ -37,6 +38,12 @@ export async function prepareNativeAssets({sourceRoot=path.resolve(directory,'..
    const child=localFile(dependency);if(!child.endsWith('.mjs'))throw Error('Unexpected native public module type.');modules.push(child);
   }
   await copy(name);
+ }
+ await mkdir(path.join(output,'locales'),{recursive:true});
+ for(const file of localeFiles){
+  const name='locales/'+file,source=path.join(sourceRoot,name),stat=await lstat(source);
+  if(!stat.isFile()||stat.isSymbolicLink())throw Error('Native locale must be a regular public file.');
+  await copyFile(source,path.join(output,name));copied.add(name);
  }
  await mkdir(path.join(output,'icons'),{recursive:true});
  for(const entry of await readdir(path.join(sourceRoot,'icons'),{withFileTypes:true})){
