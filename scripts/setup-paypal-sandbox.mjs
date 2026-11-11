@@ -2,8 +2,8 @@
 // Never prints credentials; never runs against PayPal Live or production.
 import {validatePlan} from '../server/paypal.mjs';
 const env=process.env;
-if(env.CONTEXT!=='deploy-preview'||env.BRANCH!=='paypal-sandbox-setup'||env.PAYPAL_ENVIRONMENT!=='sandbox'){
- console.log('Sandbox provisioning skipped outside the dedicated preview.');
+if(env.CONTEXT!=='deploy-preview'||env.HEAD!=='paypal-sandbox-setup'||env.PAYPAL_ENVIRONMENT!=='sandbox'){
+ console.log('Sandbox provisioning skipped outside the dedicated preview: '+JSON.stringify({context:env.CONTEXT,head:env.HEAD,environment:env.PAYPAL_ENVIRONMENT}));
  process.exit(0);
 }
 if(!env.PAYPAL_CLIENT_ID||!env.PAYPAL_CLIENT_SECRET)throw Error('Sandbox credentials missing.');
