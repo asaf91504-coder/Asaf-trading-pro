@@ -5,6 +5,11 @@
   publish = "."
   functions = "netlify/functions"
 
+# This draft branch provisions a sandbox plan only. The script rejects every
+# other branch, live credentials and production builds before making requests.
+[context.deploy-preview]
+  command = 'env -i PATH="$PATH" node --test tests/*.test.mjs && node scripts/write-runtime-context.mjs && node scripts/setup-paypal-sandbox.mjs'
+
 [build.environment]
   NODE_VERSION = "22"
 
