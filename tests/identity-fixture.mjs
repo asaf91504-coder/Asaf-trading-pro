@@ -16,6 +16,7 @@ export function fixture(){
    const members=sets.get(k[6])||new Set();if(v[2]===''&&members.size>=Number(v[8]))return -1;
    db.set(k[1],v[4]);db.set(k[2],v[5]);db.set(k[3],v[6]);db.set(k[4],v[7]);db.set(k[5],v[4]);members.add(v[9]);sets.set(k[6],members);db.delete(k[0]);return 1;
   }
+  if(script.includes('billing-admin-grant')){if(k.some((key,i)=>(db.get(key)||'')!==v[i])||JSON.parse(v[0]).expires<=Number(v[5]))return 0;db.set(k[3],v[4]);return 1}
   if(script.includes('account-version-change')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;db.set(k[0],v[2]);db.set(k[1],v[3]);return 1}
   if(script.includes('account-self-delete')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;if(v[2]==='1'&&db.get(k[4])===v[3])db.delete(k[4]);for(const i of [0,1,2,3,5,7,8,9])db.delete(k[i]);sets.get(k[6])?.delete(v[4]);sets.get(k[10])?.delete(v[4]);return 1}
   if(script.includes('market-credit-reserve')){const cost=Number(v[4]);if(!allowed||k.some((key,i)=>Number(db.get(key)||0)+cost>Number(v[i])))return 0;for(const key of k)db.set(key,String(Number(db.get(key)||0)+cost));return 1}

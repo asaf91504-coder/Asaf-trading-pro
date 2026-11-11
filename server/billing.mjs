@@ -27,9 +27,11 @@ export async function startTrial(identity,{env=process.env,run=command,now=Date.
  return record;
 }
 export function entitlement(record,now=Date.now()){
- const trial=Number.isFinite(record?.trialStartedAt)&&record.trialEndsAt===record.trialStartedAt+TRIAL_DAYS*DAY&&record.trialStartedAt<=now&&now<record.trialEndsAt;
+ const validTrial=Number.isFinite(record?.trialStartedAt)&&record.trialEndsAt===record.trialStartedAt+TRIAL_DAYS*DAY;
+ const trialEndsAt=Math.max(validTrial?record.trialEndsAt:0,Number.isFinite(record?.complimentaryUntil)?record.complimentaryUntil:0);
+ const trial=validTrial&&record.trialStartedAt<=now&&now<trialEndsAt;
  const paid=Number.isFinite(record?.paidUntil)&&record.paidUntil>now;
- return {access:trial||paid,status:paid?'paid':trial?'trial':record?'expired':'not_started',trialEndsAt:record?.trialEndsAt||null,paidUntil:record?.paidUntil||null,daysRemaining:trial?Math.ceil((record.trialEndsAt-now)/DAY):0,subscriptionStatus:record?.subscriptionStatus||null,canCancel:['ACTIVE','SUSPENDED','APPROVED'].includes(record?.subscriptionStatus)};
+ return {access:trial||paid,status:paid?'paid':trial?'trial':record?'expired':'not_started',trialEndsAt:trialEndsAt||null,paidUntil:record?.paidUntil||null,daysRemaining:trial?Math.ceil((trialEndsAt-now)/DAY):0,subscriptionStatus:record?.subscriptionStatus||null,canCancel:['ACTIVE','SUSPENDED','APPROVED'].includes(record?.subscriptionStatus)};
 }
 export async function subscriptionGuard(user,{env=process.env,run=command,now=Date.now()}={}){
  if(!billingEnabled(env))return null;
