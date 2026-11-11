@@ -12,6 +12,7 @@ const DELETE=`-- account-self-delete
 if redis.call('GET',KEYS[1])~=ARGV[1] or redis.call('GET',KEYS[2])~=ARGV[2] then return 0 end
 if ARGV[3]=='1' and redis.call('GET',KEYS[5])==ARGV[4] then redis.call('DEL',KEYS[5]) end
 local posts=cjson.decode(redis.call('GET',KEYS[12]) or '[]');for i=#posts,1,-1 do if posts[i].authorId==ARGV[6] then table.remove(posts,i) elseif posts[i].reports then posts[i].reports[ARGV[6]]=nil end end;redis.call('SET',KEYS[12],cjson.encode(posts));
+if ARGV[7]=='1' and redis.call('GET',KEYS[13])==ARGV[4] then redis.call('DEL',KEYS[13]) end
 redis.call('DEL',KEYS[1],KEYS[2],KEYS[3],KEYS[4],KEYS[6],KEYS[8],KEYS[9],KEYS[10]);redis.call('SREM',KEYS[11],ARGV[5]);redis.call('SREM',KEYS[7],ARGV[5]);return 1`;
 export function createAccountHandler({env=process.env,run=command}={}){return async request=>{
  if(!['GET','POST'].includes(request.method))return reply({error:'Method not allowed'},405);
@@ -50,7 +51,7 @@ export function createAccountHandler({env=process.env,run=command}={}){return as
    return await withBillingLock(identity,async()=>{
    const billing=await readBilling(identity,{env,run});
    if(billing?.createRequestId&&!billing.subscriptionId||billing?.subscriptionId&&!['CANCELLED','EXPIRED'].includes(billing.subscriptionStatus))return reply({error:'לפני מחיקת החשבון יש לבטל את המנוי או להסדיר בקשת תשלום ממתינה בעמוד המנוי. מחיקת החשבון אינה מבטלת חיוב ב־PayPal.',subscriptionUrl:'/subscription.html'},409);
-   const result=await run(['EVAL',DELETE,'12',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),storageKey('alerts:rules:'+user.id,env),storageKey('alerts:state:'+user.id,env),storageKey('alerts:inbox:'+user.id,env),storageKey('alerts:members',env),storageKey('community:posts',env),userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id,digest(user.id)],{env});
+   const result=await run(['EVAL',DELETE,'13',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),storageKey('alerts:rules:'+user.id,env),storageKey('alerts:state:'+user.id,env),storageKey('alerts:inbox:'+user.id,env),storageKey('alerts:members',env),storageKey('community:posts',env),storageKey('auth:apple:'+(user.appleSubject||'none'),env),userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id,digest(user.id),user.appleSubject?'1':'0'],{env});
    if(result!==1)return reply({error:'החשבון עודכן. נסה שוב.'},409);
    return reply({deleted:true,authenticated:false},200,{'Set-Cookie':expiredCookie});
    },{env,run});

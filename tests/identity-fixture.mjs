@@ -11,14 +11,14 @@ export function fixture(){
   const script=a[1],n=Number(a[2]),k=a.slice(3,3+n),v=a.slice(3+n);
   if(script.includes('alert-rules-save')){if(db.get(k[1])!==v[2]||db.get(k[2])!==v[3]||JSON.parse(v[2]).expires<=Date.now())return -1;const old=db.get(k[0]);if(old?JSON.parse(old).revision!==v[0]:v[0]!=='')return 0;db.set(k[0],v[1]);const members=sets.get(k[3])||new Set();if(v[5]==='0')members.delete(v[4]);else members.add(v[4]);sets.set(k[3],members);return 1}
   if(script.includes('alert-inbox-append')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;const seen=JSON.parse(db.get(k[2])||'{}'),inbox=JSON.parse(db.get(k[3])||'[]');let count=0;for(const e of JSON.parse(v[2]))if(seen[e.ruleId]!==e.key){seen[e.ruleId]=e.key;inbox.unshift(e);count++}db.set(k[2],JSON.stringify(seen));db.set(k[3],JSON.stringify(inbox.slice(0,100)));return count}
-  if(script.includes('google-identity-commit')){
+  if((script.includes('google-identity-commit')||script.includes('apple-identity-commit'))){
    if(db.get(k[0])!==v[0]||(db.get(k[1])||'')!==v[1]||(db.get(k[2])||'')!==v[2]||(db.get(k[3])||'')!==v[3])return 0;
    const members=sets.get(k[6])||new Set();if(v[2]===''&&members.size>=Number(v[8]))return -1;
    db.set(k[1],v[4]);db.set(k[2],v[5]);db.set(k[3],v[6]);db.set(k[4],v[7]);db.set(k[5],v[4]);members.add(v[9]);sets.set(k[6],members);db.delete(k[0]);return 1;
   }
   if(script.includes('billing-admin-grant')){if(k.some((key,i)=>(db.get(key)||'')!==v[i])||JSON.parse(v[0]).expires<=Number(v[5]))return 0;db.set(k[3],v[4]);return 1}
   if(script.includes('account-version-change')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;db.set(k[0],v[2]);db.set(k[1],v[3]);return 1}
-  if(script.includes('account-self-delete')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;if(v[2]==='1'&&db.get(k[4])===v[3])db.delete(k[4]);for(const i of [0,1,2,3,5,7,8,9])db.delete(k[i]);sets.get(k[6])?.delete(v[4]);sets.get(k[10])?.delete(v[4]);return 1}
+  if(script.includes('account-self-delete')){if(db.get(k[0])!==v[0]||db.get(k[1])!==v[1])return 0;if(v[2]==='1'&&db.get(k[4])===v[3])db.delete(k[4]);if(v[6]==='1'&&db.get(k[12])===v[3])db.delete(k[12]);for(const i of [0,1,2,3,5,7,8,9])db.delete(k[i]);sets.get(k[6])?.delete(v[4]);sets.get(k[10])?.delete(v[4]);return 1}
   if(script.includes('market-credit-reserve')){const cost=Number(v[4]);if(!allowed||k.some((key,i)=>Number(db.get(key)||0)+cost>Number(v[i])))return 0;for(const key of k)db.set(key,String(Number(db.get(key)||0)+cost));return 1}
   if(script.startsWith('for i=1,#KEYS')){if(!allowed||k.some((key,i)=>Number(db.get(key)||0)>=Number(v[i])))return 0;for(const key of k)db.set(key,String(Number(db.get(key)||0)+1));return 1}
   if(script.includes("then return redis.call('DEL'")){if(db.get(k[0])===v[0]){db.delete(k[0]);return 1}return 0}
