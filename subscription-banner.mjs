@@ -9,7 +9,7 @@ async function refresh(){
   if(current!==revision||member!==authState.memberId||!d.ready)return;
   if(d.status==='not_started'){r=await fetch('/.netlify/functions/billing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start-trial'}),signal:AbortSignal.timeout(8000)});if(!r.ok)throw Error();d=await r.json();}
   if(current!==revision||member!==authState.memberId)return;
-  text.textContent=d.status==='trial'?'14 ימי ניסיון בחינם · '+new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:'medium'}).format(new Date(d.trialEndsAt)):d.status==='paid'?'המנוי שלך פעיל.':'תקופת הניסיון הסתיימה. המשך השימוש דורש מנוי ב־10 דולר לחודש.';
+  text.textContent=d.status==='trial'?'תקופת הניסיון שלך פעילה עד · '+new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:'medium'}).format(new Date(d.trialEndsAt)):d.status==='paid'?'המנוי שלך פעיל.':'תקופת הניסיון הסתיימה. המשך השימוש דורש מנוי ב־10 דולר לחודש.';
   banner.hidden=false;
  }catch{if(current===revision){text.textContent='לא ניתן לבדוק את המנוי כרגע. נסה שוב.';banner.hidden=false;}}
 }
