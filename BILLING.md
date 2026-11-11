@@ -25,3 +25,20 @@ Production billing is OFF until the merchant is connected. Merely deploying this
 - No PayPal credentials, live/sandbox merchant operations, actual payment, or authenticated production billing were available during implementation. Offline tests do not replace the sandbox gate.
 
 API references: https://developer.paypal.com/api/subscriptions/v1 and https://developer.paypal.com/api/webhooks/v1
+
+
+## Live connection — 11 November 2026
+
+Owner approved creating ASAF Pro Live and storing its credentials in Netlify production. Credentials remain secret in Netlify; deploy previews keep the separate Sandbox application.
+
+- Live product: `PROD-0TB174687U596872T`
+- Active plan: `P-2GU57619PP2974430NL2LJZI` — USD 10 per calendar month, no setup fee, no outstanding-balance auto billing. The 14-day free trial is managed by this application; customer consent is required before a recurring subscription is created.
+- Live webhook: `0GW267900H234744K`
+- Webhook URL: `https://joyful-seahorse-967889.netlify.app/.netlify/functions/paypal-webhook`
+- Subscribed events: subscription creation, activation, update, cancellation, suspension, expiration and payment failure; completed, refunded and reversed sales.
+- Live credentials authenticated successfully and the plan and webhook were validated in Netlify deploy `6af4b4d6d5790bbc118a52f8`, commit `4e72958cf8a978b3cce7c85892cd2658fbf88d70`. No customer subscription or payment was created.
+- Production-only settings now include the live plan/webhook IDs and `ASAF_BILLING_ENABLED=true`. The final deployment must verify the runtime reports enabled and ready.
+- The one-time provisioning script is removed after successful setup. Normal builds only run tests and write runtime context.
+- 574 automated tests passed, including billing, webhook signature handling, authorization, idempotency and admin trial extensions. An actual customer checkout, bank/card charge and real delivery of payment/refund events have NOT been performed; do not describe those journeys as verified.
+
+Administrators can open `/subscription.html`, look up an already registered email, and add 1–365 trial days. Grants are audited and idempotent. Active or unresolved recurring billing must be cancelled/resolved first. Existing paid access is preserved.
