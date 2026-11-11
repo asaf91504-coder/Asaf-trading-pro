@@ -1,4 +1,5 @@
 import {command,storageKey} from './storage.mjs';
+import {billingEnabled,billingIdentity,readBilling,entitlement} from './billing.mjs';
 import {publicMarketConfigured,approvedMarketSymbols,marketSelection,readMarketSnapshot} from './market-feed.mjs';
 import {alertCandidate} from '../alert-core.mjs';
 export const ALERT_APPEND=`-- alert-inbox-append
@@ -16,6 +17,6 @@ export async function runMarketCycle({env=process.env,run=command,fetcher=fetch,
  const members=(await run(['SMEMBERS',storageKey('alerts:members',env)],{env})||[]).filter(id=>/^[a-f0-9-]{36}$/.test(id)).sort().slice(0,100);let notifications=0;
  if(now()-time>20000)return {enabled:true,refreshed:snapshots.size,notifications,partial:true};
  const all=members.length?await run(['MGET',...members.flatMap(id=>[storageKey('auth:member:'+id,env),storageKey('alerts:rules:'+id,env)])],{env}):[];
- await Promise.all(members.map(async (id,index)=>{try{const memberKey=storageKey('auth:member:'+id,env),rulesKey=storageKey('alerts:rules:'+id,env),[memberRaw,rulesRaw]=[all[index*2],all[index*2+1]];if(!memberRaw||!rulesRaw||JSON.parse(memberRaw).enabled!==true)return;const rules=JSON.parse(rulesRaw).rules;if(!Array.isArray(rules))return;const events=rules.slice(0,20).flatMap(rule=>{const snapshot=snapshots.get(rule.symbol.split(':').at(-1));const e=snapshot?alertCandidate(rule,snapshot.bars,time):null;return e?[e]:[]});if(!events.length||now()-time>23000)return;notifications+=await run(['EVAL',ALERT_APPEND,'4',memberKey,rulesKey,storageKey('alerts:state:'+id,env),storageKey('alerts:inbox:'+id,env),memberRaw,rulesRaw,JSON.stringify(events)],{env})}catch{}}));
+ await Promise.all(members.map(async (id,index)=>{try{const memberKey=storageKey('auth:member:'+id,env),rulesKey=storageKey('alerts:rules:'+id,env),[memberRaw,rulesRaw]=[all[index*2],all[index*2+1]];if(!memberRaw||!rulesRaw||JSON.parse(memberRaw).enabled!==true)return;if(billingEnabled(env)&&!entitlement(await readBilling(await billingIdentity(id,{env,run}),{env,run}),time).access)return;const rules=JSON.parse(rulesRaw).rules;if(!Array.isArray(rules))return;const events=rules.slice(0,20).flatMap(rule=>{const snapshot=snapshots.get(rule.symbol.split(':').at(-1));const e=snapshot?alertCandidate(rule,snapshot.bars,time):null;return e?[e]:[]});if(!events.length||now()-time>23000)return;notifications+=await run(['EVAL',ALERT_APPEND,'4',memberKey,rulesKey,storageKey('alerts:state:'+id,env),storageKey('alerts:inbox:'+id,env),memberRaw,rulesRaw,JSON.stringify(events)],{env})}catch{}}));
  return {enabled:true,refreshed:snapshots.size,failed:failures,notifications,scope:'עד שתי מניות ועד 100 חשבונות במחזור; רוטציית מניות; התראות נרות יומיים סגורים בלבד.'};
 }

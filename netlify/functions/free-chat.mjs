@@ -20,6 +20,7 @@ import {stockContext} from "../../market-chat.mjs";
 import {indicatorSnapshot} from "../../chart-indicators.mjs";
 import {CHART_HISTORY_LIMIT} from "../../chart-data.mjs";
 import {currentUser} from "../../server/auth-core.mjs";
+import {subscriptionGuard} from '../../server/billing.mjs';
 import {reserveAIRequest,storeConfigured} from "../../server/storage.mjs";
 const MODEL="openrouter/free"; // fixed zero-price router; never fallback to a paid model
 const reply=(payload,status=200)=>Response.json(payload,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
@@ -120,6 +121,7 @@ export default async function handler(request){
   if(!storeConfigured())return reply({error:'כניסה ומגבלות שימוש משותפות טרם הוגדרו'},503);
   try{member=await currentUser(request)}catch{return reply({error:'שירות אימות המשתמשים אינו זמין'},503)}
   if(!member)return reply({error:'נדרשת כניסה לחשבון מוזמן'},401);
+  const billingBlock=await subscriptionGuard(member);if(billingBlock)return billingBlock;
  }else{
   if(!pass||pass.length<24)return reply({error:'גישה פרטית טרם הוגדרה'},503);
   if(request.headers.get("x-asaf-free-ai-code")!==pass)return reply({error:'קוד גישה לא תקין'},401);
