@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {currentUser,publicAuthConfigured,digest,cookieToken} from '../../server/auth-core.mjs';
+import {subscriptionGuard} from '../../server/billing.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
 import {setupInput,publicSetup} from '../../server/community-core.mjs';
 const reply=(x,status=200)=>Response.json(x,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
@@ -36,6 +37,7 @@ export function createCommunityHandler({env=process.env,run=command,authenticate
  if(!(request.headers.get('content-type')||'').includes('application/json'))return reply({error:'JSON only'},415);
  const raw=await request.text();if(Buffer.byteLength(raw)>12000)return reply({error:'הפרסום גדול מדי'},413);
  let body,post;try{body=JSON.parse(raw);if(!['create','delete','report'].includes(body.action))throw Error('פעולה לא תקינה');if(body.action==='create')post={...setupInput(body),id:randomUUID(),authorId:author,createdAt:new Date().toISOString(),reports:{}};else if(!/^[a-f0-9-]{36}$/.test(body.id||''))throw Error('מזהה לא תקין')}catch(e){return reply({error:e.message},400)}
+ if(body.action==='create'){const billingBlock=await subscriptionGuard(user,{env,run});if(billingBlock)return billingBlock;}
  const result=await run(['EVAL',MUTATE,'4',key,storageKey('community:quota:'+author+':'+new Date().toISOString().slice(0,10),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:member:'+user.id,env),body.action,author,post?JSON.stringify(post):'',body.id||'',admin?'1':'0',user.sessionRaw,user.memberRaw],{env});
  if(result!==1)return reply({error:({'-1':'הכניסה פגה. התחבר שוב.','-2':'ניתן לפרסם עד 5 סטאפים ביום.','-3':'אין הרשאה למחוק את הפרסום.','-4':'הפרסום כבר אינו זמין.'})[result]||'הפעולה נכשלה'},({'-1':401,'-2':429,'-3':403,'-4':404})[result]||503);
  return reply({ok:true},post?201:200);

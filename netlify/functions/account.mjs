@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {billingIdentity,readBilling,withBillingLock} from '../../server/billing.mjs';
 import {publicAuthConfigured,currentUser,cookieToken,digest,normalizeEmail} from '../../server/auth-core.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
 const reply=(body,status=200,extra={})=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...extra}});
@@ -45,9 +46,14 @@ export function createAccountHandler({env=process.env,run=command}={}){return as
   if(!member||member.version!==user.version||member.enabled!==user.enabled)throw Error('Account changed');
   if(body.action==='delete'){
    if(body.confirmation!=='DELETE')return reply({error:'נדרש אישור מחיקה.'},400);
+   const identity=await billingIdentity(user.id,{env,run});
+   return await withBillingLock(identity,async()=>{
+   const billing=await readBilling(identity,{env,run});
+   if(billing?.createRequestId&&!billing.subscriptionId||billing?.subscriptionId&&!['CANCELLED','EXPIRED'].includes(billing.subscriptionStatus))return reply({error:'לפני מחיקת החשבון יש לבטל את המנוי או להסדיר בקשת תשלום ממתינה בעמוד המנוי. מחיקת החשבון אינה מבטלת חיוב ב־PayPal.',subscriptionUrl:'/subscription.html'},409);
    const result=await run(['EVAL',DELETE,'12',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),storageKey('alerts:rules:'+user.id,env),storageKey('alerts:state:'+user.id,env),storageKey('alerts:inbox:'+user.id,env),storageKey('alerts:members',env),storageKey('community:posts',env),userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id,digest(user.id)],{env});
    if(result!==1)return reply({error:'החשבון עודכן. נסה שוב.'},409);
    return reply({deleted:true,authenticated:false},200,{'Set-Cookie':expiredCookie});
+   },{env,run});
   }
   const version=randomUUID(),enabled=adminAction?body.action==='admin-enable':true;
   const record={...user,version,enabled},changed=await run(['EVAL',CHANGE,'2',userKey,memberKey,userRaw,memberRaw,JSON.stringify(record),JSON.stringify({id:user.id,version,enabled})],{env});

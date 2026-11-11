@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {subscriptionGuard} from '../../server/billing.mjs';
 import {currentUser,cookieToken,digest,publicAuthConfigured} from '../../server/auth-core.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
 import {publicMarketConfigured,marketSelection} from '../../server/market-feed.mjs';
@@ -20,6 +21,7 @@ export function createAlertsHandler({env=process.env,run=command,now=()=>Date.no
   if(body?.memberId!==user.id||typeof body.revision!=='string'||body.revision!==old.revision)return reply({error:'החשבון או הכללים השתנו. טען אותם שוב לפני שמירה.'},409);
   let rules;try{rules=alertRules(body.rules);if(publicMarketConfigured(env))for(const r of rules)marketSelection(r.symbol,'1day',env)}catch(e){return reply({error:e.message},400)}
   rules=rules.map(r=>{const previous=old.rules.find(x=>x.id===r.id);return {...r,createdAt:previous&&alertSignature(previous)===alertSignature(r)?previous.createdAt:now()}});
+  if(rules.length){const billingBlock=await subscriptionGuard(user,{env,run,now:now()});if(billingBlock)return billingBlock;}
   const saved={revision:randomUUID(),rules,updatedAt:new Date(now()).toISOString()};
   const result=await run(['EVAL',ALERT_SAVE,'4',key,storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:member:'+user.id,env),storageKey('alerts:members',env),body.revision,JSON.stringify(saved),user.sessionRaw,user.memberRaw,user.id,String(rules.length)],{env});
   if(result===-1)return reply({error:'הכניסה פגה. היכנס שוב.'},401);if(result!==1)return reply({error:'הכללים עודכנו. טען מחדש.'},409);return reply(saved);
