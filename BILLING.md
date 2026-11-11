@@ -25,3 +25,22 @@ Production billing is OFF until the merchant is connected. Merely deploying this
 - No PayPal credentials, live/sandbox merchant operations, actual payment, or authenticated production billing were available during implementation. Offline tests do not replace the sandbox gate.
 
 API references: https://developer.paypal.com/api/subscriptions/v1 and https://developer.paypal.com/api/webhooks/v1
+
+## Verified sandbox checkpoint — 11 November 2026
+
+- Production remains at `fcb2a56af13140a8a9b07dca0ae9d72f182bfe85`; billing is disabled (`enabled:false`, `ready:false`). No real payment was created.
+- PayPal app `ASAF Pro Sandbox` has subscriptions enabled. Its client ID and client secret are stored as Netlify secret variables in **Deploy Previews only**. Production and local-development values remain empty.
+- `PAYPAL_ENVIRONMENT=sandbox` and `PAYPAL_PLAN_ID=P-25594368XS441945CNL2GLRY` are saved in Deploy Previews only.
+- The dedicated draft [PR #28](https://github.com/asaf91504-coder/Asaf-trading-pro/pull/28) runs guarded provisioning only when `CONTEXT=deploy-preview`, `HEAD=paypal-sandbox-setup`, and `PAYPAL_ENVIRONMENT=sandbox`.
+- At 14:55 Israel time, Netlify deployment `6af465b8ed0eaa64b7ddd3bc` passed **569/569 tests**, authenticated to PayPal Sandbox, and created/validated ACTIVE plan `P-25594368XS441945CNL2GLRY` for product `PROD-50W61281JR312021R`. Exact terms: USD 10 monthly, unlimited monthly cycles, no PayPal trial or setup fee, no outstanding-balance auto collection, failure threshold 1. ASAF manages the 14-day trial.
+- The provisioning response explicitly recorded `paymentCreated:false`. It did not create a customer subscription.
+
+### Still required before any activation
+
+1. Connect an isolated sandbox datastore. Existing Redis credentials are production-only and were **not** changed or copied. Upstash is currently at its sign-in page; owner sign-in is needed to inspect a suitable isolated test setup.
+2. Register a sandbox webhook and save `PAYPAL_WEBHOOK_ID`. Netlify Deploy Previews currently require Netlify authentication, so a public PayPal callback cannot simply use the protected preview URL. Resolve this without exposing production data or weakening authentication on the live site.
+3. Complete actual sandbox approval, payment, renewal/failure, cancellation, refund/reversal and webhook reconciliation. The 569 automated tests are offline application tests, not proof of a completed PayPal payment journey.
+4. Only after sandbox verification, configure a separate PayPal Live app/plan/webhook and explicitly enable production billing. Remove the temporary preview provisioning command before merging PR #28.
+
+No credentials are stored in this document or repository.
+
