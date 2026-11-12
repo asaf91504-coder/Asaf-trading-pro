@@ -101,3 +101,12 @@ test('Intrinio trial rejects unsupported intervals and untrusted source without 
  const f=fixture({symbol:'AAPL',...options});f.context.intrinioFeed=Promise.resolve({enabled:true});f.context.publicFeed=Promise.resolve({enabled:false});await assert.rejects(()=>f.context.loadMarketData());assert.equal(f.rendered.length,0);
  }
 });
+
+
+test('licensed public stock feed takes priority over owner-only trial, including intraday',async()=>{
+ const f=fixture({symbol:'AAPL',interval:'1h',resultPatch:{symbol:'AAPL',source:'Twelve Data',interval:'1h',internalResearchOnly:false}});
+ f.context.publicFeed=Promise.resolve({enabled:true});f.context.intrinioFeed=Promise.resolve({enabled:true});
+ await f.context.loadMarketData({fromChat:true});
+ assert.equal(f.requests[0].url,'/.netlify/functions/public-market');
+ assert.equal(f.context.loaded.source,'Twelve Data');assert.equal(f.rendered.length,1);
+});
