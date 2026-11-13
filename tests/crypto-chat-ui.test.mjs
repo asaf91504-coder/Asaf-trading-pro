@@ -1,3 +1,4 @@
+import {renderSearchSources} from '../web-search-ui.mjs';
 import {marketSnapshotMetadata} from '../market-quality.mjs';
 import test from 'node:test';
 import {requestsChartAnalysis,hasAnalysisCandles} from '../chart-analysis-request.mjs';
@@ -50,7 +51,7 @@ test('AI receives a server-crypto request flag rather than a stock-provider or u
  Object.assign(c,{isChatNearBottom,log:{scrollTop:0,scrollHeight:0},setTimeout,clearTimeout,AbortController,Event,chartAttachment:()=>null,recentAIBars:value=>value,currentContext:()=>c.loaded.context,refreshAuth:async()=>{},requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),chatBusy:false,conversationEpoch:0,conversation:[],requestController:null,pendingImage:null,imageInput:null,imageStatus:null,freeAiAccessKey:'ai',message:{value:'',dispatchEvent(){},focus(){}},form:{querySelector:()=>({disabled:false})},setAiStatus(){},say(_role,content){const item={textContent:content,append(){}};bubbles.push(item);return item}});
  c.localChart.settings=()=>({style:'candles',indicators:['MA20']});
  c.fetch=async(url,options)=>{assert.equal(url,'/.netlify/functions/free-chat');payload=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'ניתוח נתוני CoinLore'})}};
- Object.assign(c,{requestsChartAnalysis,hasAnalysisCandles,historyForModel,renderChatText:(el,text)=>{el.textContent=text}});c.window.dispatchEvent=()=>{};
+ Object.assign(c,{renderSearchSources,requestsChartAnalysis,hasAnalysisCandles,historyForModel,renderChatText:(el,text)=>{el.textContent=text}});c.window.dispatchEvent=()=>{};
  vm.runInContext(source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')")),c);await c.ask('explain this chart');
  assert.equal(payload.useServerCrypto,true);assert.equal(payload.useServerMarket,false);assert.equal(payload.source,'CoinLore');assert.equal(payload.symbol,'COINLORE:BTCUSD');assert.equal(payload.receivedAt,'2026-10-29T10:00:00Z');assert.match(bubbles.at(-1).textContent,/CoinLore/);
 });
