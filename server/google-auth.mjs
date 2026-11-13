@@ -2,7 +2,7 @@ import {OAuth2Client} from 'google-auth-library';
 import {googleDisplayName} from '../welcome-message.mjs';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
-import {publicAuthConfigured,digest,normalizeEmail,currentUser,sessionCookie} from './auth-core.mjs';
+import {publicAuthConfigured,digest,normalizeEmail,currentUser,sessionCookie,SESSION_SECONDS} from './auth-core.mjs';
 
 const google=new OAuth2Client();
 const uuid=/^[a-f0-9-]{36}$/;
@@ -15,7 +15,7 @@ local identity=redis.call('GET',KEYS[2]);if (identity or '')~=ARGV[2] then retur
 local previous=redis.call('GET',KEYS[3]);if (previous or '')~=ARGV[3] then return 0 end
 local member=redis.call('GET',KEYS[4]);if (member or '')~=ARGV[4] then return 0 end
 if ARGV[3]=='' and redis.call('SCARD',KEYS[7])>=tonumber(ARGV[9]) then return -1 end
-redis.call('SET',KEYS[2],ARGV[5]);redis.call('SET',KEYS[3],ARGV[6]);redis.call('SET',KEYS[4],ARGV[7]);redis.call('SET',KEYS[5],ARGV[8],'EX',3600);redis.call('SET',KEYS[6],ARGV[5]);redis.call('SADD',KEYS[7],ARGV[10]);redis.call('DEL',KEYS[1]);return 1`;
+redis.call('SET',KEYS[2],ARGV[5]);redis.call('SET',KEYS[3],ARGV[6]);redis.call('SET',KEYS[4],ARGV[7]);redis.call('SET',KEYS[5],ARGV[8],'EX',${SESSION_SECONDS});redis.call('SET',KEYS[6],ARGV[5]);redis.call('SADD',KEYS[7],ARGV[10]);redis.call('DEL',KEYS[1]);return 1`;
 
 // GIS returns an ID token to this site's callback; no Google access/refresh token
 // or client secret is requested. Google's maintained library verifies signatures,
@@ -67,7 +67,7 @@ export function createGoogleHandler({env=process.env,run=command,verify=async to
    const user={...previous,id,version,enabled:true,googleSubject:subjectHash};
    const session=randomBytes(32).toString('hex'),max=Number(env.ASAF_ACCOUNT_MAX_MEMBERS||100);
    if(!Number.isInteger(max)||max<1||max>10000)throw Error('Invalid account limit');
-   const saved=await run(['EVAL',COMMIT,'7',nonceKey,identityKey,userKey,memberKey,storageKey('auth:session:'+digest(session),env),storageKey('auth:index:'+id,env),storageKey('auth:members',env),nonceRaw,identity||'',previousRaw||'',memberRaw||'',emailHash,JSON.stringify(user),JSON.stringify({id,version,enabled:true}),JSON.stringify({id,version,expires:now()+3600000}),String(max),id],{env});
+   const saved=await run(['EVAL',COMMIT,'7',nonceKey,identityKey,userKey,memberKey,storageKey('auth:session:'+digest(session),env),storageKey('auth:index:'+id,env),storageKey('auth:members',env),nonceRaw,identity||'',previousRaw||'',memberRaw||'',emailHash,JSON.stringify(user),JSON.stringify({id,version,enabled:true}),JSON.stringify({id,version,expires:now()+SESSION_SECONDS*1000}),String(max),id],{env});
    if(saved===-1)return reply({error:'ההרשמה מלאה כרגע. פנה למנהל האתר.'},403);
    if(saved!==1)return reply({error:'הבקשה כבר נוצלה או שהחשבון עודכן. התחל שוב.'},409);
    return reply({authenticated:true,created:!previous,displayName:googleDisplayName(claims)},previous?200:201,{'Set-Cookie':sessionCookie(session)});

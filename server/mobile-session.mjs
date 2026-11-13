@@ -1,6 +1,6 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
-import {publicAuthConfigured,currentUser,cookieToken,digest,sessionCookie} from './auth-core.mjs';
+import {publicAuthConfigured,currentUser,cookieToken,digest,sessionCookie,SESSION_SECONDS} from './auth-core.mjs';
 
 const REQUEST_TTL=300;
 const requestIdRE=/^[a-f0-9]{64}$/;
@@ -29,7 +29,7 @@ redis.call('SET',KEYS[1],ARGV[4],'EX',tonumber(ARGV[5]));return 1`;
 const REDEEM=`-- mobile-session-redeem
 if redis.call('GET',KEYS[1])~=ARGV[1] or redis.call('GET',KEYS[2])~=ARGV[2] then return 0 end
 if redis.call('EXISTS',KEYS[3])==1 then return -1 end
-redis.call('SET',KEYS[3],ARGV[3],'EX',3600);redis.call('DEL',KEYS[1]);return 1`;
+redis.call('SET',KEYS[3],ARGV[3],'EX',${SESSION_SECONDS});redis.call('DEL',KEYS[1]);return 1`;
 
 /** Same-origin PKCE handoff from the system browser to the native app's site
  * session. Disabled until the native platform flow is independently accepted.
@@ -81,7 +81,7 @@ export function createMobileSessionHandler({env=process.env,run=command,now=()=>
    if(!member||member.enabled!==true||member.id!==record.id||member.version!==record.version)return reply({error:'החשבון אינו פעיל או שהכניסה בוטלה. התחל מחדש.'},403);
    if(action==='status')return reply({status:'approved'});
    const session=random();if(!requestIdRE.test(session))throw Error('Invalid random source');
-   const saved=await run(['EVAL',REDEEM,'3',requestKey,memberKey,storageKey('auth:session:'+digest(session),env),recordRaw,memberRaw,JSON.stringify({id:record.id,version:record.version,expires:now()+3600000})],{env});
+   const saved=await run(['EVAL',REDEEM,'3',requestKey,memberKey,storageKey('auth:session:'+digest(session),env),recordRaw,memberRaw,JSON.stringify({id:record.id,version:record.version,expires:now()+SESSION_SECONDS*1000})],{env});
    if(saved!==1)return reply({error:'בקשת החיבור כבר נוצלה או שהחשבון השתנה. התחל מחדש.'},409);
    return reply({authenticated:true},200,{'Set-Cookie':sessionCookie(session)});
   }catch{return reply({error:'שירות חיבור האפליקציה אינו זמין. לא נפתחה גישה.'},503)}
