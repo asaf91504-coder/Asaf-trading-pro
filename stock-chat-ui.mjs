@@ -1,3 +1,4 @@
+import {renderSearchSources} from './web-search-ui.mjs';
 import {marketSnapshotMetadata} from './market-quality.mjs';
 import {dataFreshness,quoteSummary} from './data-freshness.mjs';
 import {analysisReceipt} from './chart-analysis-context.mjs';
@@ -243,6 +244,7 @@ async function ask(q,extra={}){
     useServerIntrinio:activeData?.source==="Intrinio",
     includeNews:extra.newsArticleId?true:$("chatIncludeNews")?.checked===true,
     newsArticleId:extra.newsArticleId||null,
+    webSearch:$("chatWebSearch")?.checked===true,
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
@@ -251,7 +253,7 @@ async function ask(q,extra={}){
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
-  if(requestState)requestState.textContent='הנתונים נשלחו — ממתין לניתוח…';
+  if(requestState)requestState.textContent=preparedPayload.webSearch?'מחפש מקורות באינטרנט ומכין תשובה…':'הנתונים נשלחו — ממתין לניתוח…';
   slowNotice=setTimeout(()=>{if(epoch===conversationEpoch&&!activeController.signal.aborted&&requestState)requestState.textContent='המודל עדיין מעבד את הבקשה. אפשר להמתין או לבטל; אין צורך לשלוח שוב.'},20000);
   const response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
   let data;try{data=await response.json()}catch(error){
@@ -274,8 +276,10 @@ async function ask(q,extra={}){
   }
 
   waiting.translate=false;
-  const completedAnswer=waiting.textContent;
-  renderChatText(waiting,completedAnswer);
+  const displayAnswer=waiting.textContent;
+  const completedAnswer=displayAnswer+(data.webSearch?.sources?.length?'\n\nמקורות שנמצאו בחיפוש:\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
+  renderChatText(waiting,displayAnswer);
+  renderSearchSources(waiting,data.webSearch);
 
   if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 

@@ -1,3 +1,4 @@
+import {renderSearchSources} from '../web-search-ui.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -16,7 +17,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const ctx={log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
  ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
- ctx.historyForModel=historyForModel;ctx.renderChatText=(el,text)=>{el.textContent=text};
+ ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.renderChatText=(el,text)=>{el.textContent=text};
  ctx.$('marketInterval').value='1day';ctx.window.dispatchEvent=()=>{};
  ctx.intrinioFeed=Promise.resolve({enabled:false,aiAnalysisEnabled:false});
  ctx.loadMarketData=async()=>{ctx.loaded=analysisData(ctx.normSymbol());ctx.currentContext=()=>ctx.loaded.context;return ctx.loaded};
