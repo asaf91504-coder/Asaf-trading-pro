@@ -1,8 +1,10 @@
+import {renderSearchSources} from './web-search-ui.mjs';
 import {marketSnapshotMetadata} from './market-quality.mjs';
 import {dataFreshness,quoteSummary} from './data-freshness.mjs';
 import {analysisReceipt} from './chart-analysis-context.mjs';
 import {shouldSendOnEnter,isChatNearBottom} from './chat-interaction.mjs';
 import {chartAttachment} from './chart-attachment.mjs';
+import {mountChatHistory} from './conversation-history-ui.mjs';
 import {mountConversationArchive} from './conversation-archive-ui.mjs';
 import {recentAIBars,CHART_HISTORY_LIMIT} from "./chart-data.mjs";
 import {authState,refreshAuth} from "./auth-ui.mjs";
@@ -87,11 +89,12 @@ const aiStatus=$("freeAiStatus"),imageStatus=$("chatImageStatus");
 const imageInput=null; // Graph uploads are no longer part of the product.
 let pendingImage=null,chatBusy=false,requestController=null,requestInvalidated=null,conversationEpoch=0;
 let conversation=[];
-mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation}),isBusy:()=>chatBusy});
+mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation.slice(-8)}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
 function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 // Changing the chart invalidates pending analysis, not the conversation itself.
 // Previous messages retain their own chartContext and are historical references.
+const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){renderChatText(say(m.role==='user'?'user':'bot',''),m.content)}}});
 function resetRequest({clearHistory=false}={}){
  const invalidate=requestInvalidated;requestInvalidated=null;
  lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;
@@ -180,7 +183,7 @@ async function ask(q,extra={}){
    // analysis below must have matching data before contacting the model.
    if(!wantsAnalysis){
     const chartContext={symbol:normSymbol(),source:loaded?.symbol===normSymbol()?loaded.source:'none',interval:loaded?.interval,receivedAt:loaded?.receivedAt};
-    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:waiting.textContent,chartContext});conversation=conversation.slice(-24);
+    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:waiting.textContent,chartContext});chatHistory.complete(conversation);conversation=conversation.slice(-24);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }
@@ -243,6 +246,7 @@ async function ask(q,extra={}){
     useServerIntrinio:activeData?.source==="Intrinio",
     includeNews:extra.newsArticleId?true:$("chatIncludeNews")?.checked===true,
     newsArticleId:extra.newsArticleId||null,
+    webSearch:$("chatWebSearch")?.checked===true,
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
@@ -251,7 +255,7 @@ async function ask(q,extra={}){
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
-  if(requestState)requestState.textContent='הנתונים נשלחו — ממתין לניתוח…';
+  if(requestState)requestState.textContent=preparedPayload.webSearch?'מחפש מקורות באינטרנט ומכין תשובה…':'הנתונים נשלחו — ממתין לניתוח…';
   slowNotice=setTimeout(()=>{if(epoch===conversationEpoch&&!activeController.signal.aborted&&requestState)requestState.textContent='המודל עדיין מעבד את הבקשה. אפשר להמתין או לבטל; אין צורך לשלוח שוב.'},20000);
   const response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
   let data;try{data=await response.json()}catch(error){
@@ -274,13 +278,15 @@ async function ask(q,extra={}){
   }
 
   waiting.translate=false;
-  const completedAnswer=waiting.textContent;
-  renderChatText(waiting,completedAnswer);
+  const displayAnswer=waiting.textContent;
+  const completedAnswer=displayAnswer+(data.webSearch?.sources?.length?'\n\nמקורות שנמצאו בחיפוש:\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
+  renderChatText(waiting,displayAnswer);
+  renderSearchSources(waiting,data.webSearch);
 
   if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 
   conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
-  conversation=conversation.slice(-24);
+  chatHistory.complete(conversation);conversation=conversation.slice(-24);
   if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
   if(followAnswer)log.scrollTop=log.scrollHeight;
   pendingImage=null;
@@ -315,6 +321,7 @@ async function ask(q,extra={}){
  }
 }
 $('clearConversation')?.addEventListener('click',()=>{
+ if(!chatHistory.newConversation())return;
  resetRequest({clearHistory:true});log.replaceChildren();if(imageStatus)imageStatus.textContent='נתוני הגרף הזמינים מצורפים אוטומטית.';say('bot','שיחה חדשה. נתוני הגרף שנבחרו נשארו זמינים.');
 });
 $('exportConversation')?.addEventListener('click',()=>{
