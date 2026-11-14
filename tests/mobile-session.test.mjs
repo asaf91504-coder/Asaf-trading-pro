@@ -28,7 +28,7 @@ function setup(overrides={}){
    if(beforeRedeem)beforeRedeem();
    if(get(keys[0])!==values[0]||get(keys[1])!==values[1])return 0;
    if(get(keys[2]))return -1;
-   db.set(keys[2],values[2]);ttls.set(keys[2],time+3600000);db.delete(keys[0]);ttls.delete(keys[0]);return 1;
+   db.set(keys[2],values[2]);ttls.set(keys[2],time+2592000000);db.delete(keys[0]);ttls.delete(keys[0]);return 1;
   }
   throw Error('Unknown Lua');
  };
@@ -56,7 +56,7 @@ test('explicit browser approval plus correct verifier creates exactly one secure
  const approved=await s.approve(b.requestId,user.cookie);assert.equal(approved.status,200);assert.deepEqual(await approved.json(),{status:'approved'});assert.equal(approved.headers.get('set-cookie'),null);
  const status=await s.handler(request('mobile-session',{action:'status',requestId:b.requestId,verifier}));assert.deepEqual(await status.json(),{status:'approved'});assert.equal(status.headers.get('set-cookie'),null);
  assert.equal((await s.redeem(b.requestId,otherVerifier)).status,401);
- const results=await Promise.all([s.redeem(b.requestId),s.redeem(b.requestId)]);assert.equal(results.filter(r=>r.status===200).length,1);const success=results.find(r=>r.status===200);assert.deepEqual(await success.json(),{authenticated:true});assert.match(success.headers.get('set-cookie'),/HttpOnly; Secure; SameSite=Strict; Max-Age=3600/);
+ const results=await Promise.all([s.redeem(b.requestId),s.redeem(b.requestId)]);assert.equal(results.filter(r=>r.status===200).length,1);const success=results.find(r=>r.status===200);assert.deepEqual(await success.json(),{authenticated:true});assert.match(success.headers.get('set-cookie'),/HttpOnly; Secure; SameSite=Strict; Max-Age=2592000/);
  const cookie=success.headers.get('set-cookie').split(';')[0];assert.equal((await currentUser(request('auth',undefined,cookie),{env:s.config,run:s.state.run})).id,user.record.id);assert.equal((await s.redeem(b.requestId)).status,401);assert.equal([...s.db.keys()].filter(key=>key.includes('auth:session:')).length,2);
 });
 test('approval cannot be reassigned and member revocation or expiry prevents redeem',async()=>{
