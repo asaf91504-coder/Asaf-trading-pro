@@ -23,7 +23,7 @@ export default async function handler(request){
  if(!data.enabled||!data.articles?.length)return respond(data);
  const translated=await translateNews(data.articles,lang,{cacheOnly:true});
  if(translated.translation==='pending'){
-  try{translated.translation=await queueTranslationJob(lang,process.env.URL||'https://joyful-seahorse-967889.netlify.app')}catch{translated.translation='unavailable'}
+  try{translated.translation=await queueTranslationJob(lang,process.env.URL||'https://joyful-seahorse-967889.netlify.app');if(translated.translation==='unavailable'){const state=await command(['GET',storageKey('news:translation:job:'+lang)]);if(typeof state==='string'&&state.startsWith('failed:'))translated.translationReason=state.slice(7)}}catch{translated.translation='unavailable'}
  }
  return respond({...data,...translated});
 }
