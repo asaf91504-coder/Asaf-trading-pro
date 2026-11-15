@@ -3,6 +3,7 @@ import {subscriptionGuard} from '../../server/billing.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
 import {publicMarketConfigured,marketSelection,readMarketSnapshot,MarketError} from '../../server/market-feed.mjs';
 import {readMarketFundamentals,fundamentalsConfigured} from '../../server/market-fundamentals.mjs';
+import {saveScannerEntry} from '../../server/scanner-entry-alerts.mjs';
 import {scanBars} from '../../scanner-core.mjs';
 const reply=(v,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store'}});
 export function createScanMarketHandler({env=process.env,run=command,fetcher=fetch,now=()=>Date.now()}={}){return async request=>{
@@ -10,7 +11,7 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
  if(request.method!=='POST')return reply({error:'POST only'},405);if(!publicMarketConfigured(env))return reply({error:'סריקה מספק ממתינה למנוי ולהפעלת רישוי הנתונים.'},503);
  if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
  if(!(request.headers.get('content-type')||'').includes('application/json'))return reply({error:'JSON only'},415);
- try{const user=await currentUser(request,{env,run});if(!user)return reply({error:'יש להיכנס לחשבון.'},401);const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large'},413);let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
+ try{const user=await currentUser(request,{env,run,includeRecords:true});if(!user)return reply({error:'יש להיכנס לחשבון.'},401);const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large'},413);let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
   const billingBlock=await subscriptionGuard(user,{env,run,now:now()});if(billingBlock)return billingBlock;
   if(!Array.isArray(body.symbols)||!body.symbols.length||body.symbols.length>5)return reply({error:'בחר 1 עד 5 מניות מורשות בכל סריקה.'},400);
   const symbols=[...new Set(body.symbols.map(s=>marketSelection(s,'1day',env).symbol))];
@@ -23,7 +24,8 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
    catch(e){fundamentals={status:'unavailable',reason:e instanceof MarketError?e.message:'לא ניתן לאמת שווי שוק כרגע.'}}
    return {record:{...scanBars(symbol,snapshot.bars),source:snapshot.source,interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,exchangeTimezone:snapshot.exchangeTimezone,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,fundamentals}};
   }catch(e){return {symbol,error:e instanceof MarketError?e.message:'הנתונים אינם זמינים כרגע'}}}));
-  return reply({records:results.filter(x=>x.record).map(x=>x.record),errors:results.filter(x=>x.error),scope:'מניות שנבחרו בלבד; נרות יומיים קודמים. שווי שוק חסר אינו עובר את מסנן שווי השוק. אין סריקה של כלל השוק.'});
+  const alertResults=await Promise.all(results.filter(x=>x.record).map(async x=>{try{return await saveScannerEntry(x.record,user,{env,run,now:scanTime})}catch{return {status:'unavailable',added:0}}}));
+  return reply({scannerAlerts:{added:alertResults.reduce((n,x)=>n+x.added,0),unavailable:alertResults.some(x=>x.status==='unavailable')},records:results.filter(x=>x.record).map(x=>x.record),errors:results.filter(x=>x.error),scope:'מניות שנבחרו בלבד; נרות יומיים קודמים. שווי שוק חסר אינו עובר את מסנן שווי השוק. אין סריקה של כלל השוק.'});
  }catch(e){return reply({error:e instanceof MarketError?e.message:'הסריקה אינה זמינה כרגע.'},e instanceof MarketError?e.status:503)}
 }}
 export default request=>createScanMarketHandler()(request);
