@@ -24,3 +24,16 @@ test('invalid entry suppresses misleading relative price errors',()=>{
  assert.deepEqual(Object.keys(positionInputErrors({...input,entry:NaN})),['entry']);
  assert.deepEqual(Object.keys(positionInputErrors({...input,side:'invalid'})),['side']);
 });
+
+test('position sizing does not require a target and never fabricates a reward',()=>{
+ for(const side of ['long','short']){
+  const data={...input,side,stop:side==='short'?105:95,target:null};
+  const r=planPosition(data);assert.equal(r.shares,20);assert.equal(r.actualRisk,100);
+  assert.equal(r.targetProfit,null);assert.equal(r.ratio,null);assert.deepEqual(positionInputErrors(data),{});
+ }
+});
+test('a supplied invalid optional target still blocks calculation',()=>{
+ for(const target of [0,NaN,Infinity,-1]){
+  assert.throws(()=>planPosition({...input,target}));assert.ok(positionInputErrors({...input,target}).target);
+ }
+});
