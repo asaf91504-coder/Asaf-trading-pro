@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePublicRSS,mergePublicArticles,publicNewsEnabled,PUBLIC_NEWS_FEEDS} from '../server/public-news.mjs';
-import {refreshPublicNews,readPublicNews} from '../server/public-news-service.mjs';
+import {refreshPublicNews,readPublicNews,isMarketHeadline} from '../server/public-news-service.mjs';
 const now=Date.parse('2026-10-26T10:00:00Z'),feed=PUBLIC_NEWS_FEEDS[0],env={CONTEXT:'production',ASAF_EXTERNAL_SERVICES_APPROVED:'true',ASAF_REDIS_REST_URL:'https://test.upstash.io',ASAF_REDIS_REST_TOKEN:'mock'};
 const rss=(title='Apple reports earnings',url='https://news.example/report',source='News')=>`<rss><channel><item><title><![CDATA[${title}]]></title><link>${url}</link><pubDate>Mon, 26 Oct 2026 09:00:00 GMT</pubDate><source url="https://news.example">${source}</source><description>Full text must not be copied</description></item></channel></rss>`;
 function state(){const db=new Map();return {db,run:async args=>{if(args[0]==='GET')return db.get(args[1])||null;if(args.includes('NX')&&db.has(args[1]))return null;db.set(args[1],args[2]);return 'OK'}}}
@@ -15,3 +15,10 @@ test('no external calls before approved storage or in preview deployments',async
 test('one refresh per quarter-hour across callers with explicit per-source states',async()=>{const s=state();let calls=0;const fetcher=async()=>{calls++;return new Response(rss(),{headers:{'content-type':'application/rss+xml'}})};assert.equal((await refreshPublicNews({env,now,run:s.run,fetcher})).status,'updated');assert.equal((await refreshPublicNews({env,now,run:s.run,fetcher})).status,'cached');assert.equal(calls,3);const snapshot=await readPublicNews({env,now,run:s.run});assert.equal(snapshot.articles.length,1);assert.equal(snapshot.sources[2].status,'ok');assert.equal(snapshot.stale,false)});
 test('all failed sources preserve old articles and original refresh timestamp',async()=>{const s=state();await refreshPublicNews({env,now,run:s.run,fetcher:async()=>new Response(rss())});const before=await readPublicNews({env,now,run:s.run});const result=await refreshPublicNews({env,now:now+900000,run:s.run,fetcher:async()=>new Response('down',{status:503})});assert.equal(result.status,'unavailable');assert.equal((await readPublicNews({env,now:now+900000,run:s.run})).updatedAt,before.updatedAt)});
 test('a broken source does not discard successful public feeds',async()=>{const s=state();const result=await refreshPublicNews({env,now,run:s.run,fetcher:async url=>url.includes('federalreserve')?new Response('down',{status:503}):new Response(rss())});assert.equal(result.status,'updated');assert.equal((await readPublicNews({env,now,run:s.run})).sources[1].status,'unavailable')});
+
+test('market feed drops unrelated entertainment and general politics while retaining financial headlines',()=>{
+ assert.equal(isMarketHeadline({id:'major-news:1',title:'Review: Johnny Depp plays Scrooge'}),false);
+ assert.equal(isMarketHeadline({id:'major-news:2',title:'Kim Jong Un redesigns national flag'}),false);
+ assert.equal(isMarketHeadline({id:'markets:3',title:'Nvidia shares climb after earnings'}),true);
+ assert.equal(isMarketHeadline({id:'economy:4',title:'Federal Reserve Board announces a decision'}),true);
+});
