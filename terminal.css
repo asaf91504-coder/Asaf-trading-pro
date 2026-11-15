@@ -207,3 +207,6 @@
 .chart-workbench-body{grid-template-columns:minmax(0,1fr)}
 .chart-config[hidden],#referenceChart[hidden]{display:none!important}
 .terminal-app .chart-chat-only{min-height:44px;white-space:normal}
+
+/* Headline-first news cards, with a separate optional source link. */
+.terminal-app #newsFeed .news-headline{margin:0;font-size:20px;line-height:1.55;font-weight:700;color:var(--text,#edf4ff);overflow-wrap:anywhere}.terminal-app #newsFeed .source-card{padding:20px;gap:14px}.terminal-app #newsFeed .source-card small{line-height:1.6;color:var(--muted,#a9b8cb)}.terminal-app #newsFeed .news-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:auto}.terminal-app #newsFeed a.news-read-more{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;box-sizing:border-box;border:1px solid #3d6975;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;color:#70e6d3}.terminal-app #newsFeed a.news-read-more:hover{background:#183a40;text-decoration:underline}.terminal-app #newsFeed a.news-read-more:focus-visible{outline:2px solid #70e6d3;outline-offset:3px}.terminal-app #newsFeed .news-actions button{min-height:44px;margin:0}@media(max-width:600px){.terminal-app #newsFeed .news-headline{font-size:18px}.terminal-app #newsFeed .source-card{padding:16px}}
