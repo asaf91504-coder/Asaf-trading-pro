@@ -1,9 +1,5 @@
 import {normalizeNews} from './news-core.mjs';
-export const PUBLIC_NEWS_FEEDS=[
- {id:'markets',name:'Google News · שווקים',url:'https://news.google.com/rss/search?q=stock%20market%20when%3A1d&hl=en-US&gl=US&ceid=US%3Aen'},
- {id:'economy',name:'Federal Reserve',url:'https://www.federalreserve.gov/feeds/press_all.xml'},
- {id:'x-index',name:'X · קישורים מאונדקסים בלבד',url:'https://news.google.com/rss/search?q=site%3Ax.com%20%28stocks%20OR%20earnings%20OR%20Federal%20Reserve%29%20when%3A1d&hl=en-US&gl=US&ceid=US%3Aen'}
-];
+export const PUBLIC_NEWS_FEEDS=[{"id": "markets", "name": "US markets · major publishers", "url": "https://news.google.com/rss/search?q=%28site%3Afinance.yahoo.com+OR+site%3Amarketwatch.com+OR+site%3Awsj.com+OR+site%3Aft.com+OR+site%3Afool.com%29+%28%22Wall+Street%22+OR+%22US+stocks%22+OR+Nasdaq+OR+NYSE%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen"}, {"id": "economy", "name": "Federal Reserve", "url": "https://www.federalreserve.gov/feeds/press_all.xml"}, {"id": "major-news", "name": "Reuters · CNBC · Bloomberg", "url": "https://news.google.com/rss/search?q=%28site%3Areuters.com+OR+site%3Acnbc.com+OR+site%3Abloomberg.com%29+%28%22Wall+Street%22+OR+%22US+stocks%22+OR+Nasdaq+OR+earnings%29+when%3A1d&hl=en-US&gl=US&ceid=US%3Aen"}];
 export function publicNewsEnabled(env=process.env){return env.ASAF_PUBLIC_NEWS_ENABLED!=='false'&&env.ASAF_EXTERNAL_SERVICES_APPROVED==='true'}
 export function xmlText(value=''){return value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replace(/<[^>]*>/g,' ').replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi,(_,e)=>{const known={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"};if(known[e])return known[e];const n=e[1].toLowerCase()==='x'?parseInt(e.slice(2),16):parseInt(e.slice(1),10);return n>0&&n<=0x10ffff&&!(n>=0xd800&&n<=0xdfff)?String.fromCodePoint(n):''}).replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim()}
 export function parsePublicRSS(xml,feed,now=Date.now()){
