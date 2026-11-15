@@ -1,0 +1,58 @@
+{
+  "origin": "https://joyful-seahorse-967889.netlify.app",
+  "operational": true,
+  "checks": [
+    {
+      "name": "health and configured capabilities",
+      "passed": true
+    },
+    {
+      "name": "homepage security headers",
+      "passed": true
+    },
+    {
+      "name": "data-use explanation",
+      "passed": true
+    },
+    {
+      "name": "anonymous workspace rejected",
+      "passed": true
+    },
+    {
+      "name": "anonymous alerts rejected",
+      "passed": true
+    },
+    {
+      "name": "admin job route rejects GET",
+      "passed": true
+    },
+    {
+      "name": "anonymous account rejected",
+      "passed": true
+    },
+    {
+      "name": "legacy private market route retired in account mode",
+      "passed": true
+    },
+    {
+      "name": "model route rejects GET",
+      "passed": true
+    },
+    {
+      "name": "foreign-origin workspace write rejected",
+      "passed": true
+    }
+  ],
+  "configuration": {
+    "version": "2026-11-08-provider-beta-1",
+    "publicAuthEnabled": true,
+    "durableQuotaEnabled": true,
+    "freeAIEnabled": true,
+    "paidAIEnabled": false,
+    "googleAuthEnabled": true,
+    "publicMarketDataEnabled": false,
+    "backgroundMarketRefreshConfigured": false,
+    "newsEnabled": true
+  },
+  "scope": "Anonymous deployment checks only; signed-in save/load, real-device mobile, licensed data, schedules and host billing controls require separate acceptance."
+}

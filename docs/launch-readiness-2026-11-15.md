@@ -44,9 +44,10 @@
 - Production Google button reaches Google's ordinary sign-in page. The browser
   has no signed-in Google account. Full sign-in/refresh/logout/login/cloud history
   acceptance remains blocked on secure user authentication.
-- Initial deployment smoke test: nine checks passed; health timed out. A separate
-  read verified health status=ok, Google/free AI/auth/durable quota enabled,
-  paid AI disabled. Recheck deployment after this release.
+- Post-release production checks: all 10 anonymous deployment checks passed.
+  The new journal module is served and health exposes webSearchEnabled=false.
+  Source release: 401aa226a3637dc3b167c3db363bf0b0b7eaedc4.
+  Google/free AI/auth/durable quota are enabled; paid AI remains disabled.
 
 ## Remaining release gates (not declared complete)
 1. Signed-in acceptance with a real test account, plus a second account/device for
