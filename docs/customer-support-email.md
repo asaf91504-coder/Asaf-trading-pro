@@ -1,4 +1,4 @@
-# Customer support email — activation pending
+# Customer support email — email verification pending
 
 Adds a support dialog on the main, chart, journal, subscription and help pages.
 Visitors supply name, reply email and message; no subscription or AI credits are
@@ -21,6 +21,6 @@ Activation checklist:
 
 Current status: code prepared, syntax checked; local preview failure preserves
 message and restores submit button. Live email delivery is unverified because
-Netlify currently presents a login screen. Do not describe it as operational.
+live deployment and inbox verification are pending; authenticated Netlify form detection and email notification have now been configured. Do not describe it as operational.
 Core labels support ten languages; detailed notices currently Hebrew/English.
 No browser-local persistence of names, emails or messages is introduced.
