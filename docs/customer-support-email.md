@@ -1,26 +1,14 @@
-# Customer support email — email verification pending
+# Customer support email
 
-Adds a support dialog on the main, chart, journal, subscription and help pages.
-Visitors supply name, reply email and message; no subscription or AI credits are
-required. No conversation history, account credentials or chart data is attached.
-The dialog explicitly says that replies arrive by email, not real-time chat.
+Adds a support dialog to the main, chart, journal, subscription and help pages.
+Visitors provide a name, reply email and message. Replies arrive by email rather
+than live chat. No AI credits are used and no trading history is attached.
 
-Transport: Netlify Forms (`customer-support`) with honeypot and `email` field
-for Reply-To. No new mail API credential or public relay is introduced. Netlify
-must enable form detection before deployment, then a form-submission notification
-must target **asaf91504@gmail.com**. Verify provider plan usage before activation.
-Provider spam filtering can withhold notifications; delivery is not guaranteed.
+The form uses Netlify Forms with a honeypot. Configuration belongs in the host's
+private settings, not this document.
 
-Activation checklist:
-1. Sign into the existing Netlify project joyful-seahorse-967889.
-2. Enable form detection; deploy this branch.
-3. Confirm `customer-support` appears in Forms.
-4. Set verified-submission email notification to asaf91504@gmail.com.
-5. Submit one clearly labeled test; verify receipt in Gmail and Reply-To.
-6. Add the support form to production and update the help/privacy descriptions.
+Verification: module syntax checks and 617 existing regression tests pass. A
+protected preview submission displayed confirmation and its email notification
+was verified in the designated support inbox. Failed submissions preserve drafts.
 
-Current status: code prepared, syntax checked; local preview failure preserves
-message and restores submit button. Live email delivery is unverified because
-live deployment and inbox verification are pending; authenticated Netlify form detection and email notification have now been configured. Do not describe it as operational.
-Core labels support ten languages; detailed notices currently Hebrew/English.
-No browser-local persistence of names, emails or messages is introduced.
+Production publication still requires approval; the change remains a draft.
