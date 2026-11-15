@@ -1,9 +1,10 @@
+import {launchTranslations} from '../launch-translations.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as language from '../interface-language.mjs';
-const source=readFileSync(new URL('../interface-language-ui.mjs',import.meta.url),'utf8').replace(/^import .*;\n/,'');
+const source=readFileSync(new URL('../interface-language-ui.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
 function fixture(){
  class Node{
   constructor(tag,text){this.tagName=tag;this.nodeType=tag?1:3;this.nodeValue=text;this.childNodes=[];this.attributes={};this.handlers={};this.value=''}
@@ -16,7 +17,7 @@ function fixture(){
  }
  const body=new Node('body'),header=new Node('header'),nav=new Node('button'),input=new Node('textarea'),user=new Node('p');nav.textContent='חדשות';input.value='My NVDA draft';input.setAttribute('placeholder','כתוב כאן');user.className='bubble user';user.textContent='חדשות NVDA';body.append(header,nav,input,user);
  let observer,fail=false,blocked=false;const memory=new Map(),events=[],storage={getItem:k=>memory.get(k),setItem:(k,v)=>{if(blocked)throw Error('quota');memory.set(k,v)}};
- const ctx={...language,AbortSignal,Event,CustomEvent:class extends Event{constructor(t,o){super(t);this.detail=o.detail}},document:{body,documentElement:{lang:'he',dir:'rtl'},createElement:tag=>new Node(tag),querySelector:()=>header},window:{localStorage:storage,confirm:()=>true,prompt:()=>'',dispatchEvent:e=>events.push(e.type)},MutationObserver:class{constructor(callback){observer=callback}disconnect(){}observe(){}},fetch:async url=>{if(fail)throw Error('offline');return {ok:true,json:async()=>url.includes('/ar.')?{'חדשות':'أخبار','כתוב כאן':'اكتب هنا'}:{'חדשות':'News','כתוב כאן':'Write here'}}}};
+ const ctx={launchTranslations,...language,AbortSignal,Event,CustomEvent:class extends Event{constructor(t,o){super(t);this.detail=o.detail}},document:{body,documentElement:{lang:'he',dir:'rtl'},createElement:tag=>new Node(tag),querySelector:()=>header},window:{localStorage:storage,confirm:()=>true,prompt:()=>'',dispatchEvent:e=>events.push(e.type)},MutationObserver:class{constructor(callback){observer=callback}disconnect(){}observe(){}},fetch:async url=>{if(fail)throw Error('offline');return {ok:true,json:async()=>url.includes('/ar.')?{'חדשות':'أخبار','כתוב כאן':'اكتب هنا'}:{'חדשות':'News','כתוב כאן':'Write here'}}}};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {ctx,body,nav,input,user,Node,memory,events,observe:r=>observer(r),fail:()=>{fail=true},block:()=>{blocked=true}};
 }
 test('a translated draft retains its canonical intent after changing language',async()=>{

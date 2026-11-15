@@ -1,3 +1,5 @@
+import {journalIntent} from './journal-chat-core.mjs';
+import {mountJournalDraft} from './journal-chat-ui.mjs';
 import {renderSearchSources} from './web-search-ui.mjs';
 import {marketSnapshotMetadata} from './market-quality.mjs';
 import {dataFreshness,quoteSummary} from './data-freshness.mjs';
@@ -13,7 +15,7 @@ import {initLocalChart} from "./local-chart.mjs";
 import {parseChartCommand,requestsChartControl} from './chat-chart-actions.mjs';
 import {executeChartActions} from './chart-command-controller.mjs';
 import {requestsChartAnalysis,hasAnalysisCandles} from './chart-analysis-request.mjs';
-import {historyForModel} from './conversation-context.mjs';
+import {historyForModel,selectConversationMessages} from './conversation-context.mjs';
 import {renderChatText} from './chat-text.mjs';
 
 const $=id=>document.getElementById(id);
@@ -170,6 +172,14 @@ async function ask(q,extra={}){
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
   const intentQuestion=window.asafCanonicalPrompt?.(question)||question;
+  if(!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
+   waiting.textContent='טיוטה ליומן המסחר';
+   const answer='נפתחה טיוטת עסקה לבדיקה. השמירה מתבצעת רק בכפתור השמירה בטיוטה.';
+   conversation.push({role:'user',content:question},{role:'assistant',content:answer});chatHistory.complete(conversation);conversation=conversation.slice(-400);
+   mountJournalDraft(waiting,question);
+   return;
+  }
+
   const command=!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
   if(command?.recognized){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
@@ -183,7 +193,7 @@ async function ask(q,extra={}){
    // analysis below must have matching data before contacting the model.
    if(!wantsAnalysis){
     const chartContext={symbol:normSymbol(),source:loaded?.symbol===normSymbol()?loaded.source:'none',interval:loaded?.interval,receivedAt:loaded?.receivedAt};
-    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:waiting.textContent,chartContext});chatHistory.complete(conversation);conversation=conversation.slice(-24);
+    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:waiting.textContent,chartContext});chatHistory.complete(conversation);conversation=conversation.slice(-400);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }
@@ -250,7 +260,7 @@ async function ask(q,extra={}){
     bars:recentAIBars(activeData?.bars),
     chartSettings:activeData?localChart.settings():null,
     image,
-    history:historyForModel(conversation.slice(-24),{allowIntrinio:allowIntrinioHistory})
+    history:selectConversationMessages(historyForModel(conversation,{allowIntrinio:allowIntrinioHistory}),question)
   };
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
@@ -286,7 +296,7 @@ async function ask(q,extra={}){
   if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 
   conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
-  chatHistory.complete(conversation);conversation=conversation.slice(-24);
+  chatHistory.complete(conversation);conversation=conversation.slice(-400);
   if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
   if(followAnswer)log.scrollTop=log.scrollHeight;
   pendingImage=null;

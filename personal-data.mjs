@@ -12,11 +12,11 @@ const positive=v=>typeof v==='number'&&Number.isFinite(v)&&v>0&&v<=1e12;
 const stamp=validCandleTime;
 const date=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v;
 function array(v,max){if(!Array.isArray(v)||v.length>max)throw Error('מספר הרשומות גדול מדי או שהנתונים אינם תקינים');return v}
-export const tradeProfit=t=>(t.side==='short'?t.entry-t.exit:t.exit-t.entry)*t.qty-t.fees;
+export const tradeProfit=t=>t.exit===null?null:(t.side==='short'?t.entry-t.exit:t.exit-t.entry)*t.qty-t.fees;
 export function personalData(section,value){
  if(section==='journal'){
   const seen=new Set();return array(value,300).map(t=>{
-   if(!object(t)||!id(t.id)||seen.has(t.id)||!symbol(t.symbol)||!date(t.date)||!['long','short'].includes(t.side)||![t.entry,t.exit,t.qty].every(positive)||typeof t.fees!=='number'||!Number.isFinite(t.fees)||t.fees<0||t.fees>1e12||!text(t.setup,100)||!['A','B','C'].includes(t.quality)||!text(t.note,1000)||!Number.isFinite(tradeProfit(t)))throw Error('רשומת יומן אינה תקינה');seen.add(t.id);
+   if(!object(t)||!id(t.id)||seen.has(t.id)||!symbol(t.symbol)||!date(t.date)||!['long','short'].includes(t.side)||![t.entry,t.qty].every(positive)||(t.exit!==null&&!positive(t.exit))||typeof t.fees!=='number'||!Number.isFinite(t.fees)||t.fees<0||t.fees>1e12||!text(t.setup,100)||!['','A','B','C'].includes(t.quality)||!text(t.note,1000)||(t.exit!==null&&!Number.isFinite(tradeProfit(t))))throw Error('רשומת יומן אינה תקינה');seen.add(t.id);
    return Object.fromEntries(['id','symbol','date','side','entry','exit','qty','fees','setup','quality','note'].map(k=>[k,t[k]]));
   });
  }

@@ -18,3 +18,12 @@ test('licensed news refresh writes shared titles cache and reads never contact p
  global.fetch=async(url,options)=>{if(String(url).startsWith('https://api.marketaux.com/')){providerCalls++;return Response.json({data:[article]})}const a=JSON.parse(options.body);let result;if(a[0]==='SET'&&a.includes('NX')){result=locked?null:'OK';locked=true}else if(a[0]==='SET'){snapshot=a[2];result='OK'}else if(a[0]==='GET')result=snapshot;return Response.json({result})};
  try{assert.equal((await refresh()).status,204);assert.equal((await refresh()).status,204);assert.equal(providerCalls,1);const r=await news(new Request('https://example.test/.netlify/functions/news'));const data=await r.json();assert.equal(data.enabled,true);assert.equal(data.articles.length,1);assert.equal(data.articles[0].title,'Results');assert.equal(providerCalls,1);assert.ok(!JSON.stringify(data).includes('test-only'))}finally{global.fetch=original;process.env=old}
 });
+test('background news cannot consume the entire shared chat quota',async()=>{
+ const db=new Map();const run=async a=>{const n=Number(a[2]),keys=a.slice(3,3+n),limits=a.slice(3+n).map(Number);if(keys.some((k,i)=>(db.get(k)||0)>=limits[i]))return 0;for(const k of keys)db.set(k,(db.get(k)||0)+1);return 1;};
+ const env={CONTEXT:'production',ASAF_FREE_AI_DAILY_LIMIT:'40'},now=Date.parse('2026-11-15T12:00Z');
+ // Spread over minutes: the minute limiter is deliberately still shared.
+ for(let i=0;i<10;i++)assert.equal(await reserveAIRequest({env,now:now+i*60000,run,purpose:'news'}),true);
+ assert.equal(await reserveAIRequest({env,now:now+11*60000,run,purpose:'news'}),false);
+ assert.equal(await reserveAIRequest({env,now:now+12*60000,run}),true);
+ assert.equal(db.get('asaf:production:ai:day:2026-11-15'),11);
+});

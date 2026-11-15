@@ -1,7 +1,7 @@
 import {command,storageKey,storeConfigured} from './storage.mjs';
 // Search is separately billable. Only a server-side owner opt-in enables it.
 export class WebResearchError extends Error {constructor(message,status=503){super(message);this.status=status}}
-export function searchConfigured(env=process.env){return env.ASAF_WEB_SEARCH_APPROVED==='true'&&!!env.OPENROUTER_API_KEY&&storeConfigured(env)}
+export function searchConfigured(env=process.env){return env.ASAF_WEB_SEARCH_APPROVED==='true'&&!!env.OPENROUTER_API_KEY&&storeConfigured(env)&&Number.isInteger(Number(env.ASAF_WEB_SEARCH_MONTHLY_LIMIT))&&Number(env.ASAF_WEB_SEARCH_MONTHLY_LIMIT)>=1&&Number(env.ASAF_WEB_SEARCH_MONTHLY_LIMIT)<=1000}
 const RESERVE="local n=tonumber(redis.call('GET',KEYS[1]) or '0'); if n>=tonumber(ARGV[1]) then return 0 end; redis.call('INCR',KEYS[1]); redis.call('EXPIRE',KEYS[1],3024000); return 1";
 export function webSources(annotations){
  const result=[],seen=new Set();

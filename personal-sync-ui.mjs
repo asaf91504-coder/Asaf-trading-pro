@@ -1,10 +1,11 @@
+import {journalStorageKey} from './journal-chat-core.mjs';
 import {authState,refreshAuth} from './auth-ui.mjs';
 import {personalSections,personalKeys,personalData,emptyPersonal,mergePersonal,personalBackup} from './personal-data.mjs';
 import {preparePersonalRestore,completePersonalRestore,prepareFileRestore} from './personal-restore.mjs';
 const labels={journal:'יומן העסקאות',research:'מקורות המחקר',chartPreferences:'העדפות הגרף',drawings:'קווי המגמה',conversations:'ארכיון שיחות הטקסט',layouts:'פריסות העבודה',scannerPresets:'תבניות הסריקה'};
 const defaults={style:'candles',chartMA20:true,chartMA150:true,chartEMA50:false,chartRSI14:true,chartBB20:false,chartMACD:false,chartATR14:false,chartMA50:false,chartMA100:false,chartMA200:false,chartStochastic:false,chartOBV:false,chartADX14:false,chartSupertrend:false,chartVWAP:false,chartIchimoku:false,chartVolumeProfile:false};
-const read=section=>{const saved=JSON.parse(localStorage.getItem(personalKeys[section])||JSON.stringify(emptyPersonal(section)));return personalData(section,section==='chartPreferences'?{...defaults,...saved}:saved)};
-function applyLocal(section,value){localStorage.setItem(personalKeys[section],JSON.stringify(value));window.dispatchEvent(new CustomEvent('asaf:personal-loaded',{detail:{section}}))}
+const read=section=>{const saved=JSON.parse(localStorage.getItem(section==='journal'?journalStorageKey(authState.memberId||null):personalKeys[section])||JSON.stringify(emptyPersonal(section)));return personalData(section,section==='chartPreferences'?{...defaults,...saved}:saved)};
+function applyLocal(section,value){localStorage.setItem(section==='journal'?journalStorageKey(authState.memberId||null):personalKeys[section],JSON.stringify(value));window.dispatchEvent(new CustomEvent('asaf:personal-loaded',{detail:{section}}))}
 function backup(section,value){const blob=new Blob([JSON.stringify(personalBackup(section,value),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='asaf-'+section+'-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 async function remote(body){const r=await fetch('/.netlify/functions/workspace',{method:body?'PUT':'GET',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(12000)});const value=await r.json();if(!r.ok){if(r.status===401)await refreshAuth();const error=Error(value.error||'הסנכרון נכשל');error.status=r.status;throw error}return value}
 export function mountPersonalSync(host,{only=null}={}){

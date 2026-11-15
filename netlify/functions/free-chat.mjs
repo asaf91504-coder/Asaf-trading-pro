@@ -1,4 +1,4 @@
-import {searchWeb,WEB_RESEARCH_SYSTEM} from '../../server/web-research.mjs';
+import {searchWeb,searchConfigured,WEB_RESEARCH_SYSTEM} from '../../server/web-research.mjs';
 import {responseLanguageInstruction} from '../../interface-language.mjs';
 import {entryStopScenario,entryStopText,scenarioSide} from '../../entry-stop-scenario.mjs';
 import {requestsChartAnalysis} from '../../chart-analysis-request.mjs';
@@ -28,6 +28,7 @@ const reply=(payload,status=200)=>Response.json(payload,{status,headers:{"Cache-
 const seen=new Map();
 const MAX_BODY=700000;
 const SYSTEM=`אתה ASAF MARKET AI — אנליסט מסחר המנהל שיחה טבעית בעברית. ההתמחות המרכזית שלך היא שוקי ההון: מניות, מדדים, אג"ח, קריפטו, מט"ח, גרפים, ניתוח טכני, דוחות, סקטורים, תמחור וסיכון.
+אין לך כלי לביצוע מסחר או לשמירת עסקאות מתוך תשובת טקסט. אל תטען ששמרת, קנית או מכרת. בקשת תיעוד ביומן פותחת טיוטה בממשק, ורק אישור השמירה והצלחתו מעידים על רישום.
 אתה **לא** מנוע תשובות מוכנות. ענה לעניין, התייחס לשאלת המשתמש המסוימת ולקונטקסט ההודעות הקודמות; אפשר לשאול שאלות המשך.
 זהה לפי נתונים או צילום גרף תבניות אפשריות כגון כוס וידית, דאבל בוטום, ראש וכתפיים, מגמת שיאים יורדים, פריצות ומחזורי מסחר. כשאין בסיס מספק, ציין את חוסר הוודאות במקום להמציא.
 candleCount הוא מספר הנרות הכולל שנסקר בשרת. detailedCandleCount הוא רק מספר הנרות המפורטים ב-last30Candles; אל תבלבל ביניהם. אין לך את כל ההיסטוריה הגולמית אלא סיכום מחושב וחתך מפורט אחרון. כאשר מצורפים נרות, השתמש במספרים המחושבים במדויק, והפרד בין "נתונים" ל"פרשנות" ל"מה יבטל את התרחיש". חותמת הזמן של הנר האחרון חייבת להופיע בניתוח מספרי; אל תכנה נתונים היסטוריים זמן אמת.
@@ -136,6 +137,7 @@ export default async function handler(request){
  try{const text=await request.text();if(text.length>MAX_BODY)return reply({error:"הבקשה גדולה מדי"},413);payload=JSON.parse(text)}catch{return reply({error:"JSON לא תקין"},400)}
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
+ if(payload.webSearch===true&&!searchConfigured())return reply({error:'חיפוש באינטרנט עדיין אינו פעיל. אפשר לשלוח שוב בלי לסמן חיפוש.',code:'web_search_unavailable'},503);
  const selectedArticleId=payload.newsArticleId;
  if(selectedArticleId!=null&&(typeof selectedArticleId!=='string'||!selectedArticleId.trim()||selectedArticleId.length>1000||payload.includeNews!==true))return reply({error:'בחירת הכותרת אינה תקינה. בחר אותה מחדש בלשונית החדשות.'},400);
  const symbol=String(payload?.symbol||"").trim().toUpperCase().slice(0,30).replace(/[^A-Z0-9:._-]/g,"");
@@ -170,7 +172,7 @@ export default async function handler(request){
  }catch(e){const known=e instanceof MarketError||e instanceof CryptoResearchError||e instanceof IntrinioError;return reply({error:known?e.message:'נתוני הגרף או המקור אינם תקינים.'},known?e.status:cryptoRequested?503:400)}
  // If a chart is supplied, require a symbol to reduce mismatched-chart analysis.
  if(bars&&!symbol)return reply({error:"חובה לציין סימול לגרף"},400);
- const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed});
+ const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed,question});
  const context=marketDataContext(symbol,bars,meta);
  const needsScenario=requestsChartAnalysis(question,{command:parseChartCommand(question,{currentSymbol:symbol})});
  const tradeScenario=needsScenario?entryStopScenario(bars,meta,scenarioSide(question)):null;

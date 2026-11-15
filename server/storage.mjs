@@ -10,11 +10,13 @@ export async function command(args,{env=process.env,fetcher=fetch}={}){
 }
 export const storageKey=(name,env=process.env)=>'asaf:'+(env.CONTEXT?(env.CONTEXT==='production'?'production':'preview'):runtimeContext)+':'+name;
 const QUOTA=`for i=1,#KEYS do local n=tonumber(redis.call('GET',KEYS[i]) or '0'); if n>=tonumber(ARGV[i]) then return 0 end end; for i=1,#KEYS do redis.call('INCR',KEYS[i]); redis.call('EXPIRE',KEYS[i],i==2 and 120 or 172800) end; return 1`;
-export async function reserveAIRequest({env=process.env,now=Date.now(),run=command,memberId=null}={}){
+export async function reserveAIRequest({env=process.env,now=Date.now(),run=command,memberId=null,purpose='chat'}={}){
+ if(!['chat','news'].includes(purpose))throw Error('Invalid request purpose');
  const configured=Number(env.ASAF_FREE_AI_DAILY_LIMIT||40),limit=Math.min(40,configured);
  if(!Number.isInteger(limit)||limit<1)throw Error('Invalid daily quota');
  const day=new Date(now).toISOString().slice(0,10),minute=Math.floor(now/60000);
  const keys=[storageKey('ai:day:'+day,env),storageKey('ai:minute:'+minute,env)],limits=[String(limit),'6'];
+ if(purpose==='news'){keys.push(storageKey('ai:news:'+day,env));limits.push(String(Math.max(1,Math.floor(limit/4))))}
  if(memberId){if(!/^[a-f0-9-]{36}$/.test(memberId))throw Error('Invalid member');keys.push(storageKey('ai:member:'+memberId+':'+day,env));limits.push(String(Math.min(10,limit)))}
  return await run(['EVAL',QUOTA,String(keys.length),...keys,...limits],{env})===1;
 }

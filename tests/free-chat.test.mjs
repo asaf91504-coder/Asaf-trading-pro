@@ -106,3 +106,9 @@ test('2000-bar chart indicators are recomputed on the server and only a compact 
 });
 test('provider length stops are clearly marked without an automatic retry or paid fallback',async()=>{await simulate(enabled,async calls=>{const r=await handler(req({message:'מהו ממוצע נע?'}));const data=await r.json();assert.equal(data.truncated,true);assert.match(data.answer,/התשובה נקטעה/);assert.equal(calls.length,1);assert.equal(calls[0].body.model,'openrouter/free')},{message:{content:'תשובה חלקית'},finish_reason:'length'})});
 test('local answer safety cap is reported, while normal completions remain unmarked',async()=>{await simulate(enabled,async calls=>{const r=await handler(req({message:'מהו ממוצע נע?'}));const data=await r.json();assert.equal(data.truncated,true);assert.ok(data.answer.length<7700);assert.equal(calls.length,1)},{message:{content:'א'.repeat(8000)},finish_reason:'stop'});await simulate(enabled,async()=>{const r=await handler(req({message:'מהו ממוצע נע?'}));const data=await r.json();assert.equal(data.truncated,false);assert.doesNotMatch(data.answer,/התשובה נקטעה/)})});
+test('unavailable web search fails before model use instead of consuming a chat request',async()=>{
+ await simulate(enabled,async calls=>{
+  const result=await handler(req({message:'בדוק באינטרנט',webSearch:true}));
+  assert.equal(result.status,503);assert.equal((await result.json()).code,'web_search_unavailable');assert.equal(calls.length,0);
+ });
+});

@@ -18,3 +18,25 @@ test('restricted historical text is excluded by default without deleting unrelat
  const history=conversationHistory(input);assert.equal(history.length,1);assert.equal(history[0].content,'a general question');assert.equal(input.length,2);
  const allowed=conversationHistory(input,{allowIntrinio:true});assert.equal(allowed.length,2);assert.match(allowed[0].content,/Intrinio/);
 });
+test('explicit follow-up retrieves bounded older stock context without confusing it with fresh prices',()=>{
+ const old=[{role:'user',content:'Discuss NVDA',chartContext:{symbol:'NVDA',source:'CSV'}},{role:'assistant',content:'NVDA historical thesis',chartContext:{symbol:'NVDA',source:'CSV'}}];
+ const recent=Array.from({length:30},(_,i)=>({role:i%2?'assistant':'user',content:'AAPL turn '+i}));
+ const result=conversationHistory([...old,...recent],{question:'מה אמרנו על NVDA?'});
+ assert.match(result[0].content,/NVDA/);assert.match(result[0].content,/not current market data/);
+ assert.match(result.at(-1).content,/AAPL turn 29/);assert.equal(result.length,26);
+ assert.equal(conversationHistory([...old,...recent]).some(m=>m.content.includes('NVDA')),false);
+ assert.equal(conversationHistory([{...old[1],chartContext:{symbol:'NVDA',source:'Intrinio'}},...recent],{question:'NVDA'}).some(m=>m.content.includes('NVDA')),false);
+});
+test('relevant archive recall retains a strict text budget even for oversized histories',()=>{
+ const old=Array.from({length:30},()=>({role:'assistant',content:'NVDA '+ 'x'.repeat(10000)}));
+ const result=conversationHistory([...old,...Array.from({length:24},()=>({role:'user',content:'recent '+ 'a'.repeat(10000)}))],{question:'NVDA'});
+ assert.ok(result.some(m=>m.content.startsWith('NVDA')));assert.ok(result.at(-1).content.startsWith('recent'));
+ assert.ok(result.reduce((n,m)=>n+m.content.length,0)<=24000);assert.ok(result.length<=30);
+});
+test('client history selection bounds outgoing text before the HTTP payload is created',async()=>{
+ const {selectConversationMessages}=await import('../conversation-context.mjs');
+ const messages=Array.from({length:400},()=>({role:'assistant',content:'NVDA '+ 'x'.repeat(30000),image:'not history'}));
+ const selected=selectConversationMessages(messages,'NVDA');
+ assert.ok(selected.length<=30);assert.ok(JSON.stringify(selected).length<130000);assert.equal(selected[0].image,undefined);
+ assert.match(selected[0].content,/shortened/);
+});

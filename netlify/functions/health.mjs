@@ -1,3 +1,4 @@
+import {searchConfigured} from '../../server/web-research.mjs';
 import {intrinioConfigured} from '../../server/intrinio-research.mjs';
 import {fundamentalsConfigured} from '../../server/market-fundamentals.mjs';
 import {publicNewsEnabled} from '../../server/public-news.mjs';
@@ -16,6 +17,7 @@ export default async function handler(request) {
   return Response.json({
     application:"ASAF TRADING PRO",
     version:VERSION,
+    webSearchEnabled:searchConfigured(),
     googleAuthEnabled:googleConfigured(),
     nativeAppLoginEnabled:mobileSessionConfigured(),
     intrinioResearchEnabled:intrinioConfigured(),

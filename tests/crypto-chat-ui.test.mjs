@@ -1,8 +1,9 @@
+import {journalIntent} from '../journal-chat-core.mjs';
 import {renderSearchSources} from '../web-search-ui.mjs';
 import {marketSnapshotMetadata} from '../market-quality.mjs';
 import test from 'node:test';
 import {requestsChartAnalysis,hasAnalysisCandles} from '../chart-analysis-request.mjs';
-import {historyForModel} from '../conversation-context.mjs';
+import {historyForModel,selectConversationMessages} from '../conversation-context.mjs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {isChatNearBottom} from '../chat-interaction.mjs';
@@ -52,6 +53,7 @@ test('AI receives a server-crypto request flag rather than a stock-provider or u
  c.localChart.settings=()=>({style:'candles',indicators:['MA20']});
  c.fetch=async(url,options)=>{assert.equal(url,'/.netlify/functions/free-chat');payload=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'ניתוח נתוני CoinLore'})}};
  Object.assign(c,{renderSearchSources,requestsChartAnalysis,hasAnalysisCandles,historyForModel,renderChatText:(el,text)=>{el.textContent=text}});c.window.dispatchEvent=()=>{};
+ c.journalIntent=journalIntent;c.selectConversationMessages=selectConversationMessages;
  vm.runInContext(source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')")),c);await c.ask('explain this chart');
  assert.equal(payload.useServerCrypto,true);assert.equal(payload.useServerMarket,false);assert.equal(payload.source,'CoinLore');assert.equal(payload.symbol,'COINLORE:BTCUSD');assert.equal(payload.receivedAt,'2026-10-29T10:00:00Z');assert.match(bubbles.at(-1).textContent,/CoinLore/);
 });

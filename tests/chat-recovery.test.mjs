@@ -1,3 +1,4 @@
+import {journalIntent} from '../journal-chat-core.mjs';
 import {renderSearchSources} from '../web-search-ui.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -7,7 +8,7 @@ import {parseChartCommand} from '../chat-chart-actions.mjs';
 import {isChatNearBottom} from '../chat-interaction.mjs';
 import {recentAIBars} from '../chart-data.mjs';
 import {requestsChartAnalysis,hasAnalysisCandles} from '../chart-analysis-request.mjs';
-import {historyForModel} from '../conversation-context.mjs';
+import {historyForModel,selectConversationMessages} from '../conversation-context.mjs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const askSource=source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')"));
 function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
@@ -15,9 +16,9 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
+ ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
- ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.renderChatText=(el,text)=>{el.textContent=text};
+ ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
  ctx.$('marketInterval').value='1day';ctx.window.dispatchEvent=()=>{};
  ctx.intrinioFeed=Promise.resolve({enabled:false,aiAnalysisEnabled:false});
  ctx.loadMarketData=async()=>{ctx.loaded=analysisData(ctx.normSymbol());ctx.currentContext=()=>ctx.loaded.context;return ctx.loaded};
@@ -315,4 +316,13 @@ test('invalid successful JSON and cancellation during response parsing retain di
   assert.match(s.bubbles[1].textContent,cancelled?/הבקשה בוטלה/:/תשובה לא תקינה/);
   assert.doesNotMatch(s.bubbles[1].textContent,/לא נפרסה|GitHub/);
  }
+});
+
+test('journal drafting never calls the market provider or LLM and does not claim it saved',async()=>{
+ const s=setup();let drafts=0;
+ s.ctx.mountJournalDraft=()=>{drafts++};
+ s.ctx.loadMarketData=async()=>{throw Error('No market data needed for journaling')};
+ await s.ctx.ask('תרשום ביומן NVDA כניסה 100 כמות 10');
+ assert.equal(drafts,1);assert.equal(s.calls(),0);assert.equal(s.ctx.chatBusy,false);
+ assert.match(s.ctx.conversation.at(-1).content,/רק בכפתור/);
 });

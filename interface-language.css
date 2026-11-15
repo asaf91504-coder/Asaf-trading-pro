@@ -2,3 +2,8 @@
 html[dir=ltr] body{text-align:start}html[dir=ltr] .terminal-app main,html[dir=ltr] .terminal-app .panel,html[dir=ltr] .terminal-app #chat,html[dir=ltr] .terminal-account-dialog,html[dir=ltr] .asset-search-dialog,html[dir=ltr] .app-install-dialog,html[dir=ltr] .chart-advanced-footer{direction:ltr;text-align:start}
 .bubble{unicode-bidi:plaintext;text-align:start;overflow-wrap:anywhere}html[dir=ltr] .terminal-app .brand small{direction:ltr}html[dir=ltr] .terminal-app input:not([dir]),html[dir=ltr] .terminal-app textarea:not([dir]){text-align:start}
 @media(max-width:900px){.interface-language-picker{flex-shrink:0;margin-inline-start:auto}.interface-language-picker select{max-width:135px}.language-status{flex-basis:100%}}
+.journal-chat-draft{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:100%;padding:12px 0}
+.journal-chat-draft>p,.journal-chat-draft>a,.journal-chat-draft>button{grid-column:1/-1}
+.journal-chat-draft label{display:grid;gap:5px;min-width:0}
+.journal-chat-draft input,.journal-chat-draft select{width:100%;min-width:0;box-sizing:border-box;font:inherit}
+@media(max-width:420px){.journal-chat-draft{grid-template-columns:1fr}}
