@@ -5,7 +5,7 @@ const env={ASAF_FREE_AI_ENABLED:'true',OPENROUTER_API_KEY:'test',ASAF_EXTERNAL_S
 const articles=[{id:'one',title:'Apple earnings rise',url:'https://example.test',source:'Test'}];
 test('translation preserves source and caches titles per language without repeating model requests',async()=>{
  const cache=new Map();let calls=0;
- const run=async args=>{if(args[0]==='GET')return cache.get(args[1]);if(args[0]==='SET'){cache.set(args[1],args[2]);return 'OK'}};
+ const run=async args=>{if(args[0]==='GET')return cache.get(args[1]);if(args[0]==='MGET')return args.slice(1).map(key=>cache.get(key)||null);if(args[0]==='SET'){cache.set(args[1],args[2]);return 'OK'}};
  const fetcher=async(_,options)=>{calls++;const body=JSON.parse(options.body);assert.ok(body.models.every(model=>model.endsWith(':free')));return {ok:true,json:async()=>({choices:[{message:{content:'["רווחי אפל עולים"]'},finish_reason:'stop'}]})}};
  const options={env,run,fetcher,reserve:async()=>true};
  const result=await translateNews(articles,'he',options);assert.equal(result.translation,'translated');assert.equal(result.articles[0].originalTitle,articles[0].title);assert.equal(result.articles[0].url,articles[0].url);
