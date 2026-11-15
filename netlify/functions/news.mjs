@@ -1,3 +1,4 @@
+import {queueTranslationJob} from '../../server/news-translation-job.mjs';
 import {translateNews} from '../../server/news-language.mjs';
 import {languageNames} from '../../interface-language.mjs';
 import {publicNewsEnabled} from '../../server/public-news.mjs';
@@ -20,5 +21,9 @@ export default async function handler(request){
  if(!lang||!response.ok)return response;
  const data=await response.json();
  if(!data.enabled||!data.articles?.length)return respond(data);
- return respond({...data,...await translateNews(data.articles,lang)});
+ const translated=await translateNews(data.articles,lang,{cacheOnly:true});
+ if(translated.translation==='pending'){
+  try{translated.translation=await queueTranslationJob(lang,process.env.URL||'https://joyful-seahorse-967889.netlify.app')}catch{translated.translation='unavailable'}
+ }
+ return respond({...data,...translated});
 }

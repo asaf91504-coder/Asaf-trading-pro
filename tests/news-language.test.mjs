@@ -26,3 +26,7 @@ test('small batches preserve completed translations across headline refreshes',a
  const second=await translateNews(items,'he',options);assert.equal(second.translation,'translated');assert.equal(calls,2);
  const third=await translateNews([...items].reverse(),'he',options);assert.equal(third.translation,'translated');assert.equal(calls,2);
 });
+test('cache-only reads never call a model or consume quota',async()=>{
+ const result=await translateNews(articles,'he',{env,cacheOnly:true,run:async()=>[null],reserve:async()=>{throw Error('must not reserve')},fetcher:async()=>{throw Error('must not fetch')}});
+ assert.equal(result.translation,'pending');assert.deepEqual(result.articles,articles);
+});
