@@ -33,7 +33,7 @@ test('daily provider snapshot excludes today, keeps exchange timezone and reache
  await assert.rejects(analysisMarket({symbol:'NVDA',receivedAt:chart.receivedAt},{env,run:s.run,now:time}),/מטמון/);
 });
 test('intraday and weekly snapshots retain partial-market warnings instead of EOD claims',async()=>{
- for(const interval of ['1min','1week']){const s=fixture(),snapshot=await readMarketSnapshot({selected:'AAPL',interval,env,run:s.run,now:time,fetcher:async()=>Response.json(prices())});assert.equal(snapshot.latestBarMayBePartial,true);assert.match(snapshot.coverage,interval==='1week'?/חלקי/:/5%/)}
+ for(const interval of ['1min','1week']){const s=fixture(),snapshot=await readMarketSnapshot({selected:'AAPL',interval,env,run:s.run,now:time,fetcher:async()=>Response.json(prices())});assert.equal(snapshot.latestBarMayBePartial,true);assert.match(snapshot.coverage,interval==='1week'?/חלקי/:/טרם אומת/)}
 });
 test('weighted credits are shared across chart and fundamentals and rejected atomically',async()=>{
  const s=fixture(),opts={env:{...env,ASAF_MARKET_REQUESTS_PER_MINUTE:'51',ASAF_MARKET_REQUESTS_PER_DAY:'51'},run:s.run,now:time};

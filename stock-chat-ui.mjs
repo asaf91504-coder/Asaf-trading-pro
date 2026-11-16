@@ -372,7 +372,7 @@ Promise.all([intrinioFeed,publicFeed]).then(([intrinio,publicMarket])=>{
   $('marketProviderDescription').textContent='נרות יומיים קודמים של מניות ארה״ב, מותאמים לפיצולים ולדיבידנדים. הטעינה ידנית ובחשבון בעל הפרויקט בלבד; אלה נתוני סוף יום, לא מחיר חי.';
   $('marketProviderScope').textContent=intrinio.aiAnalysisEnabled?'ניתוח AI של נתוני Intrinio מופעל למנהל, בכפוף לזמינות השירות.':'הגרף והאינדיקטורים המקומיים זמינים לאחר טעינה. העברת נתוני Intrinio למודל AI חיצוני עדיין כבויה.';
  }else if(publicMarket.enabled){
-  $('marketProviderTitle').textContent='חיבור נתוני שוק · הספק מוגדר';
+  $('marketProviderTitle').textContent='Twelve Data · חיבור נתוני שוק';
   $('marketProviderScope').textContent='היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
  }
  if(marketStatus.textContent==='בודק את הגדרת ספק הנתונים…')marketStatus.textContent=intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'ספק הנתונים מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
@@ -388,6 +388,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   if(!authState.authenticated)throw Error('יש להיכנס לחשבון בעל הפרויקט לפני טעינת נתוני ניסוי הקריפטו.');
  }else{
   const feed=await publicFeed;
+  if(feed.enabled&&Array.isArray(feed.intervals)&&!feed.intervals.includes(interval))throw Error('טווח הזמן אינו כלול בחיבור הנתונים הנוכחי. בחר טווח נתמך.');
   if((memberMode||fromChat)&&!feed.enabled&&!intrinio)throw Error('נתוני השוק טרם חוברו. ממתינים לספק ולאישור רישוי; לא ניתן להציג גרף או לסמן רמות ללא נרות.');
   if(memberMode&&!authState.authenticated)throw Error('יש להיכנס לחשבון לפני טעינת נתונים.');
   if(fromChat&&!memberMode)throw Error('טעינה בצ׳אט זמינה רק דרך חיבור הנתונים של האתר.');

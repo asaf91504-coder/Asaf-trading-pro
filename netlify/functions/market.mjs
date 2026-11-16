@@ -12,7 +12,7 @@ const allowedIntervals=new Set(["1min","5min","15min","30min","1h","1day","1week
 export const validateBar=item=>{
   if(!item||typeof item!=='object')return null;
   const open=Number(item.open),high=Number(item.high),low=Number(item.low),close=Number(item.close);
-  const vol=item.volume===undefined||item.volume===null?null:Number(item.volume);
+  const vol=item.volume===undefined||item.volume===null||typeof item.volume==='boolean'||String(item.volume).trim()===''?null:Number(item.volume);
   const date=typeof item.datetime==="string"?item.datetime:"";
   if(!/^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}:\d{2})?$/.test(date)||!validCandleTime(date))return null;
   if(![open,high,low,close].every(Number.isFinite)||low<=0||high<low||open<low||open>high||close<low||close>high)return null;

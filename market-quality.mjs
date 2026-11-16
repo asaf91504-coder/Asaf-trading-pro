@@ -6,10 +6,9 @@ export function previousDailyBars(bars,now=Date.now()){
  const today=newYorkDate(now);
  return bars.filter(b=>/^\d{4}-\d{2}-\d{2}$/.test(b.date)&&b.date<today);
 }
-export function marketCoverage(interval){
- if(interval==='1day')return 'נרות יומיים קודמים בלבד. נתוני EOD מאוחדים לפי הספק; מועד איחוד המחזור לא אומת בנפרד.';
- if(interval==='1week')return 'נרות שבועיים; השבוע האחרון עשוי להיות חלקי ומחזורו טרם מאוחד.';
- return 'פיד מזירות נבחרות: כ־5% ממחזור ארה״ב לפי הצהרת Twelve Data; אינו שוק מאוחד';
+export function marketCoverage(interval,volumeCoverage='unconfirmed'){
+ const volume=volumeCoverage==='consolidated'?'מחזור מאוחד לפי הגדרת המסלול שאושרה.':volumeCoverage==='partial'?'מחזור מזירות נבחרות בלבד; אינו מחזור שוק מאוחד.':'כיסוי נפח המסחר טרם אומת; אין להניח שזהו מחזור השוק המלא.';
+ return (interval==='1day'?'נרות יומיים קודמים בלבד. ':interval==='1week'?'נרות שבועיים; השבוע האחרון עשוי להיות חלקי. ':'נרות תוך־יומיים; הנר האחרון עשוי להיות חלקי. ')+volume;
 }
 export function marketCapAvailable(record,now=Date.now()){
  const cap=record?.fundamentals,age=now-Date.parse(cap?.receivedAt);
