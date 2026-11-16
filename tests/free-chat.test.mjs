@@ -17,8 +17,10 @@ const req=(payload,secret=pass)=>new Request("https://asaf.example/.netlify/func
  method:"POST",headers:{"Content-Type":"application/json","x-asaf-free-ai-code":secret,"Origin":"https://asaf.example"},
  body:JSON.stringify(payload)
 });
+let simulatedTime=Date.now();
 async function simulate(env,runner,choice={message:{content:"אני רואה מגמה עולה מהנרות שסיפקת; כדאי לבדוק גם מחזור."}}){
  const old=Object.fromEntries(keys.map(k=>[k,process.env[k]])),oldFetch=globalThis.fetch;
+ const originalNow=Date.now;simulatedTime+=61000;Date.now=()=>simulatedTime;
  const calls=[];
  try{
   for(const key of keys)delete process.env[key];
@@ -29,7 +31,7 @@ async function simulate(env,runner,choice={message:{content:"אני רואה מ�
   };
   await runner(calls);
  }finally{
-  globalThis.fetch=oldFetch;
+  Date.now=originalNow;globalThis.fetch=oldFetch;
   for(const key of keys){if(old[key]===undefined)delete process.env[key];else process.env[key]=old[key]}
  }
 }
@@ -112,3 +114,15 @@ test('unavailable web search fails before model use instead of consuming a chat 
   assert.equal(result.status,503);assert.equal((await result.json()).code,'web_search_unavailable');assert.equal(calls.length,0);
  });
 });
+
+test('unsupported agent and general-purpose work is rejected before provider calls',async()=>{
+ for(const message of ['תפעיל סוכנים לניתוח AAPL','תבדוק כל שעה את NVDA','write a python app','תכין מתכון לעוגה'])await simulate(enabled,async calls=>{
+  const response=await handler(req({message,language:'he',webSearch:true}));const body=await response.json();assert.equal(response.status,422);assert.equal(body.code,'market_qa_only');assert.equal(body.credits.charged,0);assert.equal(calls.length,0);
+ });
+});
+test('earnings research remains available with a bounded market-only system instruction',async()=>{await simulate(enabled,async calls=>{
+ const r=await handler(req({message:'Explain NVDA quarterly earnings and revenue growth'}));assert.equal(r.status,200);const system=calls[0].body.messages[0].content;assert.match(system,/PRODUCT SCOPE/);assert.match(system,/Do not create agents/);assert.doesNotMatch(system,/מותר ורצוי לנהל שיחה טבעית גם בנושאים אחרים/);assert.equal(calls.length,1);
+})});
+test('semantic scope refusal is an unsuccessful response, never chart actions or a charged success',async()=>{await simulate(enabled,async calls=>{
+ const r=await handler(req({message:'Help with an unrelated topic',language:'en',chartControl:true}));const data=await r.json();assert.equal(r.status,422);assert.equal(data.code,'market_qa_only');assert.equal(data.credits.charged,0);assert.equal(data.actions,undefined);assert.equal(calls.length,1);
+},{message:{content:'ASAF_OUT_OF_SCOPE'}})});
