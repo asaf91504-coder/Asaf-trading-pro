@@ -267,7 +267,13 @@ async function ask(q,extra={}){
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
   if(requestState)requestState.textContent=preparedPayload.webSearch?'מחפש מקורות באינטרנט ומכין תשובה…':'הנתונים נשלחו — ממתין לניתוח…';
   slowNotice=setTimeout(()=>{if(epoch===conversationEpoch&&!activeController.signal.aborted&&requestState)requestState.textContent='המודל עדיין מעבד את הבקשה. אפשר להמתין או לבטל; אין צורך לשלוח שוב.'},20000);
-  const response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
+  let response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
+  if(response.status===428){
+   const quote=await response.clone().json();
+   if(quote.code!=='credit_consent_required'||quote.maxCredits!==1)throw Error('Invalid credit quote');
+   if(!window.confirm('שליחת הבקשה תעלה קרדיט אחד. להמשיך?'))throw Error('השליחה בוטלה. לא נוכו קרדיטים.');
+   response=await fetch('/.netlify/functions/free-chat',{method:'POST',signal:activeController.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...preparedPayload,creditConsent:1})});
+  }
   let data;try{data=await response.json()}catch(error){
    if(error.name==='AbortError')throw error;
    throw Error(response.ok?'התקבלה תשובה לא תקינה משירות ה-AI. השאלה נשמרה; אפשר לנסות שוב.':'שירות ה-AI החזיר שגיאת חיבור (HTTP '+response.status+'). השאלה נשמרה; אפשר לנסות שוב.');

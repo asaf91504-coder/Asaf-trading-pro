@@ -1,3 +1,4 @@
+import {creditsEnabled,planFor,planEnv} from './plans.mjs';
 import {randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
 import {digest,publicAuthConfigured} from './auth-core.mjs';
@@ -39,7 +40,7 @@ export async function subscriptionGuard(user,{env=process.env,run=command,now=Da
  try{
   const identity=await billingIdentity(user.id,{env,run}),record=await startTrial(identity,{env,run,now});
   if(entitlement(record,now).access)return null;
-  return Response.json({error:'תקופת הניסיון הסתיימה. להמשך השימוש יש להפעיל מנוי ב־10 דולר לחודש.',code:'subscription_required',subscriptionUrl:'/subscription.html'},{status:402,headers:{'Cache-Control':'no-store'}});
+  return Response.json({error:'תקופת הניסיון הסתיימה. להמשך השימוש יש לבחור מסלול בעמוד המנוי.',code:'subscription_required',subscriptionUrl:'/subscription.html'},{status:402,headers:{'Cache-Control':'no-store'}});
  }catch{return Response.json({error:'לא ניתן לבדוק את המנוי כרגע. נסה שוב.',code:'billing_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}})}
 }
 const RELEASE="if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) else return 0 end";
@@ -52,8 +53,8 @@ export function nextMonth(time){
  const d=new Date(time),day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);
  const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d.getTime();
 }
-export function paidThrough(transactions,subscription,revoked=[],now=Date.now()){
- const payments=transactions.filter(t=>t.status==='COMPLETED'&&!revoked.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&Number(t.amount_with_breakdown.gross_amount.value)===PRICE_USD&&Date.parse(t.time)<=now);
+export function paidThrough(transactions,subscription,revoked=[],now=Date.now(),price=PRICE_USD){
+ const payments=transactions.filter(t=>t.status==='COMPLETED'&&!revoked.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&Number(t.amount_with_breakdown.gross_amount.value)===price&&Date.parse(t.time)<=now);
  const latest=payments.sort((a,b)=>Date.parse(b.time)-Date.parse(a.time))[0];if(!latest)return 0;
  const time=Date.parse(latest.time),next=Date.parse(subscription.billing_info?.next_billing_time);
  return Number.isFinite(next)&&next>time&&next<=time+32*DAY?next:nextMonth(time);
@@ -65,27 +66,35 @@ export async function syncSubscription(identity,record,{env=process.env,run=comm
  const id=record.subscriptionId;
  if(!/^I-[A-Z0-9]+$/.test(id))throw Error('Invalid subscription');
  const sub=await api('/v1/billing/subscriptions/'+id);
- if(sub.id!==id||sub.custom_id!==identity||sub.plan_id!==env.PAYPAL_PLAN_ID||sub.plan_overridden===true||Number(sub.quantity||1)!==1||Number(sub.shipping_amount?.value||0)!==0)throw Error('Subscription does not match account and plan');
+ if(sub.id!==id||sub.custom_id!==identity||sub.plan_id!==(record.planId?env[planEnv(record.planId)]:env.PAYPAL_PLAN_ID)||sub.plan_overridden===true||Number(sub.quantity||1)!==1||Number(sub.shipping_amount?.value||0)!==0)throw Error('Subscription does not match account and plan');
  const query=new URLSearchParams({start_time:new Date(now-62*DAY).toISOString(),end_time:new Date(now).toISOString()});
  const history=await api('/v1/billing/subscriptions/'+id+'/transactions?'+query);
  if(!Array.isArray(history.transactions)||Number(history.total_pages||1)>1)throw Error('Incomplete payment history');
- const updated={...record,subscriptionStatus:sub.status,paidUntil:paidThrough(history.transactions,sub,record.revokedTransactionIds,now),verifiedAt:now,approvalUrl:approvalLink(sub,env)};
+ const price=record.planId?planFor(record.planId).price:PRICE_USD;
+ const valid=history.transactions.filter(t=>t.status==='COMPLETED'&&!record.revokedTransactionIds?.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&Number(t.amount_with_breakdown.gross_amount.value)===price&&Date.parse(t.time)<=now);
+ const first=valid.length?Math.min(...valid.map(t=>Date.parse(t.time))):null;
+ const anchor=record.creditAnchor??first;
+ const updated={...record,...(record.planId&&anchor!==null?{creditAnchor:anchor,bonusUntil:record.bonusUntil??nextMonth(anchor)}:{}),subscriptionStatus:sub.status,paidUntil:paidThrough(history.transactions,sub,record.revokedTransactionIds,now,price),verifiedAt:now,approvalUrl:approvalLink(sub,env)};
  return saveBilling(identity,updated,{env,run});
 }
-export async function createSubscription(identity,record,{env=process.env,run=command,api=createPayPal({env}),now=Date.now(),origin}={}){
- if(!record||now<record.trialEndsAt||entitlement(record,now).access)throw Error('The free trial or paid period is still active');
+export async function createSubscription(identity,record,{env=process.env,run=command,api=createPayPal({env}),now=Date.now(),origin,planId}={}){
+ if(!record||(!creditsEnabled(env)&&(now<record.trialEndsAt||entitlement(record,now).access))||entitlement(record,now).status==='paid')throw Error('The free trial or paid period is still active');
  if(record.subscriptionId){
+  if(creditsEnabled(env)&&record.planId!==planId&&!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))throw Error('Resolve the existing checkout before selecting another plan');
   record=await syncSubscription(identity,record,{env,run,api,now});
   if(record.subscriptionStatus==='APPROVAL_PENDING'&&record.approvalUrl)return {approvalUrl:record.approvalUrl};
   if(!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))throw Error('Manage your existing subscription before creating another');
   if(entitlement(record,now).access)throw Error('Your paid period is still active');
  }
- validatePlan(await api('/v1/billing/plans/'+env.PAYPAL_PLAN_ID),env.PAYPAL_PLAN_ID);
+ const chosen=creditsEnabled(env)?planFor(planId):null;
+ const paypalPlanId=chosen?env[planEnv(chosen.id)]:env.PAYPAL_PLAN_ID;
+ if(record.createRequestId&&!record.subscriptionId&&record.planId!==chosen?.id)throw Error('Unresolved checkout for another plan');
+ validatePlan(await api('/v1/billing/plans/'+paypalPlanId),paypalPlanId,chosen?.price||10);
  const attempt=record.createRequestId&&!record.subscriptionId?record.createRequestId:randomUUID();
  if(record.createRequestId&&!record.subscriptionId&&now-record.createStartedAt>70*3600000)throw Error('Unresolved checkout: contact support before retrying');
- record={...record,createRequestId:attempt,createStartedAt:record.subscriptionId?now:(record.createStartedAt||now),subscriptionId:null,subscriptionStatus:null,approvalUrl:null};
+ record={...record,...(chosen?{planId:chosen.id}:{}),createRequestId:attempt,createStartedAt:record.subscriptionId?now:(record.createStartedAt||now),subscriptionId:null,subscriptionStatus:null,approvalUrl:null};
  await saveBilling(identity,record,{env,run});
- const sub=await api('/v1/billing/subscriptions',{method:'POST',requestId:attempt,body:{plan_id:env.PAYPAL_PLAN_ID,custom_id:identity,application_context:{brand_name:'ASAF Pro',shipping_preference:'NO_SHIPPING',user_action:'SUBSCRIBE_NOW',return_url:origin+'/subscription.html?paypal=return',cancel_url:origin+'/subscription.html?paypal=cancel'}}});
+ const sub=await api('/v1/billing/subscriptions',{method:'POST',requestId:attempt,body:{plan_id:paypalPlanId,custom_id:identity,application_context:{brand_name:'ASAF Pro',shipping_preference:'NO_SHIPPING',user_action:'SUBSCRIBE_NOW',return_url:origin+'/subscription.html?paypal=return',cancel_url:origin+'/subscription.html?paypal=cancel'}}});
  if(!/^I-[A-Z0-9]+$/.test(sub.id||''))throw Error('Invalid PayPal subscription');
  const url=approvalLink(sub,env);if(!url)throw Error('PayPal approval unavailable');
  await run(['SET',storageKey('billing:subscription:'+sub.id,env),identity],{env});

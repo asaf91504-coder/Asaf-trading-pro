@@ -1,3 +1,5 @@
+import {PLANS,creditsEnabled,consentFor} from '../../server/plans.mjs';
+import {creditStatus} from '../../server/credits.mjs';
 import {currentUser} from '../../server/auth-core.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
 import {billingEnabled,billingReady,billingIdentity,startTrial,readBilling,saveBilling,entitlement,withBillingLock,syncSubscription,createSubscription} from '../../server/billing.mjs';
@@ -6,12 +8,12 @@ const reply=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Contro
 export function createBillingHandler({env=process.env,run=command,now=()=>Date.now(),api=createPayPal({env})}={}){return async request=>{
  if(!['GET','POST'].includes(request.method))return reply({error:'Method not allowed'},405);
  if(request.method==='POST'&&request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
- const config={enabled:billingEnabled(env),ready:billingReady(env),trialDays:14,monthlyPrice:10,currency:'USD',sandbox:env.PAYPAL_ENVIRONMENT==='sandbox'};
+ const config={enabled:billingEnabled(env),ready:billingReady(env),pricingVersion:creditsEnabled(env)?2:1,plans:Object.values(PLANS),trialWeeklyCredits:100,trialDays:14,monthlyPrice:creditsEnabled(env)?null:10,currency:'USD',sandbox:env.PAYPAL_ENVIRONMENT==='sandbox'};
  try{
   const user=await currentUser(request,{env,run});
   if(request.method==='GET'){
    const record=user?await readBilling(await billingIdentity(user.id,{env,run}),{env,run}):null;
-   return reply({...config,authenticated:!!user,...entitlement(record,now())});
+   return reply({...config,authenticated:!!user,credits:user?await creditStatus(user.id,{env,run,now:now()}):null,...entitlement(record,now())});
   }
   if(!user)return reply({error:'יש להיכנס לחשבון לפני ניהול המנוי.'},401);
   if(!config.ready)return reply({error:'ההרשמה למנוי תיפתח לאחר השלמת חיבור התשלום.'},503);
@@ -27,9 +29,11 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
    const active=await currentUser(request,{env,run});if(active?.id!==user.id)return reply({error:'הכניסה פגה. יש להיכנס שוב.'},401);
    let record=await readBilling(identity,{env,run});
    if(body.action==='subscribe'){
-    if(body.consent!=='USD10_MONTHLY_V1')return reply({error:'נדרש אישור לחיוב של 10 דולר בכל חודש.'},400);
-    if(!record||entitlement(record,now()).access)return reply({error:'יש לממש קודם את תקופת הניסיון. לא נוצר חיוב.'},409);
-    return reply(await createSubscription(identity,record,{env,run,api,now:now(),origin:new URL(request.url).origin}));
+    if(creditsEnabled(env)&&!Object.hasOwn(PLANS,body.planId))return reply({error:'Invalid plan'},400);
+    if(body.consent!==(creditsEnabled(env)?consentFor(body.planId):'USD10_MONTHLY_V1'))return reply({error:'נדרש אישור לסכום המסלול ולחיוב החודשי.'},400);
+    if(!record)record=await startTrial(identity,{env,run,now:now()});
+    if(!creditsEnabled(env)&&entitlement(record,now()).access)return reply({error:'יש לממש קודם את תקופת הניסיון. לא נוצר חיוב.'},409);
+    return reply(await createSubscription(identity,record,{env,run,api,now:now(),origin:new URL(request.url).origin,planId:body.planId}));
    }
    if(!record?.subscriptionId)return reply({...config,authenticated:true,...entitlement(record,now())});
    record=await syncSubscription(identity,record,{env,run,api,now:now()});
