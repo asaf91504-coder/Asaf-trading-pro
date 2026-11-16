@@ -6,7 +6,7 @@ import {createBillingHandler} from '../netlify/functions/billing.mjs';
 import {billingIdentity,saveBilling,nextMonth,syncSubscription} from '../server/billing.mjs';
 import {fixture,seed,env as authEnv,request} from './identity-fixture.mjs';
 const now=Date.parse('2026-11-16T10:00:00Z');
-const env={...authEnv,ASAF_WEEKLY_CREDITS_ENABLED:'true',ASAF_BILLING_ENABLED:'true',PAYPAL_ENVIRONMENT:'sandbox',PAYPAL_CLIENT_ID:'mock',PAYPAL_CLIENT_SECRET:'mock',PAYPAL_WEBHOOK_ID:'mock',...Object.fromEntries(Object.keys(PLANS).map(id=>['PAYPAL_PLAN_'+id.toUpperCase()+'_ID','P-'+id.toUpperCase()]))};
+const env={...authEnv,ASAF_PUBLIC_PAID_LAUNCH:'true',ASAF_WEEKLY_CREDITS_ENABLED:'true',ASAF_BILLING_ENABLED:'true',PAYPAL_ENVIRONMENT:'sandbox',PAYPAL_CLIENT_ID:'mock',PAYPAL_CLIENT_SECRET:'mock',PAYPAL_WEBHOOK_ID:'mock',...Object.fromEntries(Object.keys(PLANS).map(id=>['PAYPAL_PLAN_'+id.toUpperCase()+'_ID','P-'+id.toUpperCase()]))};
 const trial={trialStartedAt:now,trialEndsAt:now+2*WEEK};
 test('weekly trial resets exactly at seven days, expires at fourteen; no calendar/day reset',()=>{
  assert.equal(creditWindow(trial,now).limit,100);
@@ -50,4 +50,16 @@ test('early upgrade selects verified price and consent; pending approval never g
  const syncApi=async path=>path.includes('transactions?')?{transactions:[payment]}:{id:'I-TEST',custom_id:identity,plan_id:env.PAYPAL_PLAN_PRO_ID,status:'ACTIVE'};
  const synced=await syncSubscription(identity,record,{env,run:f.run,now,api:syncApi});assert.equal(creditWindow(synced,now).limit,720);assert.equal(synced.creditAnchor,now);
  const again=await syncSubscription(identity,synced,{env,run:f.run,now:now+1,api:syncApi});assert.equal(again.bonusUntil,synced.bonusUntil);
+});
+
+test('payment pilot rejects non-admin checkout before contacting PayPal',async()=>{
+ const f=fixture(),user=seed(f);let calls=0;
+ const pilot={...env,ASAF_PUBLIC_PAID_LAUNCH:'false',ASAF_ADMIN_MEMBER_IDS:'another-admin'};
+ const handler=createBillingHandler({env:pilot,run:f.run,api:async()=>{calls++;throw Error('must not call')}});
+ const status=await (await handler(request('billing',null,user.cookie))).json();
+ assert.equal(status.paymentPilot,true);assert.equal(status.checkoutAllowed,false);
+ assert.equal((await handler(request('billing',{action:'subscribe',planId:'starter',consent:consentFor('starter')},user.cookie))).status,403);
+ assert.equal(calls,0);
+ const admin=createBillingHandler({env:{...pilot,ASAF_ADMIN_MEMBER_IDS:user.record.id},run:f.run});
+ assert.equal((await (await admin(request('billing',null,user.cookie))).json()).checkoutAllowed,true);
 });

@@ -11,6 +11,8 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
  const config={enabled:billingEnabled(env),ready:billingReady(env),pricingVersion:creditsEnabled(env)?2:1,plans:Object.values(PLANS),trialWeeklyCredits:100,trialDays:14,monthlyPrice:creditsEnabled(env)?null:10,currency:'USD',sandbox:env.PAYPAL_ENVIRONMENT==='sandbox'};
  try{
   const user=await currentUser(request,{env,run});
+  config.paymentPilot=creditsEnabled(env)&&env.ASAF_PUBLIC_PAID_LAUNCH!=='true';
+  config.checkoutAllowed=!config.paymentPilot||!!user&&(env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(x=>x.trim()).includes(user.id);
   if(request.method==='GET'){
    const record=user?await readBilling(await billingIdentity(user.id,{env,run}),{env,run}):null;
    return reply({...config,authenticated:!!user,credits:user?await creditStatus(user.id,{env,run,now:now()}):null,...entitlement(record,now())});
@@ -29,6 +31,7 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
    const active=await currentUser(request,{env,run});if(active?.id!==user.id)return reply({error:'הכניסה פגה. יש להיכנס שוב.'},401);
    let record=await readBilling(identity,{env,run});
    if(body.action==='subscribe'){
+    if(!config.checkoutAllowed)return reply({error:'התשלום החדש פתוח כרגע לבדיקת מנהל בלבד.'},403);
     if(creditsEnabled(env)&&!Object.hasOwn(PLANS,body.planId))return reply({error:'Invalid plan'},400);
     if(body.consent!==(creditsEnabled(env)?consentFor(body.planId):'USD10_MONTHLY_V1'))return reply({error:'נדרש אישור לסכום המסלול ולחיוב החודשי.'},400);
     if(!record)record=await startTrial(identity,{env,run,now:now()});

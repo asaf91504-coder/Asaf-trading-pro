@@ -22,3 +22,15 @@ This branch is not a completed paid-AI launch. Keep ASAF_WEEKLY_CREDITS_ENABLED 
 
 ## Forecast (assumptions, not verified invoices)
 100 paying accounts; fixed monthly budget USD2373.25 after removing email, bookkeeping and maintenance allowances. Includes market data1250, marketing700, infrastructure100, domain5, Apple99/year, free trials200, contingency120. Payment assumption5% + USD0.50/charge; budget up to five weekly grants per billing month. Profit is pre-tax and depends on these assumptions. No OpenAI/ChatGPT subscription price is implied by credit values.
+
+## 2026-11-16 production preparation
+Four live PayPal plans were created as DRAFT and their IDs saved in Netlify Production only:
+- starter: P-5CY7099903090172NNL5ONGQ
+- plus: P-7JM97420421000708NL5ONTY
+- pro: P-3FY57568TA048361TNL5ON4Q
+- premium: P-4RV64860H11306603NL5OOFQ
+Product: PROD-27505635D31938544. Prices were reviewed in PayPal: USD55/75/115/359 monthly, no setup fee/trial/tax, auto-bill outstanding OFF, pause after one missed cycle. This is UI verification, not a completed transaction test.
+
+User requested publishing and personally testing a real payment. Added a server-enforced admin-only checkout pilot whenever weekly credits are enabled and ASAF_PUBLIC_PAID_LAUNCH is not true. Non-admin subscribe requests fail before PayPal is called; cancellation/sync remain available. A visible warning identifies real recurring charges and unfinished paid AI/search. No new authorization is granted by request body fields.
+
+Live Starter activation was blocked by automatic approval review pending explicit approval of its USD55 monthly recurring charge. Keep weekly credits disabled and all four plans DRAFT until resolved. Publishing this code does not activate checkout. General paid launch remains blocked on the gates above. 623 local tests pass.

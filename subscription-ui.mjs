@@ -9,7 +9,7 @@ async function request(action){
 }
 function render(){
  if(!state)return;
- const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2,auth=state.authenticated===true;
+ const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2&&state.checkoutAllowed!==false,auth=state.authenticated===true;
  $('billingStatus').textContent=t(!ready?'ההרשמה למנוי תיפתח בקרוב. החיוב עדיין אינו פעיל.':!auth?'התחבר לחשבון כדי לקבל 14 ימים בחינם.':state.status==='trial'?'תקופת הניסיון שלך פעילה.':state.status==='paid'?'המנוי שלך פעיל.':state.status==='expired'?'תקופת הניסיון הסתיימה.':'14 ימי ניסיון בחינם מחכים לך.');
  if(ready&&auth&&!state.access&&state.subscriptionStatus==='APPROVAL_PENDING')$('billingStatus').textContent=t('ממתינים לאישור המנוי ב־PayPal.');
  if(ready&&auth&&!state.access&&['ACTIVE','APPROVED'].includes(state.subscriptionStatus))$('billingStatus').textContent=t('המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.');
@@ -25,6 +25,7 @@ function render(){
  $('billingSubscribe').textContent=`PayPal · $${plan.price} / month`;
  $('billingCredits').textContent=state.credits?`${state.credits.remaining} / ${state.credits.limit} קרדיטים זמינים · חידוש: ${date(state.credits.resetsAt)}`:'';
  if(!checkoutReady&&state.status!=='paid')$('billingStatus').textContent=t('המסלולים החדשים בהכנה. רכישה תיפתח לאחר בדיקת התשלום ומכסות השימוש.');
+ if(state.paymentPilot&&checkoutReady)$('billingStatus').textContent=t('בדיקת מנהל: זהו חיוב אמיתי ומתחדש. הצ׳אט בתשלום והחיפוש עדיין בהכנה. ניתן לבטל את החידוש לאחר הבדיקה.');
  $('billingSubscribe').disabled=busy||!checkoutReady||!$('billingConsent').checked;
 }
 async function perform(action){
