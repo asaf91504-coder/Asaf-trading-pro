@@ -1,7 +1,8 @@
+import {creditsEnabled,creditPlansReady} from './plans.mjs';
 // PayPal credentials and requests stay on the server. No SDK or payment data in the browser.
 import {storageKey} from './storage.mjs';
 export function paypalConfigured(env=process.env){
- return ['live','sandbox'].includes(env.PAYPAL_ENVIRONMENT)&&!!env.PAYPAL_CLIENT_ID&&!!env.PAYPAL_CLIENT_SECRET&&/^P-[A-Z0-9]+$/.test(env.PAYPAL_PLAN_ID||'')&&!!env.PAYPAL_WEBHOOK_ID&&
+ return ['live','sandbox'].includes(env.PAYPAL_ENVIRONMENT)&&!!env.PAYPAL_CLIENT_ID&&!!env.PAYPAL_CLIENT_SECRET&&(creditsEnabled(env)?creditPlansReady(env):/^P-[A-Z0-9]+$/.test(env.PAYPAL_PLAN_ID||''))&&!!env.PAYPAL_WEBHOOK_ID&&
   (env.PAYPAL_ENVIRONMENT!=='live'||storageKey('x',env).startsWith('asaf:production:'));
 }
 export function createPayPal({env=process.env,fetcher=fetch}={}){
@@ -18,9 +19,9 @@ export function createPayPal({env=process.env,fetcher=fetch}={}){
   return r.status===204?{}:r.json();
  };
 }
-export function validatePlan(plan,planId){
+export function validatePlan(plan,planId,price=10){
  const cycles=plan?.billing_cycles,c=cycles?.[0],fee=plan?.payment_preferences?.setup_fee;
- if(plan?.id!==planId||plan.status!=='ACTIVE'||cycles?.length!==1||c.tenure_type!=='REGULAR'||c.frequency?.interval_unit!=='MONTH'||c.frequency.interval_count!==1||c.total_cycles!==0||c.pricing_scheme?.fixed_price?.currency_code!=='USD'||Number(c.pricing_scheme.fixed_price.value)!==10||Number(fee?.value||0)!==0||Number(plan.taxes?.percentage||0)!==0||plan.quantity_supported===true||plan.payment_preferences?.auto_bill_outstanding!==false||plan.payment_preferences?.payment_failure_threshold!==1)throw Error('Expected a fixed USD 10 monthly plan with no trial or extra fees');
+ if(plan?.id!==planId||plan.status!=='ACTIVE'||cycles?.length!==1||c.tenure_type!=='REGULAR'||c.frequency?.interval_unit!=='MONTH'||c.frequency.interval_count!==1||c.total_cycles!==0||c.pricing_scheme?.fixed_price?.currency_code!=='USD'||Number(c.pricing_scheme.fixed_price.value)!==price||Number(fee?.value||0)!==0||Number(plan.taxes?.percentage||0)!==0||plan.quantity_supported===true||plan.payment_preferences?.auto_bill_outstanding!==false||plan.payment_preferences?.payment_failure_threshold!==1)throw Error('Expected a fixed USD 10 monthly plan with no trial or extra fees');
 }
 export function approvalLink(subscription,env=process.env){
  const raw=subscription?.links?.find(x=>x.rel==='approve')?.href;

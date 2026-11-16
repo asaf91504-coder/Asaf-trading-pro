@@ -1,7 +1,9 @@
+import {creditsEnabled} from '../../server/plans.mjs';
 // Paid AI is disabled by default. Shared passcode alone is not a public-launch security solution.
 const SYSTEM="You are ASAF AI, an educational Hebrew-first stock research assistant. You do not have real-time market data, news or screening API. Do not invent prices, indicators, or earnings. Keep responses concise.";
 const json=(body,status=200)=>Response.json(body,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 export default async function handler(request){
+ if(creditsEnabled())return json({error:'Paid model cost verification is pending; use the authenticated chat route.'},503);
  if(request.method!=="POST")return json({error:"Method not allowed"},405);
  if(process.env.ASAF_CHAT_ENABLED!=="true")return json({error:"ASAF AI כבוי למניעת חיובים לא צפויים"},503);
  const code=process.env.ASAF_CHAT_ACCESS_CODE;

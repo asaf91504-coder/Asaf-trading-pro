@@ -1,14 +1,15 @@
+import {PLANS,consentFor} from '../server/plans.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-const source=readFileSync(new URL('../subscription-ui.mjs',import.meta.url),'utf8');
-const expired={enabled:true,ready:true,authenticated:true,access:false,status:'expired',canCancel:false,subscriptionStatus:'APPROVAL_PENDING'};
+const source=readFileSync(new URL('../subscription-ui.mjs',import.meta.url),'utf8').replace(/^import .*\n/,'');
+const expired={enabled:true,ready:true,pricingVersion:2,authenticated:true,access:false,status:'expired',canCancel:false,subscriptionStatus:'APPROVAL_PENDING'};
 const paid={...expired,access:true,status:'paid',subscriptionStatus:'ACTIVE',canCancel:true,paidUntil:Date.now()+86400000};
 async function page(responses,search=''){
  const elements=new Map(),calls=[],navigation=[];
- const get=id=>{if(!elements.has(id))elements.set(id,{hidden:true,disabled:false,checked:false,textContent:''});return elements.get(id);};
- const context={URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
+ const get=id=>{if(!elements.has(id))elements.set(id,{hidden:true,disabled:false,checked:false,textContent:'',value:id==='billingPlan'?'starter':''});return elements.get(id);};
+ const context={PLANS,consentFor,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
   calls.push(options.body?JSON.parse(options.body).action:'GET');
   const next=responses.shift();assert.ok(next,'Unexpected request');if(next instanceof Error)throw next;
   return {ok:!next.httpError,status:next.httpError||200,json:async()=>next.httpError?{error:'יש להיכנס לחשבון.'}:next};

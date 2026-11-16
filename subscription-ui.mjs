@@ -1,14 +1,15 @@
+import {PLANS,consentFor} from './server/plans.mjs';
 const $=id=>document.getElementById(id),t=text=>window.asafTranslate?.(text)||text;
 let state=null,busy=false,retryAction;
 const show=(id,visible)=>{$(id).hidden=!visible;};
 const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'he',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
 async function request(action){
- const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{consent:'USD10_MONTHLY_V1'}:{})})}:{}),signal:AbortSignal.timeout(45000)});
+ const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{planId:$('billingPlan').value,consent:consentFor($('billingPlan').value)}:{})})}:{}),signal:AbortSignal.timeout(45000)});
  const data=await r.json();if(!r.ok){const error=Error(data.error||t('לא ניתן לבדוק את המנוי כרגע. נסה שוב.'));error.status=r.status;throw error;}return data;
 }
 function render(){
  if(!state)return;
- const ready=state.ready===true,auth=state.authenticated===true;
+ const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2&&state.checkoutAllowed!==false,auth=state.authenticated===true;
  $('billingStatus').textContent=t(!ready?'ההרשמה למנוי תיפתח בקרוב. החיוב עדיין אינו פעיל.':!auth?'התחבר לחשבון כדי לקבל 14 ימים בחינם.':state.status==='trial'?'תקופת הניסיון שלך פעילה.':state.status==='paid'?'המנוי שלך פעיל.':state.status==='expired'?'תקופת הניסיון הסתיימה.':'14 ימי ניסיון בחינם מחכים לך.');
  if(ready&&auth&&!state.access&&state.subscriptionStatus==='APPROVAL_PENDING')$('billingStatus').textContent=t('ממתינים לאישור המנוי ב־PayPal.');
  if(ready&&auth&&!state.access&&['ACTIVE','APPROVED'].includes(state.subscriptionStatus))$('billingStatus').textContent=t('המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.');
@@ -16,8 +17,16 @@ function render(){
  $('billingDate').textContent=state.status==='trial'?t('סיום הניסיון:')+' '+date(state.trialEndsAt):state.status==='paid'?t('גישה עד:')+' '+date(state.paidUntil):'';
  if(state.subscriptionStatus==='CANCELLED')$('billingDate').textContent+=' '+t('החידוש החודשי בוטל.');
  show('billingSandbox',state.sandbox===true);show('billingLogin',ready&&!auth);show('billingTrial',ready&&auth&&state.status==='not_started');show('billingContinue',ready&&auth&&state.access);
- show('billingCheckout',ready&&auth&&state.status==='expired'&&!state.canCancel);show('billingCancel',ready&&auth&&state.canCancel);show('billingSync',ready&&auth&&!!state.subscriptionStatus);
- $('billingSubscribe').disabled=busy||!$('billingConsent').checked;
+ show('billingCheckout',checkoutReady&&auth&&state.status!=='paid'&&!state.canCancel);show('billingCancel',ready&&auth&&state.canCancel);show('billingSync',ready&&auth&&!!state.subscriptionStatus);
+ const plan=PLANS[$('billingPlan').value];
+ $('billingPlanDetails').textContent=`$${plan.price} / month · ${plan.weeklyCredits} credits / week · +${plan.bonusPercent}% first month`;
+ document.querySelector('.subscription-price bdi').textContent='$'+plan.price;
+ $('billingConsentText').textContent=`אני מאשר חיוב מתחדש של $${plan.price} USD לחודש עבור ${plan.weeklyCredits} קרדיטים לשבוע. ניתן לבטל את החידוש בכל עת.`;
+ $('billingSubscribe').textContent=`PayPal · $${plan.price} / month`;
+ $('billingCredits').textContent=state.credits?`${state.credits.remaining} / ${state.credits.limit} קרדיטים זמינים · חידוש: ${date(state.credits.resetsAt)}`:'';
+ if(!checkoutReady&&state.status!=='paid')$('billingStatus').textContent=t('המסלולים החדשים בהכנה. רכישה תיפתח לאחר בדיקת התשלום ומכסות השימוש.');
+ if(state.paymentPilot&&checkoutReady)$('billingStatus').textContent=t('בדיקת מנהל: זהו חיוב אמיתי ומתחדש. הצ׳אט בתשלום והחיפוש עדיין בהכנה. ניתן לבטל את החידוש לאחר הבדיקה.');
+ $('billingSubscribe').disabled=busy||!checkoutReady||!$('billingConsent').checked;
 }
 async function perform(action){
  if(busy)return;busy=true;retryAction=action==='sync'?'sync':undefined;$('billingMessage').textContent=t('בודק את מצב החשבון…');show('billingRetry',false);
@@ -36,6 +45,7 @@ const params=new URLSearchParams(location.search),returned=params.get('paypal')=
 // PayPal callback parameters are never proof of payment. The server looks up
 // only the authenticated account's own saved subscription.
 if(params.has('paypal')||params.has('subscription_id')||params.has('ba_token')||params.has('token'))history.replaceState(null,'','/subscription.html');
+$('billingPlan').onchange=()=>{$('billingConsent').checked=false;render();};
 $('billingTrial').onclick=()=>perform('start-trial');$('billingSubscribe').onclick=()=>{if($('billingConsent').checked)perform('subscribe');};$('billingConsent').onchange=render;
 $('billingSync').onclick=()=>perform('sync');$('billingRetry').onclick=()=>perform(retryAction);
 $('billingCancel').onclick=()=>{if(window.confirm(t('לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.')))perform('cancel');};

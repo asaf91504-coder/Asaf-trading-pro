@@ -1,3 +1,5 @@
+import {creditsEnabled} from '../../server/plans.mjs';
+import {reserveCredits} from '../../server/credits.mjs';
 import {searchWeb,searchConfigured,WEB_RESEARCH_SYSTEM} from '../../server/web-research.mjs';
 import {responseLanguageInstruction} from '../../interface-language.mjs';
 import {entryStopScenario,entryStopText,scenarioSide} from '../../entry-stop-scenario.mjs';
@@ -112,7 +114,7 @@ function rateLimit(){
  if(recent.length>=6)return false;
  recent.push(now);seen.set(key,recent);return true;
 }
-export default async function handler(request){
+async function handler(request){
  const startedAt=Date.now();
  if(request.method!=="POST")return reply({error:"POST only"},405);
  if(process.env.ASAF_FREE_AI_ENABLED!=="true")return reply({error:"AI חופשי עדיין לא הוגדר. נדרש חיבור חינמי ב-Netlify; לא תבוצע קריאה בתשלום."},503);
@@ -225,3 +227,26 @@ export default async function handler(request){
  finally{clearTimeout(timeout)}
 }
 
+
+// Weekly rollout is deliberately free-model-only until paid inference and search
+// have a tested upper cost bound. Never silently route to a paid model.
+export default async function creditAwareHandler(request){
+ if(!creditsEnabled())return handler(request);
+ if(request.method!=='POST')return handler(request);
+ if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
+ if(process.env.ASAF_PUBLIC_AUTH_ENABLED!=='true')return reply({error:'Authenticated credits required'},503);
+ let ticket;
+ try{
+  const member=await currentUser(request);if(!member)return reply({error:'נדרשת כניסה לחשבון'},401);
+  const block=await subscriptionGuard(member);if(block)return block;
+  const raw=await request.clone().text();if(raw.length>MAX_BODY)return reply({error:'Request too large'},413);
+  let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
+  if(body.webSearch===true)return reply({error:'חיפוש בתשלום ממתין לאימות תקרת העלות; אפשר להמשיך בשיחה ללא חיפוש.',code:'search_cost_unverified'},503);
+  if(body.creditConsent!==1)return reply({error:'עלות בקשה זו היא קרדיט אחד. יש לאשר לפני שליחה.',code:'credit_consent_required',maxCredits:1},428);
+  ticket=await reserveCredits(member.id,0.02);
+  const response=await handler(request);
+  if(!response.ok&&ticket)await ticket.refund();
+  if(response.ok&&ticket){const data=await response.json();return reply({...data,credits:{charged:ticket.credits,remaining:ticket.remaining,resetsAt:ticket.resetsAt}})}
+  return response;
+ }catch(e){if(ticket)try{await ticket.refund()}catch{};return reply({error:e.status===402?e.message:'שירות הקרדיטים אינו זמין כרגע.',code:e.status===402?'credits_exhausted':'credits_unavailable'},e.status||503)}
+}
