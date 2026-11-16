@@ -9,5 +9,5 @@ export function createTranslator(catalog={}){
  const entries=Object.entries(catalog).filter(([key,value])=>typeof value==='string'&&key!==value&&key.length>=3).sort((a,b)=>b[0].length-a[0].length);
  const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
  const pattern=entries.length?new RegExp(entries.map(([key])=>escape(key)).join('|'),'gu'):null;
- return text=>{if(typeof text!=='string')return text;if(Object.hasOwn(catalog,text))return catalog[text];return pattern?text.replace(pattern,key=>catalog[key]):text};
+ return text=>{if(typeof text!=='string')return text;if(Object.hasOwn(catalog,text))return catalog[text];return pattern?text.replace(pattern,(key,offset,whole)=>{const letter=/[\p{L}\p{N}\p{M}_]/u;const before=whole[offset-1]||'',after=whole[offset+key.length]||'';if((letter.test(key[0])&&letter.test(before))||(letter.test(key.at(-1))&&letter.test(after)))return key;return catalog[key]}):text};
 }
