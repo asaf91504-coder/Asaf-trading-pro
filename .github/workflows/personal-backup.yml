@@ -1,0 +1,29 @@
+name: Encrypted personal-data backup
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Export and verify encrypted personal data
+        env:
+          ASAF_EXTERNAL_SERVICES_APPROVED: 'true'
+          ASAF_REDIS_REST_URL: ${{ secrets.ASAF_REDIS_REST_URL }}
+          ASAF_REDIS_REST_TOKEN: ${{ secrets.ASAF_REDIS_READONLY_TOKEN }}
+          ASAF_BACKUP_KEY: ${{ secrets.ASAF_BACKUP_KEY }}
+        run: node scripts/account-backup.mjs export personal-backup.enc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: encrypted-personal-backup
+          path: personal-backup.enc
+          retention-days: 7
+          if-no-files-found: error
