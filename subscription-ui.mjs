@@ -1,3 +1,4 @@
+import {subscriptionCopy} from './subscription-copy.mjs';
 import {PLANS,consentFor} from './server/plans.mjs';
 const $=id=>document.getElementById(id),t=text=>window.asafTranslate?.(text)||text;
 let state=null,busy=false,retryAction;
@@ -7,7 +8,21 @@ async function request(action){
  const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{planId:$('billingPlan').value,consent:consentFor($('billingPlan').value)}:{})})}:{}),signal:AbortSignal.timeout(45000)});
  const data=await r.json();if(!r.ok){const error=Error(data.error||t('לא ניתן לבדוק את המנוי כרגע. נסה שוב.'));error.status=r.status;throw error;}return data;
 }
+const copy=(key,values)=>subscriptionCopy(document.documentElement.lang,key,values);
+function renderPlan(){
+ const verifiedPlan=state?.status==='paid'&&state?.credits?.planId;
+ if(verifiedPlan&&Object.hasOwn(PLANS,verifiedPlan))$('billingPlan').value=verifiedPlan;
+ const plan=PLANS[$('billingPlan').value]||PLANS.starter;
+ const values={price:plan.price,credits:plan.weeklyCredits.toLocaleString(document.documentElement.lang||'he'),bonus:plan.bonusPercent};
+ $('planTitle').textContent='ASAF Pro · '+plan.id[0].toUpperCase()+plan.id.slice(1);
+ $('billingPlanDetails').textContent=copy('summary',values);
+ document.querySelector('.subscription-price bdi').textContent='$'+plan.price;
+ $('billingConsentText').textContent=copy('consent',values);
+ $('billingSubscribe').textContent=copy('checkout',values);
+ $('billingCredits').textContent=state?.credits?copy('balance',{remaining:state.credits.remaining,limit:state.credits.limit,date:date(state.credits.resetsAt)}):'';
+}
 function render(){
+ renderPlan();
  if(!state)return;
  const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2&&state.checkoutAllowed!==false,auth=state.authenticated===true;
  $('billingStatus').textContent=t(!ready?'ההרשמה למנוי תיפתח בקרוב. החיוב עדיין אינו פעיל.':!auth?'התחבר לחשבון כדי לקבל 14 ימים בחינם.':state.status==='trial'?'תקופת הניסיון שלך פעילה.':state.status==='paid'?'המנוי שלך פעיל.':state.status==='expired'?'תקופת הניסיון הסתיימה.':'14 ימי ניסיון בחינם מחכים לך.');
@@ -18,13 +33,6 @@ function render(){
  if(state.subscriptionStatus==='CANCELLED')$('billingDate').textContent+=' '+t('החידוש החודשי בוטל.');
  show('billingSandbox',state.sandbox===true);show('billingLogin',ready&&!auth);show('billingTrial',ready&&auth&&state.status==='not_started');show('billingContinue',ready&&auth&&state.access);
  show('billingCheckout',checkoutReady&&auth&&state.status!=='paid'&&!state.canCancel);show('billingCancel',ready&&auth&&state.canCancel);show('billingSync',ready&&auth&&!!state.subscriptionStatus);
- const plan=PLANS[$('billingPlan').value];
- $('planTitle').textContent='ASAF Pro · '+plan.id[0].toUpperCase()+plan.id.slice(1);
- $('billingPlanDetails').textContent=`$${plan.price} / month · ${plan.weeklyCredits} credits / week · +${plan.bonusPercent}% first month`;
- document.querySelector('.subscription-price bdi').textContent='$'+plan.price;
- $('billingConsentText').textContent=`אני מאשר חיוב מתחדש של $${plan.price} USD לחודש עבור ${plan.weeklyCredits} קרדיטים לשבוע. ניתן לבטל את החידוש בכל עת.`;
- $('billingSubscribe').textContent=`PayPal · $${plan.price} / month`;
- $('billingCredits').textContent=state.credits?`${state.credits.remaining} / ${state.credits.limit} קרדיטים זמינים · חידוש: ${date(state.credits.resetsAt)}`:'';
  if(!checkoutReady&&state.status!=='paid')$('billingStatus').textContent=t('המסלולים החדשים בהכנה. רכישה תיפתח לאחר בדיקת התשלום ומכסות השימוש.');
  if(state.paymentPilot&&checkoutReady)$('billingStatus').textContent=t('בדיקת מנהל: זהו חיוב אמיתי ומתחדש. הצ׳אט בתשלום והחיפוש עדיין בהכנה. ניתן לבטל את החידוש לאחר הבדיקה.');
  $('billingSubscribe').disabled=busy||!checkoutReady||!$('billingConsent').checked;
@@ -37,8 +45,8 @@ async function perform(action){
   if(data.approvalUrl){const u=new URL(data.approvalUrl);if(u.protocol!=='https:'||!['www.paypal.com','www.sandbox.paypal.com'].includes(u.hostname))throw Error('Invalid payment destination');location.assign(u.href);return;}
   state=data;render();$('billingMessage').textContent=action==='cancel'?t('החידוש החודשי בוטל.'):action==='sync'&&!state.access?t('טרם התקבל אישור תשלום. אפשר לבדוק שוב.'):'';
  }catch(e){
-  if(e.status===401){state={...state,authenticated:false,access:false,status:'not_started',subscriptionStatus:null,canCancel:false,trialEndsAt:null,paidUntil:null};retryAction=undefined;}
-  $('billingMessage').textContent=t(e.message);show('billingRetry',true);
+  if(e.status===401){state={...state,authenticated:false,access:false,status:'not_started',subscriptionStatus:null,canCancel:false,trialEndsAt:null,paidUntil:null,credits:null};retryAction=undefined;}
+  $('billingMessage').textContent=e.status?t(e.message):copy('error');show('billingRetry',true);
  }
  finally{busy=false;for(const id of ['billingTrial','billingSync','billingCancel'])$(id).disabled=false;render();}
 }
@@ -51,5 +59,7 @@ $('billingPlan').onchange=()=>{$('billingConsent').checked=false;render();};
 $('billingTrial').onclick=()=>perform('start-trial');$('billingSubscribe').onclick=()=>{if($('billingConsent').checked)perform('subscribe');};$('billingConsent').onchange=render;
 $('billingSync').onclick=()=>perform('sync');$('billingRetry').onclick=()=>perform(retryAction);
 $('billingCancel').onclick=()=>{if(window.confirm(t('לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.')))perform('cancel');};
+for(const id of ['billingPlanDetails','billingConsentText','billingSubscribe','billingCredits'])$(id).setAttribute('translate','no');
 window.addEventListener('asaf:language',render);
+renderPlan();
 await perform();if(returned&&state?.authenticated&&state?.ready)await perform('sync');

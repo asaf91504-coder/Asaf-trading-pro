@@ -1,15 +1,16 @@
+import {subscriptionCopy} from '../subscription-copy.mjs';
 import {PLANS,consentFor} from '../server/plans.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-const source=readFileSync(new URL('../subscription-ui.mjs',import.meta.url),'utf8').replace(/^import .*\n/,'');
+const source=readFileSync(new URL('../subscription-ui.mjs',import.meta.url),'utf8').replace(/^import .*\n/gm,'');
 const expired={enabled:true,ready:true,pricingVersion:2,authenticated:true,access:false,status:'expired',canCancel:false,subscriptionStatus:'APPROVAL_PENDING'};
 const paid={...expired,access:true,status:'paid',subscriptionStatus:'ACTIVE',canCancel:true,paidUntil:Date.now()+86400000};
 async function page(responses,search=''){
  const elements=new Map(),calls=[],navigation=[];
- const get=id=>{if(!elements.has(id))elements.set(id,{hidden:true,disabled:false,checked:false,textContent:'',value:id==='billingPlan'?'starter':''});return elements.get(id);};
- const context={PLANS,consentFor,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
+ const get=id=>{if(!elements.has(id))elements.set(id,{hidden:true,disabled:false,checked:false,textContent:'',setAttribute(){},value:id==='billingPlan'?'starter':''});return elements.get(id);};
+ const context={subscriptionCopy,PLANS,consentFor,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
   calls.push(options.body?JSON.parse(options.body).action:'GET');
   const next=responses.shift();assert.ok(next,'Unexpected request');if(next instanceof Error)throw next;
   return {ok:!next.httpError,status:next.httpError||200,json:async()=>next.httpError?{error:'יש להיכנס לחשבון.'}:next};
@@ -44,4 +45,23 @@ test('pending and suspended payments do not display paid access',async()=>{
   const p=await page([{...expired,subscriptionStatus}]);
   assert.equal(p.get('billingContinue').hidden,true);assert.notEqual(p.get('billingStatus').textContent,'תקופת הניסיון הסתיימה.');assert.equal(p.get('billingSync').hidden,false);
  }
+});
+
+test('selected plan price remains correct when account lookup fails',async()=>{
+ const p=await page([Error('network failure')],'?plan=premium');
+ assert.equal(p.get('price').textContent,'$359');
+ assert.match(p.get('billingPlanDetails').textContent,/2,500/);
+ assert.doesNotMatch(p.get('billingPlanDetails').textContent,/month|week/);
+ assert.equal(p.get('billingRetry').hidden,false);
+});
+test('verified paid plan overrides a stale selection link',async()=>{
+ const p=await page([{...paid,credits:{planId:'pro',remaining:500,limit:600,resetsAt:Date.now()+86400000}}],'?plan=starter');
+ assert.equal(p.get('billingPlan').value,'pro');
+ assert.equal(p.get('price').textContent,'$115');
+ assert.match(p.get('billingCredits').textContent,/500 מתוך 600/);
+});
+test('expired authentication clears the previous accounts credit balance',async()=>{
+ const p=await page([{...paid,credits:{planId:'pro',remaining:500,limit:600,resetsAt:Date.now()+86400000}},{httpError:401}]);
+ await p.get('billingSync').onclick();
+ assert.equal(p.get('billingCredits').textContent,'');
 });

@@ -1,0 +1,20 @@
+// Keep prices, consent and balances together in the selected interface language.
+const rows={
+he:['${price} לחודש · {credits} קרדיטים לשבוע · {bonus}% תוספת בחודש הראשון','אני מאשר חיוב מתחדש של ${price} USD לחודש עבור {credits} קרדיטים לשבוע. ניתן לבטל את החידוש בכל עת.','המשך ל־PayPal · ${price} לחודש','{remaining} מתוך {limit} קרדיטים זמינים · חידוש: {date}','לא ניתן לבדוק את המנוי כרגע. נסה שוב.'],
+en:['${price} / month · {credits} credits / week · +{bonus}% in the first month','I approve a recurring charge of ${price} USD per month for {credits} credits per week. Renewal can be cancelled at any time.','Continue to PayPal · ${price} / month','{remaining} of {limit} credits available · Resets: {date}','Unable to check your subscription. Please try again.'],
+es:['${price} al mes · {credits} créditos por semana · +{bonus}% el primer mes','Autorizo un cargo recurrente de ${price} USD al mes por {credits} créditos semanales. Puedo cancelar la renovación en cualquier momento.','Continuar a PayPal · ${price} al mes','{remaining} de {limit} créditos disponibles · Renovación: {date}','No se pudo comprobar la suscripción. Inténtalo de nuevo.'],
+ar:['${price} شهريًا · {credits} رصيد أسبوعيًا · +{bonus}% في الشهر الأول','أوافق على خصم متكرر بقيمة ${price} دولار أمريكي شهريًا مقابل {credits} رصيد أسبوعيًا. يمكن إلغاء التجديد في أي وقت.','المتابعة إلى PayPal · ${price} شهريًا','{remaining} من {limit} رصيد متاح · التجديد: {date}','تعذّر التحقق من الاشتراك. حاول مجددًا.'],
+fr:['${price} par mois · {credits} crédits par semaine · +{bonus}% le premier mois','J’autorise un paiement récurrent de ${price} USD par mois pour {credits} crédits par semaine. Le renouvellement peut être annulé à tout moment.','Continuer vers PayPal · ${price} par mois','{remaining} crédits disponibles sur {limit} · Renouvellement : {date}','Impossible de vérifier votre abonnement. Réessayez.'],
+de:['${price} pro Monat · {credits} Credits pro Woche · +{bonus}% im ersten Monat','Ich stimme einer wiederkehrenden Zahlung von ${price} USD pro Monat für {credits} Credits pro Woche zu. Die Verlängerung kann jederzeit gekündigt werden.','Weiter zu PayPal · ${price} pro Monat','{remaining} von {limit} Credits verfügbar · Erneuerung: {date}','Dein Abonnement konnte nicht geprüft werden. Versuche es erneut.'],
+pt:['${price} por mês · {credits} créditos por semana · +{bonus}% no primeiro mês','Autorizo uma cobrança recorrente de ${price} USD por mês por {credits} créditos semanais. A renovação pode ser cancelada a qualquer momento.','Continuar para PayPal · ${price} por mês','{remaining} de {limit} créditos disponíveis · Renovação: {date}','Não foi possível verificar a assinatura. Tente novamente.'],
+ru:['${price} в месяц · {credits} кредитов в неделю · +{bonus}% в первый месяц','Я подтверждаю регулярное списание ${price} USD в месяц за {credits} кредитов в неделю. Продление можно отменить в любой момент.','Перейти в PayPal · ${price} в месяц','Доступно {remaining} из {limit} кредитов · Обновление: {date}','Не удалось проверить подписку. Попробуйте ещё раз.'],
+zh:['每月 ${price} · 每周 {credits} 点额度 · 首月额外赠送 {bonus}%','我同意每月定期支付 ${price} 美元，获得每周 {credits} 点额度。可随时取消续订。','前往 PayPal · 每月 ${price}','可用额度 {remaining} / {limit} · 重置时间：{date}','无法查询订阅，请重试。'],
+ja:['月額 ${price} · 毎週 {credits} クレジット · 初月は {bonus}% 追加','毎週 {credits} クレジットの利用枠に対して、月額 ${price} USD の継続課金に同意します。更新はいつでもキャンセルできます。','PayPalへ進む · 月額 ${price}','利用可能：{remaining} / {limit} クレジット · 更新：{date}','サブスクリプションを確認できません。再試行してください。']
+};
+const keys=['summary','consent','checkout','balance','error'];
+export function subscriptionCopy(language,key,values={}){
+ const row=rows[String(language||'he').split('-')[0]]||rows.en;
+ const template=row[keys.indexOf(key)];
+ if(!template)throw Error('Unknown subscription message');
+ return template.replace(/\{(\w+)\}/g,(_,name)=>String(values[name]??''));
+}
