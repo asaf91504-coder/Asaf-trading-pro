@@ -54,7 +54,7 @@ const params=new URLSearchParams(location.search),returned=params.get('paypal')=
 if(Object.hasOwn(PLANS,params.get('plan')))$('billingPlan').value=params.get('plan');
 // PayPal callback parameters are never proof of payment. The server looks up
 // only the authenticated account's own saved subscription.
-if(params.has('paypal')||params.has('subscription_id')||params.has('ba_token')||params.has('token'))history.replaceState(null,'','/subscription.html');
+if(params.has('paypal')||params.has('subscription_id')||params.has('ba_token')||params.has('token'))history.replaceState(null,'','/subscription.html'+(params.has('testPayment')?'?testPayment='+encodeURIComponent(params.get('testPayment'))+'#paymentTest':''));
 $('billingPlan').onchange=()=>{$('billingConsent').checked=false;render();};
 $('billingTrial').onclick=()=>perform('start-trial');$('billingSubscribe').onclick=()=>{if($('billingConsent').checked)perform('subscribe');};$('billingConsent').onchange=render;
 $('billingSync').onclick=()=>perform('sync');$('billingRetry').onclick=()=>perform(retryAction);
