@@ -1,3 +1,4 @@
+import {subscriptionTranslations} from './subscription-translations.mjs';
 const source=[
 'טיוטה ליומן המסחר',
 'בדוק את פרטי העסקה לפני השמירה. מחיר יציאה ריק פירושו עסקה פתוחה. אין ביצוע מסחר.',
@@ -19,4 +20,4 @@ ar:['مسودة سجل التداول','راجع تفاصيل الصفقة قب�
 zh:['交易日志草稿','保存前请核对交易信息。未平仓交易请留空退出价格。此操作不会执行交易。','保存到日志和账户','保存到此设备','交易已保存到日志和账户。','交易仅保存到此设备。','打开交易日志','未平仓交易','添加交易','绩效仅统计已平仓交易。退出价格为空表示尚未平仓。','重试保存到账户','副本已保存到此设备。','网络搜索尚未启用','网络搜索已启用','账户已更改或无法验证登录。请重新发送请求。'],
 ja:['取引日誌の下書き','保存前に取引内容を確認してください。未決済の取引は決済価格を空欄にします。注文は実行されません。','日誌とアカウントに保存','この端末に保存','日誌とアカウントに取引を保存しました。','この端末にのみ取引を保存しました。','取引日誌を開く','未決済の取引','取引を追加','成績は決済済みの取引のみで計算します。決済価格が空欄の場合は未決済です。','アカウントへの保存を再試行','この端末に保存しました。','ウェブ検索はまだ有効ではありません','ウェブ検索は有効です','アカウントが変更されたか、ログインを確認できませんでした。もう一度送信してください。']
 };
-export const launchTranslations=Object.fromEntries(Object.entries(rows).map(([code,values])=>[code,Object.fromEntries(source.map((key,i)=>[key,values[i]]))]));
+export const launchTranslations=Object.fromEntries(Object.entries(rows).map(([code,values])=>[code,{...Object.fromEntries(source.map((key,i)=>[key,values[i]])),...subscriptionTranslations[code]}]));

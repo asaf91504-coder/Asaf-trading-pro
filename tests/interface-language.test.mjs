@@ -18,3 +18,9 @@ test('exact and interpolated interface strings preserve tickers, prices and punc
  assert.equal(tr('נתח גרף'),'Analyze chart');assert.equal(tr('Unchanged 👋'),'Unchanged 👋');
  assert.equal(createTranslator()('עברית'),'עברית');
 });
+
+test('partial catalog matches never corrupt longer words',()=>{
+ const tr=createTranslator({'חשב':'Calculate','מחקר':'Research','ללא':'None'});
+ assert.equal(tr('בחשבון'),'בחשבון');assert.equal(tr('למחקרים'),'למחקרים');
+ assert.equal(tr('מחקר · 100'),'Research · 100');
+});
