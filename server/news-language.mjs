@@ -12,7 +12,7 @@ export async function translateNews(articles,language,{env=process.env,run=comma
  const result=()=>({articles:items.map((a,i)=>cached[i]?{...a,title:cached[i],originalTitle:a.title,titleLanguage:language}:a),translation:cached.every(Boolean)?'translated':cached.some(Boolean)?'partial':'unavailable',language});
  if(!missing.length)return result();
  if(cacheOnly)return {...result(),translation:'pending'};
- const batch=missing.slice(0,8),input=batch.map(i=>items[i]);
+ const batch=missing.slice(0,25),input=batch.map(i=>items[i]);
  const key=storageKey('news:translation:batch5:'+language+':'+createHash('sha256').update(JSON.stringify(input.map(a=>a.title))).digest('hex'),env);
  let acquired=false;
  try{

@@ -1,0 +1,32 @@
+name: Production availability checks
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['scripts/check-operations.mjs', 'scripts/check-deployment.mjs', '.github/workflows/operations.yml']
+permissions:
+  contents: read
+concurrency:
+  group: production-availability
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check public production endpoints
+        run: node scripts/check-operations.mjs > operations.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: availability-report
+          path: operations.json
+          retention-days: 7
