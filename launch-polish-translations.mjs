@@ -40,7 +40,7 @@ export const polishTranslations={
     "הורד שיחה": "Download conversation",
     "מחק שיחה": "Delete conversation",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "Sign in for automatic saving and access to conversations on other devices.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Cancel renewal on this page or in PayPal. Paid access remains until the end of the period.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Cancel renewal on the subscription page or in PayPal. Paid access remains until the end of the period.",
     "בחירת מסלול Starter": "Choose your plan · Starter",
     "בחירת מסלול Plus": "Choose your plan · Plus",
     "בחירת מסלול Pro": "Choose your plan · Pro",
@@ -62,7 +62,12 @@ export const polishTranslations={
     "גישה עד:": "Access until:",
     "מכין כניסה מאובטחת עם Google…": "Preparing Google sign-in…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Choose an account with the Google button, then start your trial or manage your subscription.",
-    "מנוי | ASAF Pro": "Your subscription · ASAF Pro"
+    "מנוי | ASAF Pro": "Your subscription · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "Waiting for subscription approval in PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "Your subscription was approved, but payment is not confirmed yet. Select Check payment.",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Your subscription is suspended. Check your payment method in PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Payment has not been confirmed yet. You can check again.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancel monthly renewal? Paid access will remain until the end of the period."
   },
   "es": {
     "מחקר שמתאים לך": "Investiga a tu manera",
@@ -105,7 +110,7 @@ export const polishTranslations={
     "הורד שיחה": "Descargar conversación",
     "מחק שיחה": "Eliminar conversación",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "Inicia sesión para guardar automáticamente y acceder a conversaciones desde otros dispositivos.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Cancela la renovación aquí o en PayPal. El acceso pagado se mantiene hasta el fin del período.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Cancela la renovación en la página de suscripción o en PayPal. El acceso pagado continúa hasta el final del período.",
     "בחירת מסלול Starter": "Elige tu plan · Starter",
     "בחירת מסלול Plus": "Elige tu plan · Plus",
     "בחירת מסלול Pro": "Elige tu plan · Pro",
@@ -127,7 +132,12 @@ export const polishTranslations={
     "גישה עד:": "Acceso hasta:",
     "מכין כניסה מאובטחת עם Google…": "Preparando acceso con Google…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Elige una cuenta con Google y luego inicia la prueba o gestiona tu suscripción.",
-    "מנוי | ASAF Pro": "Tu suscripción · ASAF Pro"
+    "מנוי | ASAF Pro": "Tu suscripción · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "Esperando la aprobación de la suscripción en PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "La suscripción está aprobada, pero el pago aún no está confirmado. Selecciona Comprobar pago.",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Tu suscripción está suspendida. Revisa tu método de pago en PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "El pago aún no está confirmado. Puedes comprobarlo de nuevo.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "¿Cancelar la renovación mensual? El acceso pagado continuará hasta el final del período."
   },
   "ar": {
     "מחקר שמתאים לך": "ابحث بطريقتك",
@@ -170,7 +180,7 @@ export const polishTranslations={
     "הורד שיחה": "تنزيل المحادثة",
     "מחק שיחה": "حذف المحادثة",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "سجّل الدخول للحفظ التلقائي والوصول إلى المحادثات من أجهزة أخرى.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "ألغِ التجديد في هذه الصفحة أو في PayPal. يستمر الوصول المدفوع حتى نهاية الفترة.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "ألغِ التجديد من صفحة الاشتراك أو من PayPal. يستمر الوصول المدفوع حتى نهاية الفترة.",
     "בחירת מסלול Starter": "اختر خطتك · Starter",
     "בחירת מסלול Plus": "اختر خطتك · Plus",
     "בחירת מסלול Pro": "اختر خطتك · Pro",
@@ -192,7 +202,12 @@ export const polishTranslations={
     "גישה עד:": "الوصول حتى:",
     "מכין כניסה מאובטחת עם Google…": "جارٍ تجهيز الدخول عبر Google…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "اختر حسابًا بزر Google ثم ابدأ التجربة أو أدر الاشتراك.",
-    "מנוי | ASAF Pro": "اشتراكك · ASAF Pro"
+    "מנוי | ASAF Pro": "اشتراكك · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "بانتظار الموافقة على الاشتراك في PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "تمت الموافقة على الاشتراك، لكن الدفع لم يُؤكد بعد. اضغط على التحقق من الدفع.",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "تم تعليق اشتراكك. تحقق من وسيلة الدفع في PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "لم يتم تأكيد الدفع بعد. يمكنك التحقق مرة أخرى.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "هل تريد إلغاء التجديد الشهري؟ يستمر الوصول المدفوع حتى نهاية الفترة."
   },
   "fr": {
     "מחקר שמתאים לך": "La recherche à votre façon",
@@ -235,7 +250,7 @@ export const polishTranslations={
     "הורד שיחה": "Télécharger la conversation",
     "מחק שיחה": "Supprimer la conversation",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "Connectez-vous pour sauvegarder automatiquement et accéder aux conversations sur d’autres appareils.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Annulez le renouvellement ici ou dans PayPal. L’accès payé reste valable jusqu’à la fin de la période.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Annulez le renouvellement sur la page d’abonnement ou dans PayPal. L’accès payé reste disponible jusqu’à la fin de la période.",
     "בחירת מסלול Starter": "Choisissez votre offre · Starter",
     "בחירת מסלול Plus": "Choisissez votre offre · Plus",
     "בחירת מסלול Pro": "Choisissez votre offre · Pro",
@@ -257,7 +272,12 @@ export const polishTranslations={
     "גישה עד:": "Accès jusqu’au :",
     "מכין כניסה מאובטחת עם Google…": "Préparation de la connexion Google…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Choisissez un compte avec Google, puis démarrez l’essai ou gérez l’abonnement.",
-    "מנוי | ASAF Pro": "Votre abonnement · ASAF Pro"
+    "מנוי | ASAF Pro": "Votre abonnement · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "En attente de l’approbation de l’abonnement dans PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "L’abonnement est approuvé, mais le paiement n’est pas encore confirmé. Sélectionnez Vérifier le paiement.",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Votre abonnement est suspendu. Vérifiez votre moyen de paiement dans PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Le paiement n’est pas encore confirmé. Vous pouvez vérifier à nouveau.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Annuler le renouvellement mensuel ? L’accès payé reste disponible jusqu’à la fin de la période."
   },
   "de": {
     "מחקר שמתאים לך": "Recherche nach deinen Bedürfnissen",
@@ -300,7 +320,7 @@ export const polishTranslations={
     "הורד שיחה": "Gespräch herunterladen",
     "מחק שיחה": "Gespräch löschen",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "Melde dich an, um automatisch zu speichern und Gespräche auf anderen Geräten zu öffnen.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Verlängerung hier oder bei PayPal kündigen. Bezahlter Zugang bleibt bis zum Periodenende bestehen.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Kündige die Verlängerung auf der Abonnementseite oder bei PayPal. Der bezahlte Zugang bleibt bis zum Ende des Zeitraums bestehen.",
     "בחירת מסלול Starter": "Wähle deinen Tarif · Starter",
     "בחירת מסלול Plus": "Wähle deinen Tarif · Plus",
     "בחירת מסלול Pro": "Wähle deinen Tarif · Pro",
@@ -322,7 +342,12 @@ export const polishTranslations={
     "גישה עד:": "Zugang bis:",
     "מכין כניסה מאובטחת עם Google…": "Google-Anmeldung wird vorbereitet…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Wähle über Google ein Konto und starte die Testphase oder verwalte dein Abo.",
-    "מנוי | ASAF Pro": "Dein Abonnement · ASAF Pro"
+    "מנוי | ASAF Pro": "Dein Abonnement · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "Warten auf die Genehmigung des Abonnements bei PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "Das Abonnement wurde genehmigt, die Zahlung ist aber noch nicht bestätigt. Wähle Zahlung prüfen.",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Dein Abonnement ist ausgesetzt. Prüfe deine Zahlungsmethode bei PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Die Zahlung wurde noch nicht bestätigt. Du kannst erneut prüfen.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Monatliche Verlängerung kündigen? Der bezahlte Zugang bleibt bis zum Ende des Zeitraums bestehen."
   },
   "pt": {
     "מחקר שמתאים לך": "Pesquise do seu jeito",
@@ -365,7 +390,7 @@ export const polishTranslations={
     "הורד שיחה": "Baixar conversa",
     "מחק שיחה": "Excluir conversa",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "Entre para salvar automaticamente e acessar conversas em outros dispositivos.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Cancele a renovação aqui ou no PayPal. O acesso pago permanece até o fim do período.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Cancele a renovação na página da assinatura ou no PayPal. O acesso pago continua até o fim do período.",
     "בחירת מסלול Starter": "Escolha seu plano · Starter",
     "בחירת מסלול Plus": "Escolha seu plano · Plus",
     "בחירת מסלול Pro": "Escolha seu plano · Pro",
@@ -387,7 +412,12 @@ export const polishTranslations={
     "גישה עד:": "Acesso até:",
     "מכין כניסה מאובטחת עם Google…": "Preparando login com Google…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Escolha uma conta pelo Google e inicie o teste ou gerencie a assinatura.",
-    "מנוי | ASAF Pro": "Sua assinatura · ASAF Pro"
+    "מנוי | ASAF Pro": "Sua assinatura · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "Aguardando a aprovação da assinatura no PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "A assinatura foi aprovada, mas o pagamento ainda não foi confirmado. Selecione Verificar pagamento.",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Sua assinatura está suspensa. Verifique a forma de pagamento no PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "O pagamento ainda não foi confirmado. Você pode verificar novamente.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancelar a renovação mensal? O acesso pago continuará até o fim do período."
   },
   "ru": {
     "מחקר שמתאים לך": "Исследуйте по-своему",
@@ -430,7 +460,7 @@ export const polishTranslations={
     "הורד שיחה": "Скачать разговор",
     "מחק שיחה": "Удалить разговор",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "Войдите для автосохранения и доступа к разговорам с других устройств.",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Отмените продление здесь или в PayPal. Оплаченный доступ сохранится до конца периода.",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "Отмените продление на странице подписки или в PayPal. Оплаченный доступ сохранится до конца периода.",
     "בחירת מסלול Starter": "Выберите тариф · Starter",
     "בחירת מסלול Plus": "Выберите тариф · Plus",
     "בחירת מסלול Pro": "Выберите тариф · Pro",
@@ -452,7 +482,12 @@ export const polishTranslations={
     "גישה עד:": "Доступ до:",
     "מכין כניסה מאובטחת עם Google…": "Подготовка входа через Google…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Выберите аккаунт через Google, затем начните пробный период или управляйте подпиской.",
-    "מנוי | ASAF Pro": "Ваша подписка · ASAF Pro"
+    "מנוי | ASAF Pro": "Ваша подписка · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "Ожидается подтверждение подписки в PayPal.",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "Подписка одобрена, но оплата ещё не подтверждена. Нажмите «Проверить оплату».",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Ваша подписка приостановлена. Проверьте способ оплаты в PayPal.",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Оплата ещё не подтверждена. Можно проверить снова.",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Отменить ежемесячное продление? Оплаченный доступ сохранится до конца периода."
   },
   "zh": {
     "מחקר שמתאים לך": "按您的方式研究",
@@ -495,7 +530,7 @@ export const polishTranslations={
     "הורד שיחה": "下载对话",
     "מחק שיחה": "删除对话",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "登录后可自动保存，并在其他设备访问对话。",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "在此页面或PayPal取消续订。付费访问保留至本期结束。",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "在订阅页面或PayPal中取消续订。已付费的访问权限将保留至当前周期结束。",
     "בחירת מסלול Starter": "选择套餐 · Starter",
     "בחירת מסלול Plus": "选择套餐 · Plus",
     "בחירת מסלול Pro": "选择套餐 · Pro",
@@ -517,7 +552,12 @@ export const polishTranslations={
     "גישה עד:": "访问有效期至：",
     "מכין כניסה מאובטחת עם Google…": "正在准备Google登录…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "通过Google按钮选择账户，然后开始试用或管理订阅。",
-    "מנוי | ASAF Pro": "您的订阅 · ASAF Pro"
+    "מנוי | ASAF Pro": "您的订阅 · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "正在等待PayPal批准订阅。",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "订阅已获批准，但付款尚未确认。请选择“检查付款”。",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "您的订阅已暂停。请在PayPal中检查付款方式。",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "付款尚未确认。您可以再次检查。",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "取消每月续订？已付费的访问权限将保留至当前周期结束。"
   },
   "ja": {
     "מחקר שמתאים לך": "自分に合ったリサーチ",
@@ -560,7 +600,7 @@ export const polishTranslations={
     "הורד שיחה": "会話をダウンロード",
     "מחק שיחה": "会話を削除",
     "היכנס לחשבון לשמירה אוטומטית ולגישה לשיחות ממכשיר אחר.": "ログインすると自動保存でき、他の端末から会話にアクセスできます。",
-    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "このページまたはPayPalで更新をキャンセルできます。支払い済みのアクセスは期間終了まで継続します。",
+    "בטל את החידוש בעמוד המנוי או ב־PayPal. הגישה ששולמה נשארת עד סוף התקופה.": "購読ページまたはPayPalで更新をキャンセルできます。支払い済みのアクセスは期間終了まで継続します。",
     "בחירת מסלול Starter": "プランを選択 · Starter",
     "בחירת מסלול Plus": "プランを選択 · Plus",
     "בחירת מסלול Pro": "プランを選択 · Pro",
@@ -582,6 +622,11 @@ export const polishTranslations={
     "גישה עד:": "アクセス期限：",
     "מכין כניסה מאובטחת עם Google…": "Googleログインを準備中…",
     "בחר חשבון באמצעות הכפתור של Google. לאחר הכניסה תוכל להפעיל ניסיון או לנהל את המנוי.": "Googleボタンでアカウントを選択し、試用を開始または購読を管理します。",
-    "מנוי | ASAF Pro": "ご利用の購読 · ASAF Pro"
+    "מנוי | ASAF Pro": "ご利用の購読 · ASAF Pro",
+    "ממתינים לאישור המנוי ב־PayPal.": "PayPalでの購読承認を待っています。",
+    "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "購読は承認されましたが、支払いはまだ確認されていません。「支払いを確認」を選択してください。",
+    "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "購読は一時停止中です。PayPalで支払い方法を確認してください。",
+    "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "支払いはまだ確認されていません。再度確認できます。",
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "毎月の更新をキャンセルしますか？支払い済みのアクセスは期間終了まで継続します。"
   }
 };
