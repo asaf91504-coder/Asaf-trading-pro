@@ -19,6 +19,7 @@ function render(){
  show('billingSandbox',state.sandbox===true);show('billingLogin',ready&&!auth);show('billingTrial',ready&&auth&&state.status==='not_started');show('billingContinue',ready&&auth&&state.access);
  show('billingCheckout',checkoutReady&&auth&&state.status!=='paid'&&!state.canCancel);show('billingCancel',ready&&auth&&state.canCancel);show('billingSync',ready&&auth&&!!state.subscriptionStatus);
  const plan=PLANS[$('billingPlan').value];
+ $('planTitle').textContent='ASAF Pro · '+plan.id[0].toUpperCase()+plan.id.slice(1);
  $('billingPlanDetails').textContent=`$${plan.price} / month · ${plan.weeklyCredits} credits / week · +${plan.bonusPercent}% first month`;
  document.querySelector('.subscription-price bdi').textContent='$'+plan.price;
  $('billingConsentText').textContent=`אני מאשר חיוב מתחדש של $${plan.price} USD לחודש עבור ${plan.weeklyCredits} קרדיטים לשבוע. ניתן לבטל את החידוש בכל עת.`;
@@ -42,6 +43,7 @@ async function perform(action){
  finally{busy=false;for(const id of ['billingTrial','billingSync','billingCancel'])$(id).disabled=false;render();}
 }
 const params=new URLSearchParams(location.search),returned=params.get('paypal')==='return';
+if(Object.hasOwn(PLANS,params.get('plan')))$('billingPlan').value=params.get('plan');
 // PayPal callback parameters are never proof of payment. The server looks up
 // only the authenticated account's own saved subscription.
 if(params.has('paypal')||params.has('subscription_id')||params.has('ba_token')||params.has('token'))history.replaceState(null,'','/subscription.html');
