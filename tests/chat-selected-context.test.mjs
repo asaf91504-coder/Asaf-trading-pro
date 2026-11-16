@@ -18,8 +18,8 @@ test('without candles, the model receives the current selection separately from 
   })}));
   assert.equal(response.status,200);assert.equal(calls,1);assert.equal(sent.model,'openrouter/free');
   assert.match(sent.messages[0].content,/ההתמחות המרכזית שלך היא שוקי ההון/);
-  assert.match(sent.messages[0].content,/גם בנושאים אחרים/);
-  assert.doesNotMatch(sent.messages[0].content,/אל תספק עצות בנושאים שאינם שוק ההון/);
+  assert.doesNotMatch(sent.messages[0].content,/מותר ורצוי לנהל שיחה טבעית גם בנושאים אחרים/);
+  assert.match(sent.messages[0].content,/PRODUCT SCOPE/);
   const current=sent.messages.at(-1).content;
   assert.match(current,/SELECTED_CHART.*client selection only/s);assert.match(current,/"symbol":"NVDA"/);assert.match(current,/"interval":"1week"/);
   assert.match(current,/No verified OHLCV/);assert.doesNotMatch(current,/AAPL|100/);
