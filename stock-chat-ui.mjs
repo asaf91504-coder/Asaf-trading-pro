@@ -353,7 +353,7 @@ window.addEventListener('asaf:load-dataset',event=>{
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
  try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT);if(data.source==='CoinLore'&&(cryptoResearchSymbol(symbol)!==symbol||!cryptoIntervals.has(data.interval)))throw Error('סימול הקריפטו או טווח הזמן אינם נתמכים.');
  const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...marketSnapshotMetadata(data),...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
- chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;$("chart").replaceChildren();loaded={symbol,bars,context,...meta};if(Array.from($('marketInterval').options||[]).some(option=>option.value===interval))$('marketInterval').value=interval;localChart.setData(symbol,bars);try{if(data.source==='Intrinio')sessionStorage.removeItem(key);else sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
+ chartRevision++;resetRequest();chartSymbol.value=symbol;$('activeSymbol').textContent=symbol;loaded={symbol,bars,context,...meta};if(Array.from($('marketInterval').options||[]).some(option=>option.value===interval))$('marketInterval').value=interval;localChart.setData(symbol,bars);try{if(data.source==='Intrinio')sessionStorage.removeItem(key);else sessionStorage.setItem(key,JSON.stringify({symbol,bars,...meta}))}catch{}
  renderStatus();datasetReady();status.textContent='נתוני '+symbol+' נטענו לגרף ולצ׳אט.';
  }catch(e){status.textContent=e.message}
 });
@@ -496,7 +496,7 @@ $("marketInterval").addEventListener("change",()=>{
  try{sessionStorage.removeItem(key)}catch{}
  renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));
 });
-chartSymbol.addEventListener("input",()=>{chartRevision++;rememberSymbol();$("chart").replaceChildren();resetRequest();renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
+chartSymbol.addEventListener("input",()=>{chartRevision++;rememberSymbol();resetRequest();renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 window.addEventListener('asaf:layout',()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();
