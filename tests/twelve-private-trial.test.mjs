@@ -54,5 +54,5 @@ test('trial owner scanner passes identity to price reader and reports unavailabl
  const bars=Array.from({length:200},(_,i)=>({date:new Date(now-(201-i)*86400000).toISOString().slice(0,10),open:100+i,high:102+i,low:99+i,close:101+i,volume:10000+i}));
  f.db.set(marketSnapshotKey('AAPL','1day',env),JSON.stringify({symbol:'AAPL',interval:'1day',source:'Twelve Data',receivedAt,bars}));
  const handler=createScanMarketHandler({env,run:f.run,now:()=>now,fetcher:async()=>{throw Error('cache expected')}});
- const response=await handler(request('scan-market',{symbols:['AAPL']},a.cookie));assert.equal(response.status,200);const data=await response.json();assert.equal(data.records.length,1);assert.equal(data.records[0].source,'Twelve Data');assert.equal(data.records[0].fundamentals.status,'unavailable');assert.equal(data.errors.length,0);
+ const response=await handler(request('scan-market',{symbols:['AAPL']},a.cookie));assert.equal(response.status,200);const data=await response.json();assert.equal(data.records.length,1);assert.equal(data.records[0].source,'Twelve Data');assert.equal(data.records[0].marketCapStatus,'unavailable');assert.equal(data.errors.length,0);
 });

@@ -1,3 +1,4 @@
+import {VENTURE_AI_POLICY,rawMarketExportRequest} from '../../server/venture-policy.mjs';
 import {MARKET_QA_POLICY,SCOPE_MARKER,unsupportedChatRequest,scopeError} from '../../server/chat-scope.mjs';
 import {creditsEnabled,creditsForCost} from '../../server/plans.mjs';
 import {aiProviderConfig,openaiDataAllowed,requestAI,AIProviderError,OPENAI_REQUEST_CEILING_USD} from '../../server/ai-provider.mjs';
@@ -162,6 +163,7 @@ async function handler(request){
   if(!trialAccess)return reply({error:'נתוני הניסיון זמינים לניתוח רק לבעל החשבון ובמהלך הניסיון הפעיל.',code:'market_trial_unavailable'},403);
   if(payload.source!=='Twelve Data'||payload.useServerMarket!==true||payload.useServerIntrinio===true||payload.useServerCrypto===true)return reply({error:'ניתוח גרף במהלך הניסיון דורש עותק Twelve Data מאומת מהשרת. טען מחדש את הגרף.',code:'market_snapshot_required'},400);
  }
+ if((payload.useServerMarket===true||payload.source==='Twelve Data')&&rawMarketExportRequest(question))return reply({error:'אפשר לקבל ניתוח ותמונת גרף. ייצוא נתוני מקור וסדרות מחירים אינו זמין במסלול הזה.',code:'raw_market_export_unavailable'},422);
  const intrinioRequested=payload.source==='Intrinio'||payload.useServerIntrinio===true;
  const intrinioAllowed=publicMode&&!!member&&(process.env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(s=>s.trim()).includes(member.id)&&process.env.ASAF_INTRINIO_AI_LICENSE_CONFIRMED==='true';
  if(intrinioRequested&&(payload.source!=='Intrinio'||payload.useServerIntrinio!==true||payload.useServerMarket===true||payload.useServerCrypto===true))return reply({error:'נתוני Intrinio חייבים להגיע מעותק שרת מאומת.'},400);
@@ -233,7 +235,7 @@ async function handler(request){
   // Storage/quota preparation can cross the trial boundary. Do not send a
   // previously authorized snapshot or inherited derived prices after expiry.
   if(privateTrial&&(twelveRequested||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
-  const result=await requestAI({signal:controller.signal,messages:[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:'user',content}]});
+  const result=await requestAI({signal:controller.signal,messages:[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(meta.source==='Twelve Data'?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:'user',content}]});
   const {answer,truncated}=result;
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);
   if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated});return reply({...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};

@@ -8,6 +8,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  included_files = ["server-assets/*.ttf"]
+  external_node_modules = ["@resvg/resvg-js"]
+
 [[headers]]
   for = "/sw.js"
   [headers.values]

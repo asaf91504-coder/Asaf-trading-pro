@@ -1,12 +1,7 @@
-import {marketCapAvailable,marketCapLabel} from './market-quality.mjs';
-import {showScannerResearch} from './scanner-research-ui.mjs';
-import {patternStages} from './pattern-research.mjs';
-import {screenResult,safeSourceUrl,csvCell} from './scanner-core.mjs';
-const $=id=>document.getElementById(id),records=new Map();
+import {mountVentureScanner} from './venture-scanner-ui.mjs';
+import {safeSourceUrl} from './scanner-core.mjs';
+const $=id=>document.getElementById(id);
 const scenarioLabel=document.createElement('label');scenarioLabel.textContent='כיוון תרחיש ';const scenarioSide=document.createElement('select');scenarioSide.id='scanScenarioSide';for(const [value,label] of [['any','לונג ושורט'],['long','לונג בלבד'],['short','שורט בלבד']]){const option=document.createElement('option');option.value=value;option.textContent=label;scenarioSide.append(option)}scenarioLabel.append(scenarioSide);$('scanPattern').closest('.row').append(scenarioLabel);
-let sharedScanStatus='';
-function rememberSharedScan(data){if(!data.shared)return;sharedScanStatus='סריקה משותפת בכל 3 שעות · עודכנה '+new Date(data.completedAt).toLocaleString('he-IL')+(data.stale?' · העדכון הבא מתעכב': '')+(data.partial?' · תוצאות חלקיות':'')+' · נרות יומיים קודמים. שינוי המסננים אינו מפעיל סריקה.'}
-const pretty=n=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
 function download(name,type,content){const url=URL.createObjectURL(new Blob([content],{type})),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function clock(){$('workspaceClock').textContent=new Intl.DateTimeFormat('he-IL',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit'}).format(new Date())}clock();setInterval(clock,60000);
 // Accessible tab semantics, keyboard navigation and a stable shareable location.
@@ -15,29 +10,7 @@ function tabState(){for(const b of tabs){b.setAttribute('role','tab');b.setAttri
 for(const [index,b] of tabs.entries()){b.addEventListener('click',()=>{tabState();const url=new URL(location.href);url.searchParams.set('tab',b.dataset.tab);history.replaceState(null,'',url);b.scrollIntoView({block:'nearest',inline:'nearest',behavior:document.documentElement.dataset.reduceMotion==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})});b.addEventListener('keydown',e=>{let i=index;if(e.key==='ArrowRight')i=index-1;else if(e.key==='ArrowLeft')i=index+1;else if(e.key==='Home')i=0;else if(e.key==='End')i=tabs.length-1;else return;e.preventDefault();const next=tabs[(i+tabs.length)%tabs.length];next.click();next.focus()})}tabState();
 const initial=new URL(location.href).searchParams.get('tab');if(initial&&tabs.some(b=>b.dataset.tab===initial))tabs.find(b=>b.dataset.tab===initial).click();
 function filters(){return {minMarketCap:Number($('scanMinMarketCap').value),minPrice:Math.max(0,Number($('scanMinPrice').value)||0),minVolume:Math.max(0,Number($('scanMinVolume').value)||0),above20:$('scanAbove20').checked,minATR:Math.max(0,Number($('scanMinATR').value)||0),breakout20:$('scanBreakout20').checked,risingVolume:$('scanRisingVolume').checked,rsiEnabled:$('scanRSIEnabled').checked,minRSI:Number($('scanMinRSI').value),maxRSI:Number($('scanMaxRSI').value),macdAboveSignal:$('scanMACDSignal').checked,macdPositive:$('scanMACDPositive').checked,stochasticAboveSignal:$('scanStochastic').checked,obvRising:$('scanOBVRising').checked,adxEnabled:$('scanADXEnabled').checked,minADX:Number($('scanMinADX').value),diDirection:$('scanDIDirection').value,supertrendDirection:$('scanSupertrend').value,pattern:$('scanPattern').value,scenarioSide:$('scanScenarioSide').value,crossedOnly:$('scanPatternCrossed').checked,minMeasuredMove:Number($('scanMinMeasuredMove').value),minScenarioRR:Number($('scanMinScenarioRR').value)}}
-function scenarioMove(record){return Math.max(-1,...(record.research?.candidates||[]).map(c=>c.scenario?.movePercent??-1))}
-function ordered(){return [...records.values()].sort((a,b)=>$('scanSort').value==='symbol'?a.symbol.localeCompare(b.symbol):$('scanSort').value==='scenario'?scenarioMove(b)-scenarioMove(a):$('scanSort').value==='volume'?(b.summary.volumeRatio??-1)-(a.summary.volumeRatio??-1):(b.summary.atrPercent??-1)-(a.summary.atrPercent??-1))}
-function renderScan(){
- const rows=$('scanRows');rows.replaceChildren();let matched=0;
- $('scanStatus').textContent=sharedScanStatus||(records.size?'התוצאות מבוססות על נתוני Twelve Data שנטענו. אפשר לשנות מסננים בלי לבצע סריקה נוספת.':'לחץ על ״מצא לי מניות״ כדי לטעון תוצאות.');
- for(const r of ordered()){const result=screenResult(r,filters());if(result.matches)matched++;if($('scanOnlyMatches').checked&&!result.matches)continue;
-  const row=document.createElement('tr');
-  const a=r.summary,values=[r.symbol+'\n'+a.date+' · '+(r.source==='Twelve Data'?'Twelve Data · נתונים יומיים':'נתוני ספק'),'$'+pretty(a.close),pretty(a.sma20)+' / '+pretty(a.sma150),pretty(a.atrPercent)+'%',a.volumeRatio==null?'חסר':pretty(a.volumeRatio)+'×',a.breakout20?'מעל שיא 20 נרות':'לא',pretty(a.rsi14),pretty(a.macd)+' / '+pretty(a.macdSignal),pretty(a.stochasticK)+' / '+pretty(a.stochasticD),pretty(a.obv),pretty(a.adx14)+' / '+pretty(a.plusDI14)+' / '+pretty(a.minusDI14),pretty(a.supertrend)+' · '+(a.supertrendDirection==='up'?'עולה':a.supertrendDirection==='down'?'יורד':'חסר'),(r.research?.candidates||[]).map(c=>c.label+' · '+patternStages[c.stage]).join(' | ')||'לא נמצא מועמד',(result.matches?'עומדת במסננים שנבחרו':result.reasons.join(' · '))+' · '+marketCapLabel(r)];
-  for(const text of values){const td=document.createElement('td');td.textContent=text;row.append(td)}
-  const actions=document.createElement('td'),open=document.createElement('button');open.type='button';open.textContent='פתח גרף';open.setAttribute('aria-label','פתח גרף · '+r.symbol);open.onclick=()=>{window.dispatchEvent(new CustomEvent('asaf:load-dataset',{detail:{symbol:r.symbol,bars:r.bars,source:r.source||'provider',interval:'1day',receivedAt:r.receivedAt||null,coverage:r.coverage,exchangeTimezone:r.exchangeTimezone,barPolicy:r.barPolicy,latestBarMayBePartial:r.latestBarMayBePartial}}));tabs.find(b=>b.dataset.tab==='charts').click()};const inspect=document.createElement('button');inspect.type='button';inspect.textContent='פרטי מחקר';inspect.setAttribute('aria-label','פרטי מחקר · '+r.symbol);inspect.onclick=()=>showScannerResearch($('scanResearchDetails'),r,{onScenario:applyScenario,selectedPattern:$('scanPattern').value});actions.append(open,inspect);row.append(actions);rows.append(row);
- }
- if(!rows.children.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=15;td.className='empty-cell';td.textContent=records.size?'אין תוצאות במסננים הנוכחיים.':'ממתינים לנתוני מניות מהספק.';tr.append(td);rows.append(tr)}
- const shortlist=$('scanShortlist');
- if(shortlist){shortlist.replaceChildren();const ranked=ordered().map(record=>({record,result:screenResult(record,filters())})).sort((a,b)=>a.result.reasons.length-b.result.reasons.length||(b.record.summary.volumeRatio||0)-(a.record.summary.volumeRatio||0)).slice(0,6);
- for(const {record:r,result} of ranked){const card=document.createElement('article');card.className='scanner-candidate';const title=document.createElement('h4');title.textContent=r.symbol+' · '+(result.matches?'עברה את המסננים':'לבדיקה נוספת');const details=document.createElement('p');details.textContent='$'+pretty(r.summary.close)+' · ATR '+pretty(r.summary.atrPercent)+'% · מחזור יחסי '+pretty(r.summary.volumeRatio)+'× · נר '+r.summary.date;const reason=document.createElement('p');reason.textContent=result.matches?'עומדת במסננים שנבחרו. התאמה טכנית אינה המלצת קנייה.':result.reasons.join(' · ');const open=document.createElement('button');open.type='button';open.textContent='פתח '+r.symbol+' בגרף';open.onclick=()=>{window.dispatchEvent(new CustomEvent('asaf:load-dataset',{detail:{symbol:r.symbol,bars:r.bars,source:r.source,interval:'1day',receivedAt:r.receivedAt,coverage:r.coverage,exchangeTimezone:r.exchangeTimezone,barPolicy:r.barPolicy,latestBarMayBePartial:r.latestBarMayBePartial}}));tabs.find(b=>b.dataset.tab==='charts').click()};card.append(title,details,reason,open);shortlist.append(card)}
- }
- const summary=$('scanSummary');summary.replaceChildren();for(const [label,value] of [['מניות נטענו',records.size],['התאמות טכניות',matched],['מעל MA20',[...records.values()].filter(r=>r.summary.aboveMA20).length],['שווי שוק זמין',[...records.values()].filter(r=>marketCapAvailable(r)).length+' / '+records.size]]){const item=document.createElement('div'),small=document.createElement('small'),strong=document.createElement('strong');small.textContent=label;strong.textContent=value;item.append(small,strong);summary.append(item)}
-}
-function applyScenario(s,record,candidate){$('riskSide').value=s.side;for(const [id,value] of [['entry',s.entry],['stop',s.stop],['target',s.target]])$(id).value=String(value);$('calc').click();$('riskScenarioSource').textContent='תרחיש ראשוני מ־'+record.symbol+' · '+candidate.label+' · נר '+record.summary.date+'. רמות גאומטריות למחקר; אינן הוראת מסחר או הבטחת ביצוע.';tabs.find(b=>b.dataset.tab==='risk').click()}
-for(const id of ['entry','stop','target','riskSide'])$(id).addEventListener('input',()=>{$('riskScenarioSource').textContent=''});
-for(const id of ['scanMinMarketCap','scanMinPrice','scanMinVolume','scanAbove20','scanMinATR','scanBreakout20','scanRisingVolume','scanRSIEnabled','scanMinRSI','scanMaxRSI','scanMACDSignal','scanMACDPositive','scanStochastic','scanOBVRising','scanADXEnabled','scanMinADX','scanDIDirection','scanSupertrend','scanPattern','scanScenarioSide','scanPatternCrossed','scanMinMeasuredMove','scanMinScenarioRR','scanOnlyMatches','scanSort'])$(id).addEventListener('input',renderScan);
-$('scanClear').onclick=()=>{records.clear();sharedScanStatus='';$('scanResearchDetails').replaceChildren();$('scanResearchDetails').hidden=true;renderScan();$('scanStatus').textContent='תוצאות הסריקה נוקו מהלשונית. אפשר לטעון שוב מהספק כשהחיבור זמין.'};
-$('scanExport').onclick=()=>{if(!records.size){$('scanStatus').textContent='אין תוצאות לייצוא.';return}const output=[['Symbol','LastCandle','Close','MA20','MA150','ATRPercent','RelativeVolume','Breakout20','RSI14','MACD','MACDSignal','MACDHistogram','StochasticK','StochasticD','OBV','ADX14','PlusDI14','MinusDI14','Supertrend103','SupertrendDirection','PatternCandidates','RangeLow20','RangeHigh20','CandidateScenarios','Matches','RejectionReasons','MarketCapAvailable','MarketCapUSD','MarketCapReceivedAt'],...ordered().filter(r=>!$('scanOnlyMatches').checked||screenResult(r,filters()).matches).map(r=>[r.symbol,r.summary.date,r.summary.close,r.summary.sma20,r.summary.sma150,r.summary.atrPercent,r.summary.volumeRatio,r.summary.breakout20,r.summary.rsi14,r.summary.macd,r.summary.macdSignal,r.summary.macdHistogram,r.summary.stochasticK,r.summary.stochasticD,r.summary.obv,r.summary.adx14,r.summary.plusDI14,r.summary.minusDI14,r.summary.supertrend,r.summary.supertrendDirection,JSON.stringify(r.research?.candidates?.map(c=>({kind:c.kind,stage:c.stage}))||[]),r.research?.support20,r.research?.resistance20,JSON.stringify(r.research?.candidates?.filter(c=>c.scenario).map(c=>({kind:c.kind,...c.scenario}))||[]),screenResult(r,filters()).matches,screenResult(r,filters()).reasons.join(' | '),marketCapAvailable(r),marketCapAvailable(r)?r.fundamentals.marketCap:null,r.fundamentals?.receivedAt||''])];download('asaf-screen.csv','text/csv;charset=utf-8','\uFEFF'+output.map(row=>row.map(csvCell).join(',')).join('\r\n'))};renderScan();
+mountVentureScanner({filters,openCharts:()=>tabs.find(b=>b.dataset.tab==='charts').click()});
 const researchKey='asaf_research_sources_v1';let notes=[];
 try{const data=JSON.parse(localStorage.getItem(researchKey)||'[]');notes=Array.isArray(data)?data.filter(n=>n&&typeof n.id==='string'&&typeof n.title==='string'&&typeof n.url==='string'&&typeof n.note==='string'&&typeof n.symbol==='string'&&typeof n.saved==='string').slice(0,100).filter(n=>{try{safeSourceUrl(n.url);return true}catch{return false}}):[]}catch{}
 function saveNotes(){try{localStorage.setItem(researchKey,JSON.stringify(notes));return true}catch{$('researchStatus').textContent='האחסון אינו זמין. המקור נמצא בזיכרון הלשונית בלבד; ייצא גיבוי לפני יציאה.';return false}}
@@ -49,43 +22,3 @@ $('researchFilter').oninput=renderNotes;$('researchExport').onclick=()=>download
 function reloadResearch(){try{notes=JSON.parse(localStorage.getItem(researchKey)||'[]');renderNotes()}catch{$('researchStatus').textContent='לא ניתן לטעון את מקורות המחקר שנשמרו.'}}
 window.addEventListener('asaf:personal-loaded',e=>{if(e.detail?.section==='research')reloadResearch()});
 window.addEventListener('storage',e=>{if(e.key===researchKey)reloadResearch()});
-
-let providerScanBusy=false;
-$('scanProvider').onclick=async()=>{if(providerScanBusy)return;providerScanBusy=true;$('scanProvider').disabled=true;try{const symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);if(!symbols.length||symbols.length>10)throw Error('בחר 1 עד 10 מניות מופרדות בפסיקים');const response=await fetch('/.netlify/functions/scan-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols}),signal:AbortSignal.timeout(35000)});const data=await response.json();if(!response.ok)throw Error(data.error||'הסריקה נכשלה');for(const symbol of symbols)records.delete(symbol.toUpperCase().split(':').at(-1));rememberSharedScan(data);for(const record of data.records){if(records.size>=50&&!records.has(record.symbol))throw Error('מקסימום 50 מניות בסריקה');records.set(record.symbol,record)}renderScan();$('scanProviderStatus').textContent='נטענו '+data.records.length+' מניות. '+data.errors.map(e=>e.symbol+': '+e.error).join(' | ')+' '+data.scope}catch(e){$('scanProviderStatus').textContent=e.message;$('scanProviderAuto').checked=false}finally{providerScanBusy=false;$('scanProvider').disabled=false}};
-setInterval(()=>{if($('scanProviderAuto').checked&&!document.hidden&&!providerScanBusy)$('scanProvider').click()},301000);window.addEventListener('asaf:logout',()=>{$('scanProviderAuto').checked=false;discoveryController?.abort();records.clear();sharedScanStatus='';renderScan()});
-
-// Explicit, bounded discovery shares the provider endpoint and its account limits.
-let discoveryController=null;
-const pause=(ms,signal)=>new Promise((resolve,reject)=>{
- const done=()=>{signal.removeEventListener('abort',stop);resolve()};
- const timer=setTimeout(done,ms);const stop=()=>{clearTimeout(timer);reject(new DOMException('Stopped','AbortError'))};
- signal.addEventListener('abort',stop,{once:true});if(signal.aborted)stop();
-});
-document.addEventListener('click',async event=>{
- if(event.target.id==='scanDiscoverStop'){discoveryController?.abort();return}
- if(event.target.id!=='scanDiscover'||providerScanBusy)return;
- const controller=new AbortController();discoveryController=controller;providerScanBusy=true;
- const button=$('scanDiscover'),stop=$('scanDiscoverStop'),status=$('scanDiscoverStatus');
- button.disabled=true;$('scanProvider').disabled=true;stop.hidden=false;$('scanProviderAuto').checked=false;
- let checked=0,total=0,failures=0;
- try{
-  status.textContent='בודק את מאגר המניות הזמין בחשבון שלך…';
-  const configResponse=await fetch('/.netlify/functions/scan-market',{signal:controller.signal});
-  const config=await configResponse.json();
-  if(!configResponse.ok||!config.enabled||!config.symbols?.length)throw Error(config.error||'יש להתחבר לחשבון עם גישה פעילה לנתוני Twelve Data.');
-  const symbols=config.symbols.slice(0,50),batchSize=Math.min(10,config.maxSymbols||5);total=symbols.length;
-  records.clear();renderScan();
-  for(let offset=0;offset<total;offset+=batchSize){
-   if(offset&&!config.shared){status.textContent=`נבדקו ${checked} מתוך ${total}. נמצאו נתונים ל־${records.size} מניות. ממתין למכסת הקבוצה הבאה…`;await pause(Math.max(31000,config.batchDelayMs||0),controller.signal)}
-   status.textContent=config.shared?'טוען סטאפים מהסריקה האחרונה…':`סורק מניות ${offset+1}–${Math.min(total,offset+batchSize)} מתוך ${total}…`;
-   const response=await fetch('/.netlify/functions/scan-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize)}),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(35000)])});
-   const data=await response.json();if(!response.ok)throw Error(data.error||'הסריקה נכשלה');
-   if(controller.signal.aborted)throw new DOMException('Stopped','AbortError');
-   rememberSharedScan(data);for(const record of data.records)records.set(record.symbol,record);
-   checked+=Math.min(batchSize,total-offset);failures+=data.errors.length;renderScan();
-   if(data.errors.length)$('scanProviderStatus').textContent=data.errors.map(e=>e.symbol+': '+e.error).join(' | ');
-  }
-  status.textContent=config.shared?sharedScanStatus:`הסריקה הסתיימה: ${checked} מניות נבדקו, ${records.size} עם נתונים, ${failures} ללא נתונים. התוצאות לפי המסננים שלמטה; שווי שוק חסר דורש אימות.`;
- }catch(e){status.textContent=controller.signal.aborted?`הסריקה נעצרה. נבדקו ${checked} מתוך ${total}; התוצאות שהתקבלו נשמרו.`:e.message+' התוצאות שכבר התקבלו נשמרו.'}
- finally{providerScanBusy=false;button.disabled=false;$('scanProvider').disabled=false;stop.hidden=true;discoveryController=null}
-});
