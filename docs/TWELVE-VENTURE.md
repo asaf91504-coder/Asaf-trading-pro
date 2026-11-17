@@ -16,7 +16,7 @@ Scanning and all filtering happen on the server over the configured US-symbol al
 
 The response uses an explicit allowlist: symbol, provenance dates, pass/fail and reasons, MA position booleans, ATR%, RVOL, RSI, ADX, trend direction, pattern type/stage and scenario percentages/ratios. No bars, close price, absolute moving-average values, pivot prices, raw volume, fundamental data values or absolute scenario levels are sent. CSV exports these derived results only. Clicking a result opens a separately rendered chart image.
 
-Changing filters requires an explicit update. Cached filtering cannot fetch missing price series or missing fundamentals, and therefore cannot silently consume provider credits. Automatic background scanning from the browser is disabled. Existing bounded discovery and provider quotas remain.
+Changing filters requires an explicit update. Cached filtering cannot fetch missing price series or missing fundamentals, and therefore cannot silently consume provider credits. Automatic background scanning from the browser is disabled. Existing bounded discovery and provider quotas remain. When the shared three-hour scanner is enabled, browser requests read that shared snapshot and receive the same derived-only projection; they never trigger a provider scan. Existing owner-reviewed setup publishing is preserved.
 
 ## AI
 

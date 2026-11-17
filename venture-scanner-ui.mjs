@@ -28,22 +28,23 @@ export function mountVentureScanner({filters,openCharts}){
   if(busy)return;busy=true;const current=++revision;controller=new AbortController();const signal=controller.signal,selected=filters(),signature=JSON.stringify(selected),status=$('scanDiscoverStatus')||$('scanProviderStatus');
   const stop=$('scanDiscoverStop');if(stop)stop.hidden=false;update.disabled=true;$('scanProvider').disabled=true;if($('scanDiscover'))$('scanDiscover').disabled=true;$('scanProviderAuto').checked=false;
   try{
-   let symbols,batchSize=10,delay=31000;
+   let symbols,batchSize=10,delay=31000,shared=false,sharedReceipt='';
    if(cachedOnly){symbols=[...records.keys()];if(!symbols.length)throw Error('יש לבצע סריקה ראשונה לפני עדכון המסננים.');}
-   else if(discover){const response=await fetch('/.netlify/functions/scan-market',{signal,credentials:'same-origin'}),config=await response.json();if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');symbols=config.symbols.slice(0,50);batchSize=Math.min(10,config.maxSymbols||10);delay=Math.max(31000,config.batchDelayMs||0);}
+   else if(discover){const response=await fetch('/.netlify/functions/scan-market',{signal,credentials:'same-origin'}),config=await response.json();if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=config.symbols.slice(0,50);batchSize=Math.min(10,config.maxSymbols||10);delay=Math.max(31000,config.batchDelayMs||0);}
    else symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);
    if(!symbols.length||(!discover&&!cachedOnly&&symbols.length>10))throw Error('בחר 1 עד 10 סימולים בכל סריקה ידנית.');
    records.clear();dirty=true;render();
    for(let offset=0;offset<symbols.length;offset+=batchSize){
-    if(offset&&!cachedOnly){status.textContent='ממתין למכסת הקבוצה הבאה…';await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException('Cancelled','AbortError'))},timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},delay);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort()})}
+    if(offset&&!cachedOnly&&!shared){status.textContent='ממתין למכסת הקבוצה הבאה…';await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException('Cancelled','AbortError'))},timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},delay);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort()})}
     status.textContent=`בודק ${offset+1}–${Math.min(symbols.length,offset+batchSize)} מתוך ${symbols.length}…`;
     const response=await fetch('/.netlify/functions/scan-market',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize),filters:selected,cachedOnly}),signal:AbortSignal.any([signal,AbortSignal.timeout(35000)])}),data=await response.json();
     if(!response.ok)throw Error(data.error||'הסריקה נכשלה.');if(current!==revision||signal.aborted)return;
+    if(data.shared){shared=true;sharedReceipt='סריקה משותפת · עדכון '+data.completedAt+' · עדכון הבא '+new Date(data.nextUpdateAt).toLocaleString('he-IL')+(data.stale?' · ממתין לרענון':'');}
     for(const r of data.records||[])if(r.presentation==='derived-only')records.set(r.symbol,r);
     dirty=JSON.stringify(filters())!==signature;lastFilters=signature;render();
     if(data.errors?.length)$('scanProviderStatus').textContent=data.errors.map(e=>e.symbol+': '+e.error).join(' | ');
    }
-   status.textContent=`הסריקה הסתיימה: התקבלו ${records.size} תוצאות נגזרות. `+(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':'החישוב בשרת; נפח יומי EOD, ללא מחירי מקור להורדה.');
+   status.textContent=sharedReceipt||`הסריקה הסתיימה: התקבלו ${records.size} תוצאות נגזרות. `+(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':'החישוב בשרת; נפח יומי EOD, ללא מחירי מקור להורדה.');
   }catch(e){status.textContent=e.name==='AbortError'?'הסריקה נעצרה.':e.message;}
   finally{if(current===revision){busy=false;controller=null;update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if(stop)stop.hidden=true}}
  }

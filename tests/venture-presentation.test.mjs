@@ -6,6 +6,7 @@ import {createPublicMarketHandler} from '../netlify/functions/public-market.mjs'
 import {createScanMarketHandler} from '../netlify/functions/scan-market.mjs';
 import {analysisMarket} from '../server/analysis-sources.mjs';
 import {marketSnapshotKey} from '../server/market-feed.mjs';
+import {sharedScannerKey} from '../server/shared-scanner.mjs';
 import {scanBars,screenResult} from '../scanner-core.mjs';
 import {fixture,seed,env as authEnv,request} from './identity-fixture.mjs';
 const now=Date.parse('2026-11-17T14:00:00Z');
@@ -38,10 +39,18 @@ test('projection strips raw pivot prices and even unexpected future fields',()=>
  const result=ventureScanRecord(record,screenResult(record,{minVolume:0}));noRawFields(result);assert.equal(result.secret,undefined);assert.equal(result.patterns[0].movePercent,25);assert.equal(result.patterns[0].scenario,undefined);
 });
 test('cache-only re-screening never buys missing fundamentals or time series',async()=>{
- const {state,user}=seeded();let calls=0;const handler=createScanMarketHandler({env:{...env,ASAF_MARKET_FUNDAMENTALS_ENABLED:'true'},run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('Unexpected provider request')}});
+ const {state,user}=seeded();const configured={...env,ASAF_MARKET_FUNDAMENTALS_ENABLED:'true',ASAF_MARKET_REQUESTS_PER_MINUTE:'64'};state.db.set(marketSnapshotKey('AAPL','1day',configured),JSON.stringify(snapshot));let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('Unexpected provider request')}});
  const result=await(await handler(request('scan-market',{symbols:['AAPL'],cachedOnly:true,filters:{minMarketCap:1e9}},user.cookie))).json();assert.equal(calls,0);assert.equal(result.records[0].screen.matches,false);
 });
 test('raw export requests are rejected while ordinary research remains available',()=>{
  for(const q of ['ייצא לי את כל הנרות','הורד CSV','show all prices','download OHLCV as JSON'])assert.equal(rawMarketExportRequest(q),true);
  for(const q of ['נתח את המגמה','הצג כניסה וסטופ','Explain MA20'])assert.equal(rawMarketExportRequest(q),false);
+});
+
+test('shared three-hour snapshots keep raw records inside the server boundary',async()=>{
+ const {state,user}=seeded(),configured={...env,ASAF_HOURLY_SCANNER_ENABLED:'true'};
+ const record={...scanBars('AAPL',bars),source:'Twelve Data',receivedAt:snapshot.receivedAt,barPolicy:snapshot.barPolicy,fundamentals:{status:'unavailable'}};
+ state.db.set(sharedScannerKey(configured)+':snapshot',JSON.stringify({records:[record],errors:[],completedAt:snapshot.receivedAt,startedAt:snapshot.receivedAt,nextUpdateAt:now+10800000}));
+ let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('No provider request')}});
+ const response=await handler(request('scan-market',{symbols:['AAPL'],filters:{minPrice:5,minMarketCap:0,minVolume:0}},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);assert.equal(body.shared,true);assert.equal(body.records[0].screen.matches,true);assert.equal(calls,0);
 });

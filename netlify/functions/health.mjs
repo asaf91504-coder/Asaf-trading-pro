@@ -1,4 +1,5 @@
 import {searchConfigured} from '../../server/web-research.mjs';
+import {aiProviderConfig,openaiDataAllowed} from '../../server/ai-provider.mjs';
 import {intrinioConfigured} from '../../server/intrinio-research.mjs';
 import {fundamentalsConfigured} from '../../server/market-fundamentals.mjs';
 import {publicNewsEnabled} from '../../server/public-news.mjs';
@@ -14,6 +15,7 @@ const VERSION="2026-11-17-venture-raster-1";
 const headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
 export default async function handler(request) {
   if(request.method!=="GET")return Response.json({error:"Method not allowed"},{status:405,headers});
+  const ai=aiProviderConfig(),access=process.env.ASAF_PUBLIC_AUTH_ENABLED==='true'?publicAuthConfigured():!!process.env.ASAF_FREE_AI_ACCESS_CODE&&process.env.ASAF_FREE_AI_ACCESS_CODE.length>=24;
   return Response.json({
     application:"ASAF TRADING PRO",
     version:VERSION,
@@ -28,7 +30,7 @@ export default async function handler(request) {
     cryptoResearchOwnerOnly:true,
     marketFundamentalsEnabled:fundamentalsConfigured(),
     marketDailyBarPolicy:'previous-daily-sessions',
-    marketAnalysisEnabled:publicMarketConfigured()&&process.env.ASAF_MARKET_AI_LICENSE_CONFIRMED==='true',
+    marketAnalysisEnabled:publicMarketConfigured()&&process.env.ASAF_MARKET_AI_LICENSE_CONFIRMED==='true'&&(ai.provider!=='openai'||openaiDataAllowed('Twelve Data')),
     backgroundMarketRefreshConfigured:publicMarketConfigured()&&process.env.ASAF_BACKGROUND_REFRESH_ENABLED==='true',
     newsAnalysisEnabled:(newsConfigured()&&process.env.ASAF_NEWS_AI_LICENSE_CONFIRMED==='true'||publicNewsEnabled()&&!newsConfigured())&&storeConfigured(),
     googleSignupEnabled:googleConfigured()&&process.env.ASAF_GOOGLE_SIGNUP_ENABLED==="true",
@@ -37,7 +39,11 @@ export default async function handler(request) {
     marketProvider:"Twelve Data (optional)",
     marketDataEnabled:process.env.ASAF_MARKET_ENABLED==="true"&&process.env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED==="true"&&!!process.env.TWELVE_DATA_API_KEY&&!!process.env.ASAF_MARKET_ACCESS_CODE,
     paidAIEnabled:process.env.ASAF_CHAT_ENABLED==="true"&&!!process.env.OPENAI_API_KEY,
-    freeAIEnabled:process.env.ASAF_FREE_AI_ENABLED==="true"&&!!process.env.OPENROUTER_API_KEY&&(process.env.ASAF_PUBLIC_AUTH_ENABLED==='true'?publicAuthConfigured():!!process.env.ASAF_FREE_AI_ACCESS_CODE&&process.env.ASAF_FREE_AI_ACCESS_CODE.length>=24),
+    aiProvider:ai.provider,
+    aiModel:ai.model,
+    aiEnabled:ai.enabled&&access,
+    openaiAIEnabled:ai.provider==='openai'&&ai.enabled&&access,
+    freeAIEnabled:ai.provider==='openrouter'&&ai.enabled&&access,
     publicAuthEnabled:publicAuthConfigured(),
     durableQuotaEnabled:storeConfigured()&&(process.env.ASAF_PUBLIC_AUTH_ENABLED==='true'||process.env.ASAF_FREE_AI_DURABLE_QUOTA==='true'),
     newsEnabled:(newsConfigured()||publicNewsEnabled())&&storeConfigured(),
