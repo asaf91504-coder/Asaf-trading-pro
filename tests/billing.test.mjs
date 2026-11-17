@@ -23,10 +23,10 @@ function provider(identity,{status='ACTIVE',transactions=[payment()],signature='
   return {id,status:current,custom_id,plan_id:env.PAYPAL_PLAN_ID,billing_info:{next_billing_time:new Date(nextMonth(now)).toISOString()},links:current==='APPROVAL_PENDING'?[{rel:'approve',href:'https://www.sandbox.paypal.com/webapps/billing/subscriptions?ba_token=mock'}]:[]};
  };return {api,calls};
 }
-test('trial lasts exactly 14 days, does not restart across devices or recreated account',async()=>{
+test('trial lasts exactly 7 days, does not restart across devices or recreated account',async()=>{
  const f=setup(),identity=await billingIdentity(f.user.record.id,{env,run:f.run});
  const trial=await startTrial(identity,{env,run:f.run,now});
- assert.equal(entitlement(trial,now+14*DAY-1).access,true);assert.equal(entitlement(trial,now+14*DAY).access,false);
+ assert.equal(entitlement(trial,now+7*DAY-1).access,true);assert.equal(entitlement(trial,now+7*DAY).access,false);
  assert.deepEqual(await startTrial(identity,{env,run:f.run,now:now+30*DAY}),trial);
  const recreated=seed(f,'member@example.test','aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
  assert.equal(await billingIdentity(recreated.record.id,{env,run:f.run}),identity);

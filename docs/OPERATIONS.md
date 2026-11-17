@@ -24,3 +24,9 @@ Run `node scripts/account-backup.mjs verify personal-backup.enc` with the same k
 Enable and inspect native database backup retention in the current database provider account. Restore to a separate staging database first. Verify account ownership, journals, conversations, billing references and credit balances; re-verify subscriptions against PayPal. Invalidate restored sessions. Confirm a recovery point and time before switching production. Do not restore stale billing records over newer payments.
 
 A provider-console restore drill, retention settings and delivery of an incident notification were not verified in this session. Personal JSON round trips and encrypted export tests do not replace those steps.
+
+
+## Backup activation checkpoint — 2026-11-17
+The personal-data workflow now has a daily 02:41 UTC schedule, gated by the repository variable `ASAF_BACKUP_SCHEDULE_ENABLED=true`. It remains inactive until credentials are installed and a manual export succeeds. Required secrets: `ASAF_REDIS_REST_URL`, a read-only `ASAF_REDIS_READONLY_TOKEN`, and an independent random 32-byte hexadecimal `ASAF_BACKUP_KEY`. Retention is seven days. Keep the decryption key separately in the owner's password manager.
+
+Netlify access was verified; Upstash currently requires sign-in. No production backup, provider backup policy, or restore test has been verified. Do not describe backup as active. The encrypted export covers conversations and workspaces only; use provider-native consistent backups for auth, billing and credit state. Before activation, restore a provider snapshot to an isolated database, verify account isolation and billing/credit consistency, and document retention and cost. Do not restore production from the partial export.

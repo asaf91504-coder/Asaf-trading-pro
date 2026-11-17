@@ -5,7 +5,7 @@ let state=null,busy=false,retryAction;
 const show=(id,visible)=>{$(id).hidden=!visible;};
 const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'he',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
 async function request(action){
- const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{promoCode:$('billingPromoCode')?.value?.trim()||'',planId:$('billingPlan').value,consent:consentFor($('billingPlan').value)}:{})})}:{}),signal:AbortSignal.timeout(45000)});
+ const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{promoCode:$('billingPromoCode')?.value?.trim()||'',planId:$('billingPlan').value,consent:window.asafBillingPromotion?.consent||consentFor($('billingPlan').value)}:{})})}:{}),signal:AbortSignal.timeout(45000)});
  const data=await r.json();if(!r.ok){const error=Error(data.error||t('לא ניתן לבדוק את המנוי כרגע. נסה שוב.'));error.status=r.status;throw error;}return data;
 }
 const copy=(key,values)=>subscriptionCopy(document.documentElement.lang,key,values);
@@ -13,10 +13,11 @@ function renderPlan(){
  const verifiedPlan=state?.status==='paid'&&state?.credits?.planId;
  if(verifiedPlan&&Object.hasOwn(PLANS,verifiedPlan))$('billingPlan').value=verifiedPlan;
  const plan=PLANS[$('billingPlan').value]||PLANS.starter;
- const values={price:plan.price,credits:plan.weeklyCredits.toLocaleString(document.documentElement.lang||'he'),bonus:plan.bonusPercent};
+ const effectivePrice=window.asafBillingPromotion?.planId===plan.id?window.asafBillingPromotion.monthlyPrice:plan.price;
+ const values={price:effectivePrice,credits:plan.weeklyCredits.toLocaleString(document.documentElement.lang||'he'),bonus:plan.bonusPercent};
  $('planTitle').textContent='ASAF Pro · '+plan.id[0].toUpperCase()+plan.id.slice(1);
  $('billingPlanDetails').textContent=copy('summary',values);
- document.querySelector('.subscription-price bdi').textContent='$'+plan.price;
+ document.querySelector('.subscription-price bdi').textContent='$'+effectivePrice;
  $('billingConsentText').textContent=copy('consent',values);
  $('billingSubscribe').textContent=copy('checkout',values);
  $('billingCredits').textContent=state?.credits?copy(state.credits.planId==='trial'?'trialBalance':'balance',{remaining:state.credits.remaining,limit:state.credits.limit,date:date(state.credits.resetsAt)}):'';
@@ -25,7 +26,7 @@ function render(){
  renderPlan();
  if(!state)return;
  const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2&&state.checkoutAllowed!==false,auth=state.authenticated===true;
- $('billingStatus').textContent=t(!ready?'ההרשמה למנוי תיפתח בקרוב. החיוב עדיין אינו פעיל.':!auth?'התחבר לחשבון כדי לקבל 14 ימים בחינם.':state.status==='trial'?'תקופת הניסיון שלך פעילה.':state.status==='paid'?'המנוי שלך פעיל.':state.status==='expired'?'תקופת הניסיון הסתיימה.':'14 ימי ניסיון בחינם מחכים לך.');
+ $('billingStatus').textContent=t(!ready?'ההרשמה למנוי תיפתח בקרוב. החיוב עדיין אינו פעיל.':!auth?'התחבר לחשבון כדי לקבל 7 ימים בחינם.':state.status==='trial'?'תקופת הניסיון שלך פעילה.':state.status==='paid'?'המנוי שלך פעיל.':state.status==='expired'?'תקופת הניסיון הסתיימה.':'7 ימי ניסיון בחינם מחכים לך.');
  if(ready&&auth&&!state.access&&state.subscriptionStatus==='APPROVAL_PENDING')$('billingStatus').textContent=t('ממתינים לאישור המנוי ב־PayPal.');
  if(ready&&auth&&!state.access&&['ACTIVE','APPROVED'].includes(state.subscriptionStatus))$('billingStatus').textContent=t('המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.');
  if(ready&&auth&&!state.access&&state.subscriptionStatus==='SUSPENDED')$('billingStatus').textContent=t('המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.');
@@ -61,5 +62,6 @@ $('billingSync').onclick=()=>perform('sync');$('billingRetry').onclick=()=>perfo
 $('billingCancel').onclick=()=>{if(window.confirm(t('לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.')))perform('cancel');};
 for(const id of ['billingPlanDetails','billingConsentText','billingSubscribe','billingCredits'])$(id).setAttribute('translate','no');
 window.addEventListener('asaf:language',render);
+window.addEventListener('asaf:promotion',render);
 renderPlan();
 await perform();if(returned&&state?.authenticated&&state?.ready)await perform('sync');
