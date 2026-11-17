@@ -3,10 +3,11 @@ const $=id=>document.getElementById(id),scanner=$('scanner');
 const heading=scanner.querySelector('.section-heading');
 heading.querySelector('h2').textContent='מצא מניות למחקר';
 heading.querySelector('.eyebrow').textContent='סורק מניות';
-const intro=heading.nextElementSibling;intro.textContent='בחר מניות, הגדר את התנאים ולחץ על סריקה. את התוצאות אפשר לפתוח בגרף ולנתח עם ASAF AI.';
-const provider=$('scanProvider').closest('details');provider.open=true;provider.classList.add('scanner-start');provider.querySelector('summary').textContent='1 · אילו מניות לבדוק?';
+const intro=heading.nextElementSibling;intro.textContent='לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.';
+const provider=$('scanProvider').closest('details');provider.open=false;provider.classList.add('scanner-start');provider.querySelector('summary').textContent='סריקה ידנית של סימולים';
 $('scanProviderSymbols').placeholder='AAPL, NVDA, MSFT';$('scanProvider').textContent='סרוק את המניות';$('scanProvider').classList.add('primary');
-provider.querySelector('p').textContent='עד 5 סימולים, מופרדים בפסיקים. נדרש חיבור נתונים פעיל; שווי שוק נבדק כשהנתון זמין; נתון חסר לא יעבור את סף שווי השוק.';
+provider.querySelector('p').textContent='עד 10 סימולים, מופרדים בפסיקים. נדרש חיבור נתונים פעיל; שווי שוק נבדק כשהנתון זמין; נתון חסר לא יעבור את סף שווי השוק.';
+const discover=document.createElement('section');discover.className='scanner-discovery';discover.innerHTML='<h3>1 · מצא לי מניות</h3><p>סריקה של המניות המורשות בחיבור הנוכחי, בקבוצות ובכפוף למכסה. התוצאות מתעדכנות תוך כדי; אין כאן סריקה של כלל הבורסה.</p><div class="row"><button id="scanDiscover" class="primary" type="button">מצא לי מניות</button><button id="scanAsafRules" type="button">הכללים שלי</button><button id="scanDiscoverStop" type="button" hidden>עצור סריקה</button></div><p id="scanDiscoverStatus" role="status">הסריקה משתמשת בנרות יומיים שהושלמו. שווי שוק חסר אינו נחשב התאמה מלאה.</p>';provider.before(discover);
 const basic=document.createElement('section');basic.className='scanner-basic';basic.setAttribute('aria-labelledby','scannerBasicTitle');basic.innerHTML='<h3 id="scannerBasicTitle">2 · תנאים עיקריים</h3><p>אפשר להתחיל עם ההגדרות הקיימות. שינוי תנאי מסנן את הנתונים שכבר נטענו.</p><div class="scanner-fields"></div>';
 const advanced=document.createElement('details');advanced.className='scanner-advanced';advanced.innerHTML='<summary>מסננים מתקדמים</summary><p>תנופה, תנודתיות ותבניות טכניות. תנאים שסומנו ממשיכים לפעול גם כשהאזור סגור.</p><div class="scanner-fields"></div>';
 const filterRow=$('scanMinPrice').closest('.row');filterRow.before(basic,advanced);
@@ -25,3 +26,10 @@ function labelCells(){for(const row of $('scanRows').rows)for(let i=0;i<row.cell
 new MutationObserver(labelCells).observe($('scanRows'),{childList:true,subtree:true});labelCells();
 const presets=scanner.querySelector('.scanner-preset-tools');if(presets)advanced.append(presets);
 const utilities=$('scanClear').closest('.row');utilities.classList.add('scanner-result-actions');scanner.querySelector('.table-scroll').after(utilities);
+
+const shortlist=document.createElement('div');shortlist.id='scanShortlist';shortlist.className='scanner-shortlist';$('scanSummary').after(shortlist);
+$('scanAsafRules').onclick=()=>{
+ for(const [id,value] of [['scanMinMarketCap',1000000000],['scanMinPrice',5],['scanMinVolume',1],['scanMinMeasuredMove',15]])$(id).value=String(value);
+ $('scanAbove20').checked=true;$('scanRisingVolume').checked=true;$('scanScenarioSide').value='long';$('scanMinPrice').dispatchEvent(new Event('input',{bubbles:true}));
+ $('scanDiscoverStatus').textContent='הוחלו: שווי שוק מיליארד דולר, מחיר מעל $5, מעל MA20, יום עולה עם מחזור מעל הממוצע ותרחיש לונג עם יעד מדוד של 15% לפחות. יעד מדוד אינו תחזית. יתר המסננים נשארו כפי שהגדרת.';
+};

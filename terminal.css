@@ -232,3 +232,7 @@
  .terminal-app[data-view=chat] #chatForm{position:sticky;bottom:0;background:#141e29;padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:4}
  .terminal-app[data-view=chat] #chatInput{font-size:16px;resize:none;max-height:25dvh}
 }
+
+.scanner-discovery{padding:20px;border:1px solid #358576;border-radius:14px;background:#14352f;margin:18px 0}.scanner-discovery h3{margin-top:0}.scanner-discovery button{min-height:48px}.scanner-discovery [role=status]{line-height:1.8;margin-bottom:0}
+
+.scanner-shortlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));gap:12px;margin:16px 0}.scanner-candidate{min-width:0;padding:18px;border:1px solid #385166;background:#132333;border-radius:12px}.scanner-candidate h4{margin:0;font-size:18px}.scanner-candidate p{overflow-wrap:anywhere}.scanner-candidate button{min-height:44px}
