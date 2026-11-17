@@ -43,7 +43,7 @@ test('only the trial owner can see missing configuration names, never secret val
 test('scanner discovery and POST stay restricted to trial owner and expiry',async()=>{
  const f=fixture(),a=seed(f,'owner@example.test',owner),b=seed(f,'other@example.test','bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','e'.repeat(64));let calls=0;
  const handler=createScanMarketHandler({env,run:f.run,now:()=>now,fetcher:async()=>{calls++;throw Error('unexpected')}});
- const config=await(await handler(request('scan-market',undefined,a.cookie))).json();assert.deepEqual(config.symbols,['AAPL']);assert.equal(config.maxSymbols,10);
+ const config=await(await handler(request('scan-market',undefined,a.cookie))).json();assert.deepEqual(config.symbols,['AAPL']);assert.equal(config.maxSymbols,8);assert.equal(config.batchDelayMs,61000);
  for(const cookie of ['',b.cookie]){const config=await(await handler(request('scan-market',undefined,cookie))).json();assert.equal(config.enabled,false);assert.equal(config.symbols,undefined);assert.equal((await handler(request('scan-market',{symbols:['AAPL']},cookie))).status,503)}
  const expired=createScanMarketHandler({env,run:f.run,now:()=>Date.parse(end)});assert.equal((await expired(request('scan-market',{symbols:['AAPL']},a.cookie))).status,503);
  assert.equal((await handler(request('scan-market',{symbols:Array(11).fill('AAPL')},a.cookie))).status,400);
