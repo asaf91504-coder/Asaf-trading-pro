@@ -5,7 +5,7 @@ let state=null,busy=false,retryAction;
 const show=(id,visible)=>{$(id).hidden=!visible;};
 const date=value=>new Intl.DateTimeFormat(document.documentElement.lang||'he',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value));
 async function request(action){
- const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{planId:$('billingPlan').value,consent:consentFor($('billingPlan').value)}:{})})}:{}),signal:AbortSignal.timeout(45000)});
+ const r=await fetch('/.netlify/functions/billing',{method:action?'POST':'GET',cache:'no-store',headers:action?{'Content-Type':'application/json'}:{},...(action?{body:JSON.stringify({action,...(action==='subscribe'?{promoCode:$('billingPromoCode')?.value?.trim()||'',planId:$('billingPlan').value,consent:consentFor($('billingPlan').value)}:{})})}:{}),signal:AbortSignal.timeout(45000)});
  const data=await r.json();if(!r.ok){const error=Error(data.error||t('לא ניתן לבדוק את המנוי כרגע. נסה שוב.'));error.status=r.status;throw error;}return data;
 }
 const copy=(key,values)=>subscriptionCopy(document.documentElement.lang,key,values);
