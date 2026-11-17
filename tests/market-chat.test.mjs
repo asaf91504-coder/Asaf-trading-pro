@@ -30,7 +30,7 @@ test("extracts actual historical price context",()=>{
 test("no CSV never implies live access",()=>{
  const reply=answerStockQuestion("תנתח לי את NVDA");
  assert.match(reply,/אין עדיין נתוני גרף/);
- assert.match(reply,/TradingView/);
+ assert.match(reply,/נדרשים לפחות 21 נרות/);
 });
 test("stock answers include input symbol and date",()=>{
  const ctx=stockContext("NASDAQ:NVDA",bars());

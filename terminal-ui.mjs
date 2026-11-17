@@ -16,7 +16,7 @@ const dataButton=document.createElement('button');dataButton.type='button';dataB
 const accountButton=document.createElement('button');accountButton.type='button';accountButton.className='terminal-account-button';accountButton.textContent='התחברות';header.append(accountButton);
 const globalTools=document.createElement('details');globalTools.className='terminal-global-tools';const globalSummary=document.createElement('summary');globalSummary.textContent='עזרה ומצב שירותים';main.querySelector('.tabs').before(globalTools);globalTools.append(globalSummary,$('keyboardHelp'),document.querySelector('.server-tools'));
 const connection=$('charts').querySelector('.connection-settings');
-const dataTools=document.createElement('details');dataTools.id='terminalDataTools';dataTools.className='terminal-data-tools';const dataSummary=document.createElement('summary');dataSummary.textContent='מקור נתונים וכלים מתקדמים';dataTools.append(dataSummary);connection.before(dataTools);dataTools.append(connection);dataTools.before($('referenceChart'));
+const dataTools=document.createElement('details');dataTools.id='terminalDataTools';dataTools.className='terminal-data-tools';const dataSummary=document.createElement('summary');dataSummary.textContent='מקור נתונים וכלים מתקדמים';dataTools.append(dataSummary);connection.before(dataTools);dataTools.append(connection);
 function selectTab(id){document.querySelector('[data-tab="'+id+'"]').click()}
 dataButton.onclick=()=>{selectTab('charts');dataTools.open=!dataTools.open;if(dataTools.open)connection.open=true;dataSummary.focus()};
 // Collapsible statistics and indicators leave the actual chart room to breathe.
@@ -48,7 +48,7 @@ window.addEventListener('asaf:auth',()=>{
 });
 const conversationNav=document.createElement('div');conversationNav.className='terminal-conversation-nav';
 const fullChat=document.createElement('button');fullChat.type='button';fullChat.textContent='פתח שיחה מלאה';fullChat.onclick=()=>{selectTab('chat');$('chatInput').focus()};
-const openChart=document.createElement('button');openChart.type='button';openChart.textContent='פתח גרף';openChart.onclick=()=>{selectTab('charts');$('localChartCanvas').focus()};
+const openChart=document.createElement('button');openChart.type='button';openChart.textContent='חזרה לגרף';openChart.onclick=()=>{selectTab('charts');$('localChartCanvas').focus()};
 conversationNav.append(fullChat,openChart);chat.querySelector('h2').after(conversationNav);
 const contextDetails=document.createElement('details');contextDetails.className='terminal-conversation-context';const contextSummary=document.createElement('summary');contextSummary.textContent='הגרף והמקורות המצורפים לשיחה';contextDetails.append(contextSummary,context,auto);conversationNav.after(contextDetails);
 function auth(){accountButton.textContent=authState.authenticated?'החשבון שלי':'התחברות';if(authState.authenticated)accountButton.classList.add('signed-in');else accountButton.classList.remove('signed-in')}
@@ -116,7 +116,7 @@ const exactRange=document.createElement('div');exactRange.className='row';const 
 // Chart workspace occupies the page; retain a single conversation and chart instance.
 mountAssetSearch({host:command,open(symbol){$('symbol').value=symbol;$('symbol').dispatchEvent(new Event('input'));selectTab('charts');$('marketFetch').click()}});
 const workspaceChat=document.createElement('button');workspaceChat.type='button';workspaceChat.className='workspace-chat-toggle';workspaceChat.textContent='✦ ASAF AI';workspaceChat.setAttribute('aria-expanded','false');command.append(workspaceChat);
-function toggleWorkspaceChat(open){document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
+function toggleWorkspaceChat(open){if(open&&!wide.matches){document.body.classList.remove('chart-chat-open');workspaceChat.setAttribute('aria-expanded','false');workspaceChat.textContent='✦ ASAF AI';selectTab('chat');$('chatInput').focus();return}document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
 workspaceChat.onclick=()=>toggleWorkspaceChat(!document.body.classList.contains('chart-chat-open'));
 chartChatOnly.onclick=()=>{chartFocus(false);toggleWorkspaceChat(true);if(!$('chatInput').value.trim())$('chatInput').value='נתח את הגרף והצג נקודת כניסה וסטופ־לוס עם התנאים לתרחיש';$('chatInput').dispatchEvent(new Event('input'));$('chatInput').focus()};
 // Reveal executed chart changes, including requests made from the full chat page.
@@ -154,3 +154,6 @@ quickActions.after(composerHint);
 const navLabels={charts:'גרפים',scanner:'סורק מניות',news:'חדשות',chat:'ASAF AI',risk:'מחשבון סיכון',watch:'מעקב'};
 for(const tab of document.querySelectorAll('.tabs [data-tab]'))tab.textContent=navLabels[tab.dataset.tab]||tab.textContent;
 $('journalLink').textContent='יומן מסחר';
+
+// Keep a phone conversation on its own page after rotation or resizing.
+wide.addEventListener('change',()=>{if(!wide.matches&&document.body.classList.contains('chart-chat-open'))toggleWorkspaceChat(true)});
