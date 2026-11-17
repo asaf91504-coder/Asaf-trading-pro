@@ -170,7 +170,7 @@ async function handler(request){
    if(typeof payload.receivedAt!=='string'||payload.receivedAt!==snapshot.receivedAt)return reply({error:'עותק נתוני הקריפטו בשרת השתנה. טען מחדש את הגרף לפני הניתוח.'},409);
    bars=validateBars(snapshot.bars);
    meta={...meta,source:'CoinLore',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,quote:snapshot.quote||null,delayMinutes:null,exchangeTimezone:'UTC',provenance:'server-crypto-cache',internalResearchOnly:true,latestBarMayBePartial:true};
-  }else if(payload.useServerMarket===true){const verified=await analysisMarket({...payload,symbol});bars=validateBars(verified.bars);meta={...meta,...verified.meta}}
+  }else if(payload.useServerMarket===true){const verified=await analysisMarket({...payload,symbol},{memberId:member?.id});bars=validateBars(verified.bars);meta={...meta,...verified.meta}}
   else bars=validateBars(payload?.bars);
   image=validatedImage(payload?.image);
  }catch(e){const known=e instanceof MarketError||e instanceof CryptoResearchError||e instanceof IntrinioError;return reply({error:known?e.message:'נתוני הגרף או המקור אינם תקינים.'},known?e.status:cryptoRequested?503:400)}
@@ -212,7 +212,7 @@ async function handler(request){
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
    method:"POST",signal:controller.signal,
    headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","X-Title":"ASAF Trading Pro"},
-   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency"},stream:false})
+   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency",data_collection:"deny",zdr:true},stream:false})
   });
   if(!response.ok){
    return reply({error:response.status===429?"מכסת החינם של מודל ה-AI נוצלה; נסה מאוחר יותר.":"מודל ה-AI החינמי אינו זמין כרגע ("+response.status+")"},response.status===429?429:502);

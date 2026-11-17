@@ -3,9 +3,9 @@ import {readPublicNews} from './public-news-service.mjs';
 import {readMarketSnapshot,MarketError} from './market-feed.mjs';
 import {command,storageKey,storeConfigured} from './storage.mjs';
 import {newsConfigured,snapshotState} from './news-core.mjs';
-export async function analysisMarket(payload,{env=process.env,run=command,now=Date.now()}={}){
+export async function analysisMarket(payload,{env=process.env,run=command,now=Date.now(),memberId=null}={}){
  if(env.ASAF_MARKET_AI_LICENSE_CONFIRMED!=='true')throw new MarketError('ניתוח נתוני ספק ממתין לאישור רישוי AI ולהפעלת החיבור.');
- const snapshot=await readMarketSnapshot({selected:payload.symbol,interval:payload.interval||'1day',env,run,now,cachedOnly:true,maxAgeMs:15*60000});
+ const snapshot=await readMarketSnapshot({selected:payload.symbol,interval:payload.interval||'1day',env,run,now,cachedOnly:true,maxAgeMs:15*60000,memberId});
  if(typeof payload.receivedAt!=='string'||payload.receivedAt!==snapshot.receivedAt)throw new MarketError('עותק הנתונים בשרת השתנה. טען מחדש את הגרף לפני הניתוח.',409);
  return {bars:snapshot.bars,meta:{source:'Twelve Data',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,volumeCoverage:snapshot.volumeCoverage||'unconfirmed',priceAdjustment:snapshot.priceAdjustment||'unconfirmed',extendedHours:snapshot.extendedHours===true,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,exchangeTimezone:snapshot.exchangeTimezone,delayMinutes:snapshot.delayMinutes,provenance:'server-provider-cache'}};
 }
