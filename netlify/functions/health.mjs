@@ -11,7 +11,7 @@ import {googleConfigured} from "../../server/google-auth.mjs";
 import {publicMarketConfigured} from "./public-market.mjs";
 import {newsConfigured} from "../../server/news-core.mjs";
 // No network access, provider request, billing, or secrets are involved in this health check.
-const VERSION="2026-11-17-venture-raster-1";
+const VERSION="2026-11-17-venture-raster-2";
 const headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"};
 export default async function handler(request) {
   if(request.method!=="GET")return Response.json({error:"Method not allowed"},{status:405,headers});

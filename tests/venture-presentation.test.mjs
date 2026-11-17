@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ventureChart,ventureScanRecord} from '../server/venture-presentation.mjs';
+import {Resvg} from '@resvg/resvg-js';
+import {ventureChart,ventureScanRecord,rasterFontOptions} from '../server/venture-presentation.mjs';
 import {rawMarketExportRequest} from '../server/venture-policy.mjs';
 import {createPublicMarketHandler} from '../netlify/functions/public-market.mjs';
 import {createScanMarketHandler} from '../netlify/functions/scan-market.mjs';
@@ -53,4 +54,9 @@ test('shared three-hour snapshots keep raw records inside the server boundary',a
  state.db.set(sharedScannerKey(configured)+':snapshot',JSON.stringify({records:[record],errors:[],completedAt:snapshot.receivedAt,startedAt:snapshot.receivedAt,nextUpdateAt:now+10800000}));
  let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('No provider request')}});
  const response=await handler(request('scan-market',{symbols:['AAPL'],filters:{minPrice:5,minMarketCap:0,minVolume:0}},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);assert.equal(body.shared,true);assert.equal(body.records[0].screen.matches,true);assert.equal(calls,0);
+});
+
+test('bundled server font produces visible price and attribution glyphs without system fonts',()=>{
+ const image=new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="80"><rect width="400" height="80" fill="white"/><text x="10" y="55" font-family="DejaVu Sans" font-size="30" fill="black">AAPL 123.45 Twelve Data</text></svg>',{font:rasterFontOptions()}).render();
+ const pixels=image.pixels;let ink=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]<128&&pixels[i+3]>128)ink++;assert.ok(ink>500,'Missing server-rendered text');
 });

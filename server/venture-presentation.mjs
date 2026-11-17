@@ -1,5 +1,4 @@
 import {Resvg} from '@resvg/resvg-js';
-import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {chartIndicators} from '../chart-indicators.mjs';
 import {executeChartActions} from '../chart-command-controller.mjs';
@@ -9,8 +8,7 @@ import {MarketError} from './market-feed.mjs';
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const number=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:2});
 // Bundle a small licensed ASCII font: Lambda runtimes need not have system fonts.
-let font;
-function chartFont(){return font??=readFileSync(resolve(process.env.LAMBDA_TASK_ROOT||process.cwd(),'server-assets/chart-sans.ttf'))}
+export function rasterFontOptions(){return {loadSystemFonts:false,fontFiles:[resolve(process.env.LAMBDA_TASK_ROOT||process.cwd(),'server-assets/chart-sans.ttf')],defaultFontFamily:'DejaVu Sans'}}
 // This SVG stays on the server. Only rasterized PNG pixels cross the boundary.
 export async function ventureChart(snapshot,input=[]){
  const actions=validateChartActions(input);
@@ -42,7 +40,7 @@ export async function ventureChart(snapshot,input=[]){
  svg+='<text x="25" y="540" font-size="10">VOL</text>';
  for(const i of [0,Math.floor(visible.length/2),visible.length-1])svg+=`<text x="${x(i)}" y="595" text-anchor="middle" font-size="12">${escape(visible[i].date.slice(0,16))}</text>`;
  svg+=legend.join('')+`<text x="25" y="650" font-size="14">Data provided by Twelve Data | Static research image | No raw data export</text><text x="25" y="674" font-size="12">${snapshot.interval==='1day'?'Previous daily sessions only. EOD volume; not live intraday volume.':'Intraday volume is not consolidated. Latest candle may be incomplete.'} Conditional research, not a trade order.</text></g></svg>`;
- const png=new Resvg(svg,{font:{loadSystemFonts:false,fontBuffers:[chartFont()],defaultFontFamily:'DejaVu Sans'}}).render().asPng();
+ const png=new Resvg(svg,{font:rasterFontOptions()}).render().asPng();
  return {presentation:'server-raster',source:'Twelve Data',symbol:snapshot.symbol,interval:snapshot.interval,receivedAt:snapshot.receivedAt,latestBarTime:snapshot.latestBarTime,candleCount:bars.length,chartSettings:{style,indicators:[...indicators],visibleRange:{start:visible[0].date,end:snapshot.latestBarTime}},firstVisibleBarTime:visible[0].date,exchangeTimezone:snapshot.exchangeTimezone,coverage:snapshot.coverage,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,delayMinutes:snapshot.delayMinutes,cached:snapshot.cached===true,image:'data:image/png;base64,'+Buffer.from(png).toString('base64'),messages:receipt.messages};
 }
 
