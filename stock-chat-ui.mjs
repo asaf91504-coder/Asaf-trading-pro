@@ -375,8 +375,8 @@ Promise.all([intrinioFeed,publicFeed]).then(([intrinio,publicMarket])=>{
   $('marketProviderDescription').textContent='נרות יומיים קודמים של מניות ארה״ב, מותאמים לפיצולים ולדיבידנדים. הטעינה ידנית ובחשבון בעל הפרויקט בלבד; אלה נתוני סוף יום, לא מחיר חי.';
   $('marketProviderScope').textContent=intrinio.aiAnalysisEnabled?'ניתוח AI של נתוני Intrinio מופעל למנהל, בכפוף לזמינות השירות.':'הגרף והאינדיקטורים המקומיים זמינים לאחר טעינה. העברת נתוני Intrinio למודל AI חיצוני עדיין כבויה.';
  }else if(publicMarket.enabled){
-  $('marketProviderTitle').textContent='Twelve Data · חיבור נתוני שוק';
-  $('marketProviderScope').textContent='היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
+  $('marketProviderTitle').textContent=publicMarket.privateTrial?'Twelve Data · ניסיון פרטי לחשבון שלך':'Twelve Data · חיבור נתוני שוק';
+  $('marketProviderScope').textContent=publicMarket.privateTrial?'בדיקה פנימית לבעל החשבון בלבד. נפח המסחר חלקי; אין להציג או לשתף את נתוני הניסיון עם לקוחות.':'היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
  }
  if(marketStatus.textContent==='בודק את הגדרת ספק הנתונים…')marketStatus.textContent=intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'ספק הנתונים מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
 });
