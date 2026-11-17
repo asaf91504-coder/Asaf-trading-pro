@@ -25,7 +25,7 @@ export function creditWindow(record,now=Date.now()){
   return {key:`paid:${anchor}:${period}`,limit:p.weeklyCredits+(bonus?Math.floor(p.weeklyCredits*p.bonusPercent/100):0),startsAt:start,resetsAt:Math.min(start+WEEK,record.paidUntil,bonus?record.bonusUntil:Infinity),planId:p.id};
  }
  const anchor=record?.trialStartedAt,end=Math.max(record?.trialEndsAt||0,record?.complimentaryUntil||0);
- if(!Number.isFinite(anchor)||record.trialEndsAt!==anchor+14*86400000||now<anchor||now>=end)return null;
+ if(!Number.isFinite(anchor)||![7,14].some(days=>record.trialEndsAt===anchor+days*86400000)||now<anchor||now>=end)return null;
  return {key:`trial-total:${anchor}`,limit:100,startsAt:anchor,resetsAt:end,planId:'trial'};
 }
 export function creditsForCost(usd){if(!Number.isFinite(usd)||usd<0)throw Error('Invalid cost');return Math.max(1,Math.ceil((usd-1e-10)/CREDIT_USD_CEILING));}

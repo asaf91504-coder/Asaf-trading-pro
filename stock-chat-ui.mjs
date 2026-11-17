@@ -1,3 +1,4 @@
+import {showCreditPlans} from './exhausted-credits-ui.mjs';
 import {journalIntent} from './journal-chat-core.mjs';
 import {mountJournalDraft} from './journal-chat-ui.mjs';
 import {renderSearchSources} from './web-search-ui.mjs';
@@ -278,10 +279,12 @@ async function ask(q,extra={}){
    if(error.name==='AbortError')throw error;
    throw Error(response.ok?'התקבלה תשובה לא תקינה משירות ה-AI. השאלה נשמרה; אפשר לנסות שוב.':'שירות ה-AI החזיר שגיאת חיבור (HTTP '+response.status+'). השאלה נשמרה; אפשר לנסות שוב.');
   }
+  if(response.status===402&&['credits_exhausted','subscription_required'].includes(data.code)){showCreditPlans();}
   if(!response.ok){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
    throw Error(data.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
   }
+  if(data.credits?.remaining===0)showCreditPlans();
   if(epoch!==conversationEpoch)return;
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);

@@ -1,10 +1,13 @@
 name: Encrypted personal-data backup
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '41 2 * * *'
 permissions:
   contents: read
 jobs:
   backup:
+    if: github.event_name == 'workflow_dispatch' || vars.ASAF_BACKUP_SCHEDULE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

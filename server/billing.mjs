@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
 import {digest,publicAuthConfigured} from './auth-core.mjs';
 import {paypalConfigured,createPayPal,validatePlan,approvalLink} from './paypal.mjs';
-export const DAY=86400000,TRIAL_DAYS=14,PRICE_USD=10;
+export const DAY=86400000,TRIAL_DAYS=7,PRICE_USD=10;
 export const billingEnabled=(env=process.env)=>env.ASAF_BILLING_ENABLED==='true';
 export const billingReady=(env=process.env)=>billingEnabled(env)&&publicAuthConfigured(env)&&paypalConfigured(env);
 const parse=raw=>raw?JSON.parse(raw):null;
@@ -24,11 +24,11 @@ export async function startTrial(identity,{env=process.env,run=command,now=Date.
  if(!billingReady(env))throw Error('Subscriptions are not open');
  await run(['SET',recordKey(identity,env),JSON.stringify({trialStartedAt:now,trialEndsAt:now+TRIAL_DAYS*DAY,paidUntil:0}),'NX'],{env});
  const record=await readBilling(identity,{env,run});
- if(!Number.isFinite(record?.trialStartedAt)||record.trialEndsAt!==record.trialStartedAt+TRIAL_DAYS*DAY)throw Error('Invalid trial record');
+ if(!Number.isFinite(record?.trialStartedAt)||![7,14].some(days=>record.trialEndsAt===record.trialStartedAt+days*DAY))throw Error('Invalid trial record');
  return record;
 }
 export function entitlement(record,now=Date.now()){
- const validTrial=Number.isFinite(record?.trialStartedAt)&&record.trialEndsAt===record.trialStartedAt+TRIAL_DAYS*DAY;
+ const validTrial=Number.isFinite(record?.trialStartedAt)&&[7,14].some(days=>record.trialEndsAt===record.trialStartedAt+days*DAY);
  const trialEndsAt=Math.max(validTrial?record.trialEndsAt:0,Number.isFinite(record?.complimentaryUntil)?record.complimentaryUntil:0);
  const trial=validTrial&&record.trialStartedAt<=now&&now<trialEndsAt;
  const paid=Number.isFinite(record?.paidUntil)&&record.paidUntil>now;
@@ -66,19 +66,22 @@ export async function syncSubscription(identity,record,{env=process.env,run=comm
  const id=record.subscriptionId;
  if(!/^I-[A-Z0-9]+$/.test(id))throw Error('Invalid subscription');
  const sub=await api('/v1/billing/subscriptions/'+id);
- if(sub.id!==id||sub.custom_id!==identity||sub.plan_id!==(record.planId?env[planEnv(record.planId)]:env.PAYPAL_PLAN_ID)||sub.plan_overridden===true||Number(sub.quantity||1)!==1||Number(sub.shipping_amount?.value||0)!==0)throw Error('Subscription does not match account and plan');
+ if(sub.id!==id||sub.custom_id!==identity||sub.plan_id!==(record.promotion?.paypalPlanId||(record.planId?env[planEnv(record.planId)]:env.PAYPAL_PLAN_ID))||sub.plan_overridden===true||Number(sub.quantity||1)!==1||Number(sub.shipping_amount?.value||0)!==0)throw Error('Subscription does not match account and plan');
  const query=new URLSearchParams({start_time:new Date(now-62*DAY).toISOString(),end_time:new Date(now).toISOString()});
  const history=await api('/v1/billing/subscriptions/'+id+'/transactions?'+query);
  if(!Array.isArray(history.transactions)||Number(history.total_pages||1)>1)throw Error('Incomplete payment history');
- const price=record.planId?planFor(record.planId).price:PRICE_USD;
+ const price=record.promotion?.monthlyPrice??(record.planId?planFor(record.planId).price:PRICE_USD);
  const valid=history.transactions.filter(t=>t.status==='COMPLETED'&&!record.revokedTransactionIds?.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&Number(t.amount_with_breakdown.gross_amount.value)===price&&Date.parse(t.time)<=now);
  const first=valid.length?Math.min(...valid.map(t=>Date.parse(t.time))):null;
  const anchor=record.creditAnchor??first;
  const updated={...record,...(record.planId&&anchor!==null?{creditAnchor:anchor,bonusUntil:record.bonusUntil??nextMonth(anchor)}:{}),subscriptionStatus:sub.status,paidUntil:paidThrough(history.transactions,sub,record.revokedTransactionIds,now,price),verifiedAt:now,approvalUrl:approvalLink(sub,env)};
  return saveBilling(identity,updated,{env,run});
 }
-export async function createSubscription(identity,record,{env=process.env,run=command,api=createPayPal({env}),now=Date.now(),origin,planId}={}){
+export async function createSubscription(identity,record,{env=process.env,run=command,api=createPayPal({env}),now=Date.now(),origin,planId,promotion=null}={}){
  if(!record||(!creditsEnabled(env)&&(now<record.trialEndsAt||entitlement(record,now).access))||entitlement(record,now).status==='paid')throw Error('The free trial or paid period is still active');
+ if((record.createRequestId&&!record.subscriptionId)||(record.subscriptionId&&!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))){
+  if((record.promotion?.consent||null)!==(promotion?.consent||null))throw Error('Resolve existing checkout before changing promotion');
+ }
  if(record.subscriptionId){
   if(creditsEnabled(env)&&record.planId!==planId&&!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))throw Error('Resolve the existing checkout before selecting another plan');
   record=await syncSubscription(identity,record,{env,run,api,now});
@@ -87,12 +90,12 @@ export async function createSubscription(identity,record,{env=process.env,run=co
   if(entitlement(record,now).access)throw Error('Your paid period is still active');
  }
  const chosen=creditsEnabled(env)?planFor(planId):null;
- const paypalPlanId=chosen?env[planEnv(chosen.id)]:env.PAYPAL_PLAN_ID;
+ const paypalPlanId=promotion?.paypalPlanId||(chosen?env[planEnv(chosen.id)]:env.PAYPAL_PLAN_ID);
  if(record.createRequestId&&!record.subscriptionId&&record.planId!==chosen?.id)throw Error('Unresolved checkout for another plan');
- validatePlan(await api('/v1/billing/plans/'+paypalPlanId),paypalPlanId,chosen?.price||10);
+ validatePlan(await api('/v1/billing/plans/'+paypalPlanId),paypalPlanId,promotion?.monthlyPrice??chosen?.price??10);
  const attempt=record.createRequestId&&!record.subscriptionId?record.createRequestId:randomUUID();
  if(record.createRequestId&&!record.subscriptionId&&now-record.createStartedAt>70*3600000)throw Error('Unresolved checkout: contact support before retrying');
- record={...record,...(chosen?{planId:chosen.id}:{}),createRequestId:attempt,createStartedAt:record.subscriptionId?now:(record.createStartedAt||now),subscriptionId:null,subscriptionStatus:null,approvalUrl:null};
+ record={...record,promotion,...(chosen?{planId:chosen.id}:{}),createRequestId:attempt,createStartedAt:record.subscriptionId?now:(record.createStartedAt||now),subscriptionId:null,subscriptionStatus:null,approvalUrl:null};
  await saveBilling(identity,record,{env,run});
  const sub=await api('/v1/billing/subscriptions',{method:'POST',requestId:attempt,body:{plan_id:paypalPlanId,custom_id:identity,application_context:{brand_name:'ASAF Pro',shipping_preference:'NO_SHIPPING',user_action:'SUBSCRIBE_NOW',return_url:origin+'/subscription.html?paypal=return',cancel_url:origin+'/subscription.html?paypal=cancel'}}});
  if(!/^I-[A-Z0-9]+$/.test(sub.id||''))throw Error('Invalid PayPal subscription');
