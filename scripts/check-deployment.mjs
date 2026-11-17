@@ -13,7 +13,7 @@ export async function checkDeployment(value,{fetcher=fetch}={}){
   catch{checks.push({name,passed:false});}
  }
  await check('health and configured capabilities','/.netlify/functions/health',async r=>{if(r.status!==200)return false;const h=await r.json();if(h.application!=='ASAF TRADING PRO'||h.status!=='ok'||typeof h.version!=='string')return false;
-  configuration.version=h.version;for(const key of ['publicAuthEnabled','durableQuotaEnabled','freeAIEnabled','paidAIEnabled','googleAuthEnabled','publicMarketDataEnabled','backgroundMarketRefreshConfigured','newsEnabled'])configuration[key]=h[key]===true;
+  configuration.version=h.version;configuration.aiProvider=h.aiProvider;configuration.aiModel=h.aiModel;for(const key of ['publicAuthEnabled','durableQuotaEnabled','freeAIEnabled','paidAIEnabled','openaiAIEnabled','googleAuthEnabled','publicMarketDataEnabled','backgroundMarketRefreshConfigured','newsEnabled'])configuration[key]=h[key]===true;
   return r.headers.get('cache-control')?.includes('no-store')&&h.publicAuthEnabled===true&&h.durableQuotaEnabled===true&&h.paidAIEnabled===false;
  });
  const tasks=[

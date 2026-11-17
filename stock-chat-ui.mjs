@@ -272,9 +272,9 @@ async function ask(q,extra={}){
   let response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
   if(response.status===428){
    const quote=await response.clone().json();
-   if(quote.code!=='credit_consent_required'||quote.maxCredits!==1)throw Error('Invalid credit quote');
-   if(!window.confirm('שליחת הבקשה תעלה קרדיט אחד. להמשיך?'))throw Error('השליחה בוטלה. לא נוכו קרדיטים.');
-   response=await fetch('/.netlify/functions/free-chat',{method:'POST',signal:activeController.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...preparedPayload,creditConsent:1})});
+   if(quote.code!=='credit_consent_required'||!Number.isInteger(quote.maxCredits)||quote.maxCredits<1||quote.maxCredits>10)throw Error('Invalid credit quote');
+   if(!window.confirm('שליחת הבקשה תעלה '+quote.maxCredits+' קרדיטים. להמשיך?'))throw Error('השליחה בוטלה. לא נוכו קרדיטים.');
+   response=await fetch('/.netlify/functions/free-chat',{method:'POST',signal:activeController.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...preparedPayload,creditConsent:quote.maxCredits})});
   }
   let data;try{data=await response.json()}catch(error){
    if(error.name==='AbortError')throw error;
@@ -291,6 +291,7 @@ async function ask(q,extra={}){
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   const followAnswer=isChatNearBottom(log);
   waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+data.answer;
+  if(data.historyRestricted)waiting.textContent+='\n\nהשיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.';
   if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
   if(Array.isArray(data.actions)&&data.actions.length){
    if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
@@ -312,7 +313,7 @@ async function ask(q,extra={}){
   pendingImage=null;
   if(imageInput)imageInput.value="";
   if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";
-  setAiStatus("✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך");
+  setAiStatus(data.provider==='openai'?'✓ AI שיחתי מחובר · OpenAI · '+data.model+' · נתוני שוק לפי מקור/תאריך':'✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך');
  }catch(e){
   if(epoch!==conversationEpoch)return;
   waiting.textContent=(localReceipt?localReceipt+"\n\n":"")+"⚠️ "+(e.name==="AbortError"?(timedOut?"הזמן להמתנה לתשובה הסתיים.":"הבקשה בוטלה."):e.message);
