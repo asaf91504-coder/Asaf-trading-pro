@@ -1,3 +1,4 @@
+import {directOpenAI,openAIBlock,openAIRequest,OPENAI_MODEL} from '../../server/chat-provider.mjs';
 import {MARKET_QA_POLICY,SCOPE_MARKER,unsupportedChatRequest,scopeError} from '../../server/chat-scope.mjs';
 import {creditsEnabled} from '../../server/plans.mjs';
 import {reserveCredits} from '../../server/credits.mjs';
@@ -10,8 +11,8 @@ import {chartViewContext,technicalEvidence} from '../../chart-analysis-context.m
 import {validCandleTime} from '../../candle-time.mjs';
 import {patternResearch} from '../../pattern-research.mjs';
 /**
- * ASAF Market AI: genuine conversational text/vision via free-only OpenRouter router.
- * Off by default; does NOT use paid OpenAI or provider/market data APIs.
+ * ASAF Market AI: full conversational text/vision, with explicit server-side provider selection.
+ * Direct OpenAI is owner-only and disabled until funding and data approvals are verified.
  * Authenticated members (or explicitly configured legacy owner access); durable quotas gate model requests.
  */
 import {analysisMarket,analysisNews} from '../../server/analysis-sources.mjs';
@@ -118,9 +119,11 @@ function rateLimit(){
 async function handler(request){
  const startedAt=Date.now();
  if(request.method!=="POST")return reply({error:"POST only"},405);
- if(process.env.ASAF_FREE_AI_ENABLED!=="true")return reply({error:"AI חופשי עדיין לא הוגדר. נדרש חיבור חינמי ב-Netlify; לא תבוצע קריאה בתשלום."},503);
- const key=process.env.OPENROUTER_API_KEY,pass=process.env.ASAF_FREE_AI_ACCESS_CODE;
+ const direct=directOpenAI(),model=direct?OPENAI_MODEL:MODEL;
+ if(!direct&&process.env.ASAF_FREE_AI_ENABLED!=="true")return reply({error:"AI חופשי עדיין לא הוגדר. נדרש חיבור חינמי ב-Netlify; לא תבוצע קריאה בתשלום."},503);
+ const key=direct?process.env.OPENAI_API_KEY:process.env.OPENROUTER_API_KEY,pass=process.env.ASAF_FREE_AI_ACCESS_CODE;
  const publicMode=process.env.ASAF_PUBLIC_AUTH_ENABLED==='true';let member=null;
+ if(direct&&!publicMode)return reply({error:'OpenAI requires authenticated access'},401);
  if(!key)return reply({error:'מפתח המודל טרם הוגדר בשרת'},503);
  if(publicMode){
   if(!storeConfigured())return reply({error:'כניסה ומגבלות שימוש משותפות טרם הוגדרו'},503);
@@ -138,6 +141,7 @@ async function handler(request){
  if(length>MAX_BODY)return reply({error:"הבקשה גדולה מדי"},413);
  let payload;
  try{const text=await request.text();if(text.length>MAX_BODY)return reply({error:"הבקשה גדולה מדי"},413);payload=JSON.parse(text)}catch{return reply({error:"JSON לא תקין"},400)}
+ const providerBlock=openAIBlock(member,payload);if(providerBlock)return reply(providerBlock,providerBlock.status);
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  if(unsupportedChatRequest(question))return reply(scopeError(payload.language),422);
@@ -207,32 +211,41 @@ async function handler(request){
  // Keep the complete function below the host's 60-second execution ceiling.
  const remainingMs=Math.min(45000,50000-(Date.now()-startedAt));
  if(remainingMs<=0)return reply({error:'הכנת הנתונים התעכבה. השאלה נשמרה ואפשר לנסות שוב.',code:'preparation_timeout'},504);
+ const messages=[{role:"system",content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}];
+ let providerBody;
+ try{providerBody=direct?openAIRequest(messages):{model:MODEL,messages,max_tokens:1800,temperature:0.35,provider:{sort:"latency",data_collection:"deny",zdr:true},stream:false}}catch(e){return reply({error:e.message,code:e.code},e.status||503)}
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),remainingMs);
  try{
-  const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
+  const response=await fetch(direct?"https://api.openai.com/v1/chat/completions":"https://openrouter.ai/api/v1/chat/completions",{
    method:"POST",signal:controller.signal,
    headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","X-Title":"ASAF Trading Pro"},
-   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency",data_collection:"deny",zdr:true},stream:false})
+   body:JSON.stringify(providerBody)
   });
   if(!response.ok){
-   return reply({error:response.status===429?"מכסת החינם של מודל ה-AI נוצלה; נסה מאוחר יותר.":"מודל ה-AI החינמי אינו זמין כרגע ("+response.status+")"},response.status===429?429:502);
+   return reply({error:response.status===429?"מכסת ספק ה-AI נוצלה; נסה מאוחר יותר.":"מודל ה-AI אינו זמין כרגע ("+response.status+")"},response.status===429?429:502);
   }
   const output=await response.json();
   const raw=output?.choices?.[0]?.message?.content;
   const answer=typeof raw==="string"?raw:Array.isArray(raw)?raw.filter(p=>p?.type==="text").map(p=>p.text).join("\n"):"";
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);
-  if(!answer)return reply({error:"המודל החינמי לא החזיר תשובה"},502);
+  if(!answer.trim())return reply({error:"המודל לא החזיר תשובה"},502);
   const truncated=output?.choices?.[0]?.finish_reason==="length"||answer.length>7500;
-  if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated});return reply({...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,truncated,analysisContext,...(webSearch?{webSearch}:{}),model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
+  if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated});if(direct&&parsed.chartActionStatus==='unavailable')return reply({...parsed,code:'invalid_model_actions'},502);return reply({...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,truncated,analysisContext,...(webSearch?{webSearch}:{}),model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ התשובה נקטעה במגבלת האורך. אפשר לבקש המשך; לא נשלחת בקשה נוספת אוטומטית.":"");
-  return reply({answer:text+scenarioSuffix,tradeScenario,truncated,analysisContext,...(webSearch?{webSearch}:{}),model:MODEL,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
- }catch(error){return reply({error:error?.name==='AbortError'?"המודל החינמי לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.":"אין כרגע חיבור למודל החינמי",code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
+  return reply({answer:text+scenarioSuffix,tradeScenario,truncated,analysisContext,...(webSearch?{webSearch}:{}),model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
+ }catch(error){return reply({error:error?.name==='AbortError'?"המודל לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.":"אין כרגע חיבור למודל",code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
  finally{clearTimeout(timeout)}
 }
 
 
-// Weekly rollout is deliberately free-model-only until paid inference and search
-// have a tested upper cost bound. Never silently route to a paid model.
+// Direct OpenAI is explicitly gated and bounded to the existing one-credit ceiling.
+// Provider failures never fall back to another processor.
+async function refundTicket(ticket){
+ // Reservation refunds are idempotent. A transient storage error gets one retry.
+ for(let attempt=0;attempt<2;attempt++)try{await ticket.refund();return true}catch{}
+ return false;
+}
+const refundPending=()=>reply({error:'לא ניתן לאמת את החזר הקרדיט כרגע. יש לפנות לתמיכה לפני ניסיון נוסף.',code:'credit_refund_pending',credits:{refundPending:true}},503);
 export default async function creditAwareHandler(request){
  if(!creditsEnabled())return handler(request);
  if(request.method!=='POST')return handler(request);
@@ -245,12 +258,13 @@ export default async function creditAwareHandler(request){
   const raw=await request.clone().text();if(raw.length>MAX_BODY)return reply({error:'Request too large'},413);
   let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
   if(unsupportedChatRequest(body?.message))return reply(scopeError(body?.language),422);
+  const providerBlock=openAIBlock(member,body);if(providerBlock)return reply(providerBlock,providerBlock.status);
   if(body.webSearch===true)return reply({error:'חיפוש בתשלום ממתין לאימות תקרת העלות; אפשר להמשיך בשיחה ללא חיפוש.',code:'search_cost_unverified'},503);
   if(body.creditConsent!==1)return reply({error:'עלות בקשה זו היא קרדיט אחד. יש לאשר לפני שליחה.',code:'credit_consent_required',maxCredits:1},428);
   ticket=await reserveCredits(member.id,0.02);
   const response=await handler(request);
-  if(!response.ok&&ticket)await ticket.refund();
+  if(!response.ok&&ticket&&!await refundTicket(ticket))return refundPending();
   if(response.ok&&ticket){const data=await response.json();return reply({...data,credits:{charged:ticket.credits,remaining:ticket.remaining,resetsAt:ticket.resetsAt}})}
   return response;
- }catch(e){if(ticket)try{await ticket.refund()}catch{};return reply({error:e.status===402?e.message:'שירות הקרדיטים אינו זמין כרגע.',code:e.status===402?'credits_exhausted':'credits_unavailable'},e.status||503)}
+ }catch(e){if(ticket&&!await refundTicket(ticket))return refundPending();return reply({error:e.status===402?e.message:'שירות הקרדיטים אינו זמין כרגע.',code:e.status===402?'credits_exhausted':'credits_unavailable'},e.status||503)}
 }
