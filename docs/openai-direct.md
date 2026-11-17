@@ -24,12 +24,17 @@ subscription is not itself proof of usable API balance. No real API test was run
 
 ## Separate data approval
 
-The prior OpenRouter permission does not authorize direct OpenAI. Leave
-`ASAF_TWELVE_OPENAI_LICENSE_CONFIRMED` unset until the updated written approval
-covers direct OpenAI and its monitoring retention. Setting `store:false` does
-not establish zero retention or disable provider abuse monitoring.
+Updated written approval was verified on 2026-11-17: direct OpenAI inference is
+permitted for Asaf's single-user evaluation only, with no customers, training or
+fine-tuning. Twelve Data does not require ZDR and suggests `store=false` when
+using the Responses API. This route uses Chat Completions with `store:false`;
+that setting does not establish zero retention or disable abuse monitoring.
+Attribution remains required. The private approval email is retained outside
+this public repository; this approval grants no commercial rollout permission.
 
-After approval, the flag must be `true`, `ASAF_TWELVE_TRIAL_MEMBER_ID` must equal
+The server approval flag `ASAF_TWELVE_OPENAI_LICENSE_CONFIRMED` may be set to
+`true` for this verified personal trial only after the funding/owner checks above;
+ `ASAF_TWELVE_TRIAL_MEMBER_ID` must equal
 the single OpenAI member ID, and `ASAF_TWELVE_TRIAL_ENDS_AT` must remain in the
 future. Existing market license/cache/owner checks also apply to server snapshots.
 Until then, only a fresh text-only request is allowed: all bars, images, tool
