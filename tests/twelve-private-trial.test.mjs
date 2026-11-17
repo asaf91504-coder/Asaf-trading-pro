@@ -31,3 +31,11 @@ test('private cache isolation and cached AI reads require owner on every call',a
  await assert.rejects(analysisMarket({symbol:'AAPL',receivedAt},{env,now:Date.parse(end),memberId:owner,run:f.run}));
  assert.notEqual(marketSnapshotKey('AAPL','1day',env),marketSnapshotKey('AAPL','1day',{...env,ASAF_TWELVE_PRIVATE_TRIAL:'false'}));
 });
+test('only the trial owner can see missing configuration names, never secret values',async()=>{
+ const f=fixture(),a=seed(f,'owner@example.test',owner),b=seed(f,'other@example.test','bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','e'.repeat(64));
+ const h=createPublicMarketHandler({env:{...env,TWELVE_DATA_API_KEY:''},run:f.run,now:()=>now});
+ const get=cookie=>new Request('https://example.test/.netlify/functions/public-market',{headers:cookie?{cookie}:{}});
+ const ownerResult=await(await h(get(a.cookie))).json();assert.deepEqual(ownerResult.configurationIssues,['provider-key-missing']);
+ for(const cookie of [null,b.cookie])assert.equal((await(await h(get(cookie))).json()).configurationIssues,undefined);
+ assert.doesNotMatch(JSON.stringify(ownerResult),/test-secret|TWELVE_DATA_API_KEY/);
+});

@@ -23,6 +23,8 @@ function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,
   publicFeed:{then(){throw Error('Stock feed gating must not be consulted for crypto')}},
   fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body),options});if(duringFetch)duringFetch(context);return {ok:status<400,status,json:async()=>({symbol:'COINLORE:BTCUSD',bars,source:'CoinLore',interval,receivedAt:'2026-10-29T10:00:00Z',latestBarTime:bars.at(-1).date,quote:{price:222.5,receivedAt:'2026-10-29T10:00:00Z',quoteTime:null},internalResearchOnly:true,coverage:'CoinLore aggregated crypto data',latestBarMayBePartial:true,...resultPatch})}}
  };
+ context.refreshProviderFeed=async()=>{};
+ context.providerFeed={get:async()=>({intrinio:await context.intrinioFeed,publicMarket:await context.publicFeed})};
  // Lexical declarations belong to the exact source under test.
  delete context.cryptoIntervals;vm.createContext(context);vm.runInContext(helpers+loader+restore,context);return {context,nodes,requests,saved,ready,rendered};
 }

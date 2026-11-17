@@ -1,4 +1,5 @@
 import {showCreditPlans} from './exhausted-credits-ui.mjs';
+import {createMarketFeedClient} from './market-feed-client.mjs';
 import {journalIntent} from './journal-chat-core.mjs';
 import {mountJournalDraft} from './journal-chat-ui.mjs';
 import {renderSearchSources} from './web-search-ui.mjs';
@@ -219,7 +220,7 @@ async function ask(q,extra={}){
   // The server independently enforces this gate. Check before screenshots or
   // payload preparation so an unavailable analysis has a useful local result.
   if(activeData?.source==='Intrinio'||preparedPayload?.source==='Intrinio'||preparedPayload?.useServerIntrinio===true){
-   const policy=await intrinioFeed;
+   const policy=(await providerFeed.get()).intrinio;
    allowIntrinioHistory=policy.aiAnalysisEnabled===true;
    if(epoch!==conversationEpoch)return;
    if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
@@ -366,10 +367,8 @@ $("offlineAnalysis")?.addEventListener("click",()=>{
  say("bot","🧮 ניתוח מתמטי מקומי (ללא AI):\\n"+answerStockQuestion("תנתח את הגרף ואת המגמה",context));
 });
 const lastFetchBySymbol=new Map();
-const intrinioFeed=fetch('/.netlify/functions/intrinio-research',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
-const publicFeed=fetch('/.netlify/functions/public-market',{cache:'no-store'}).then(async r=>r.ok?await r.json():{enabled:false}).catch(()=>({enabled:false}));
-publicFeed.then(c=>{const option=$('marketAutoRefresh');if(option)option.disabled=!c.enabled;if(authState.enabled)$('marketForgetCode').hidden=true});
-Promise.all([intrinioFeed,publicFeed]).then(([intrinio,publicMarket])=>{
+const providerFeed=createMarketFeedClient({onChange:({intrinio,publicMarket})=>{
+ const option=$('marketAutoRefresh');if(option)option.disabled=!publicMarket.enabled;if(authState.enabled)$('marketForgetCode').hidden=true;
  if(intrinio.enabled&&!publicMarket.enabled){
   $('marketProviderTitle').textContent='Intrinio · ניסיון פנימי למנהל';
   $('marketProviderDescription').textContent='נרות יומיים קודמים של מניות ארה״ב, מותאמים לפיצולים ולדיבידנדים. הטעינה ידנית ובחשבון בעל הפרויקט בלבד; אלה נתוני סוף יום, לא מחיר חי.';
@@ -378,19 +377,23 @@ Promise.all([intrinioFeed,publicFeed]).then(([intrinio,publicMarket])=>{
   $('marketProviderTitle').textContent=publicMarket.privateTrial?'Twelve Data · ניסיון פרטי לחשבון שלך':'Twelve Data · חיבור נתוני שוק';
   $('marketProviderScope').textContent=publicMarket.privateTrial?'בדיקה פנימית לבעל החשבון בלבד. נפח המסחר חלקי; אין להציג או לשתף את נתוני הניסיון עם לקוחות.':'היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
  }
- if(marketStatus.textContent==='בודק את הגדרת ספק הנתונים…')marketStatus.textContent=intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'ספק הנתונים מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
-});
+ if(!loaded)marketStatus.textContent=intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'Twelve Data מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
+}});
+const refreshProviderFeed=()=>providerFeed.refresh(JSON.stringify([authState.enabled,authState.authenticated,authState.memberId]));
+window.addEventListener('asaf:auth',refreshProviderFeed);
+refreshProviderFeed();
 async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
  const requested=normSymbol(),crypto=cryptoResearchSymbol(requested),symbol=crypto||requested;
  if(!symbol)throw Error("נא להזין סימול מניה תחילה.");
  const interval=$("marketInterval").value,fetchKey=symbol+"|"+interval;
  if(crypto&&!cryptoIntervals.has(interval))throw Error('בניסוי הקריפטו זמין טווח 1day בלבד. בחר טווח נתמך; הטווח לא שונה אוטומטית.');
- const memberMode=authState.enabled,intrinio=!crypto&&memberMode&&!(await publicFeed).enabled&&(await intrinioFeed).enabled===true;
+ if(!crypto)await refreshProviderFeed();
+ const {intrinio:intrinioConfig,publicMarket:feed}=crypto?{intrinio:{enabled:false},publicMarket:{enabled:false}}:await providerFeed.get();
+ const memberMode=authState.enabled,intrinio=!crypto&&memberMode&&!feed.enabled&&intrinioConfig.enabled===true;
  if(intrinio&&interval!=='1day')throw Error('ניסיון Intrinio תומך כרגע בנרות יומיים בלבד. בחר 1day.');
  if(crypto){
   if(!authState.authenticated)throw Error('יש להיכנס לחשבון בעל הפרויקט לפני טעינת נתוני ניסוי הקריפטו.');
  }else{
-  const feed=await publicFeed;
   if(feed.enabled&&Array.isArray(feed.intervals)&&!feed.intervals.includes(interval))throw Error('טווח הזמן אינו כלול בחיבור הנתונים הנוכחי. בחר טווח נתמך.');
   if((memberMode||fromChat)&&!feed.enabled&&!intrinio)throw Error('נתוני השוק טרם חוברו. ממתינים לספק ולאישור רישוי; לא ניתן להציג גרף או לסמן רמות ללא נרות.');
   if(memberMode&&!authState.authenticated)throw Error('יש להיכנס לחשבון לפני טעינת נתונים.');
@@ -438,7 +441,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
 }
 marketButton.addEventListener("click",()=>loadMarketData().catch(error=>{marketStatus.textContent=error.message}));
 setInterval(()=>{if($('marketAutoRefresh')?.checked&&!document.hidden&&authState.authenticated&&!marketButton.disabled)marketButton.click()},61000);
-window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false;if(['CoinLore','Intrinio'].includes(loaded?.source)){chartRevision++;loaded=null;localChart.clear();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'))}});
+window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false;lastFetchBySymbol.clear();if(['CoinLore','Intrinio','Twelve Data'].includes(loaded?.source)){chartRevision++;resetRequest();loaded=null;localChart.clear();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'))}});
 $("marketForgetCode").addEventListener("click",()=>{
  sessionStorage.removeItem(privateAccessKey);
  marketStatus.textContent="קוד הגישה הזמני נשכח מהמכשיר.";
