@@ -11,10 +11,11 @@ ru:['${price} в месяц · {credits} кредитов в неделю · +{b
 zh:['每月 ${price} · 每周 {credits} 点额度 · 首月额外赠送 {bonus}%','我同意每月定期支付 ${price} 美元，获得每周 {credits} 点额度。可随时取消续订。','前往 PayPal · 每月 ${price}','可用额度 {remaining} / {limit} · 重置时间：{date}','无法查询订阅，请重试。'],
 ja:['月額 ${price} · 毎週 {credits} クレジット · 初月は {bonus}% 追加','毎週 {credits} クレジットの利用枠に対して、月額 ${price} USD の継続課金に同意します。更新はいつでもキャンセルできます。','PayPalへ進む · 月額 ${price}','利用可能：{remaining} / {limit} クレジット · 更新：{date}','サブスクリプションを確認できません。再試行してください。']
 };
+const trialBalances={he:'{remaining} מתוך 100 קרדיטים חינמיים בסך הכול · ללא חידוש · תוקף: {date}',en:'{remaining} of 100 total free credits · No renewal · Expires: {date}',es:'{remaining} de 100 créditos gratuitos totales · Sin renovación · Vence: {date}',ar:'{remaining} من إجمالي 100 رصيد مجاني · دون تجديد · ينتهي: {date}',fr:'{remaining} sur 100 crédits gratuits au total · Sans renouvellement · Expiration : {date}',de:'{remaining} von insgesamt 100 kostenlosen Credits · Keine Erneuerung · Gültig bis: {date}',pt:'{remaining} de 100 créditos gratuitos no total · Sem renovação · Validade: {date}',ru:'Осталось {remaining} из 100 бесплатных кредитов всего · Без обновления · До: {date}',zh:'免费积分共100，剩余{remaining} · 不续发 · 到期：{date}',ja:'無料クレジット合計100、残り{remaining} · 補充なし · 有効期限：{date}'};
 const keys=['summary','consent','checkout','balance','error'];
 export function subscriptionCopy(language,key,values={}){
  const row=rows[String(language||'he').split('-')[0]]||rows.en;
- const template=row[keys.indexOf(key)];
+ const template=key==='trialBalance'?(trialBalances[String(language||'he').split('-')[0]]||trialBalances.en):row[keys.indexOf(key)];
  if(!template)throw Error('Unknown subscription message');
  return template.replace(/\{(\w+)\}/g,(_,name)=>String(values[name]??''));
 }

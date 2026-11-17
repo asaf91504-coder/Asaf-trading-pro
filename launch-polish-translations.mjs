@@ -2,7 +2,6 @@ export const polishTranslations={
   "en": {
     "מחקר שמתאים לך": "Research your way",
     "בחר את המסלול שלך": "Choose your plan",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "14-day trial, 100 credits per week. Upgrade anytime.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "Billed monthly in USD. Credits renew weekly and do not roll over.",
     "גרפים וכלי מחקר": "Charts and research tools",
     "מעקב, שיחות וקהילה": "Watchlist, conversations and community",
@@ -67,12 +66,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "Your subscription was approved, but payment is not confirmed yet. Select Check payment.",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Your subscription is suspended. Check your payment method in PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Payment has not been confirmed yet. You can check again.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancel monthly renewal? Paid access will remain until the end of the period."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancel monthly renewal? Paid access will remain until the end of the period.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "14-day trial with 100 credits total, without renewal. Upgrade anytime."
   },
   "es": {
     "מחקר שמתאים לך": "Investiga a tu manera",
     "בחר את המסלול שלך": "Elige tu plan",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "Prueba de 14 días, 100 créditos por semana. Mejora cuando quieras.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "Cobro mensual en USD. Los créditos se renuevan cada semana y no se acumulan.",
     "גרפים וכלי מחקר": "Gráficos y herramientas de análisis",
     "מעקב, שיחות וקהילה": "Seguimiento, conversaciones y comunidad",
@@ -137,12 +136,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "La suscripción está aprobada, pero el pago aún no está confirmado. Selecciona Comprobar pago.",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Tu suscripción está suspendida. Revisa tu método de pago en PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "El pago aún no está confirmado. Puedes comprobarlo de nuevo.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "¿Cancelar la renovación mensual? El acceso pagado continuará hasta el final del período."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "¿Cancelar la renovación mensual? El acceso pagado continuará hasta el final del período.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Prueba de 14 días con 100 créditos en total, sin renovación. Mejora cuando quieras."
   },
   "ar": {
     "מחקר שמתאים לך": "ابحث بطريقتك",
     "בחר את המסלול שלך": "اختر خطتك",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "تجربة 14 يومًا، 100 رصيد أسبوعيًا. يمكنك الترقية في أي وقت.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "الفوترة شهرية بالدولار. يتجدد الرصيد أسبوعيًا ولا يُرحّل.",
     "גרפים וכלי מחקר": "الرسوم البيانية وأدوات البحث",
     "מעקב, שיחות וקהילה": "المتابعة والمحادثات والمجتمع",
@@ -207,12 +206,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "تمت الموافقة على الاشتراك، لكن الدفع لم يُؤكد بعد. اضغط على التحقق من الدفع.",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "تم تعليق اشتراكك. تحقق من وسيلة الدفع في PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "لم يتم تأكيد الدفع بعد. يمكنك التحقق مرة أخرى.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "هل تريد إلغاء التجديد الشهري؟ يستمر الوصول المدفوع حتى نهاية الفترة."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "هل تريد إلغاء التجديد الشهري؟ يستمر الوصول المدفوع حتى نهاية الفترة.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "تجربة 14 يومًا مع 100 رصيد إجمالاً دون تجديد. يمكنك الترقية في أي وقت."
   },
   "fr": {
     "מחקר שמתאים לך": "La recherche à votre façon",
     "בחר את המסלול שלך": "Choisissez votre offre",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "Essai de 14 jours, 100 crédits par semaine. Passez à une offre payante à tout moment.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "Facturation mensuelle en USD. Les crédits sont renouvelés chaque semaine sans report.",
     "גרפים וכלי מחקר": "Graphiques et outils de recherche",
     "מעקב, שיחות וקהילה": "Suivi, conversations et communauté",
@@ -277,12 +276,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "L’abonnement est approuvé, mais le paiement n’est pas encore confirmé. Sélectionnez Vérifier le paiement.",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Votre abonnement est suspendu. Vérifiez votre moyen de paiement dans PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Le paiement n’est pas encore confirmé. Vous pouvez vérifier à nouveau.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Annuler le renouvellement mensuel ? L’accès payé reste disponible jusqu’à la fin de la période."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Annuler le renouvellement mensuel ? L’accès payé reste disponible jusqu’à la fin de la période.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Essai de 14 jours avec 100 crédits au total, sans renouvellement. Passez à une offre payante à tout moment."
   },
   "de": {
     "מחקר שמתאים לך": "Recherche nach deinen Bedürfnissen",
     "בחר את המסלול שלך": "Wähle deinen Tarif",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "14 Tage testen, 100 Credits pro Woche. Jederzeit upgraden.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "Monatliche Abrechnung in USD. Credits werden wöchentlich erneuert, ohne Übertrag.",
     "גרפים וכלי מחקר": "Charts und Recherchewerkzeuge",
     "מעקב, שיחות וקהילה": "Watchlist, Gespräche und Community",
@@ -347,12 +346,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "Das Abonnement wurde genehmigt, die Zahlung ist aber noch nicht bestätigt. Wähle Zahlung prüfen.",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Dein Abonnement ist ausgesetzt. Prüfe deine Zahlungsmethode bei PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Die Zahlung wurde noch nicht bestätigt. Du kannst erneut prüfen.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Monatliche Verlängerung kündigen? Der bezahlte Zugang bleibt bis zum Ende des Zeitraums bestehen."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Monatliche Verlängerung kündigen? Der bezahlte Zugang bleibt bis zum Ende des Zeitraums bestehen.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "14 Tage testen mit insgesamt 100 Credits, ohne Erneuerung. Jederzeit upgraden."
   },
   "pt": {
     "מחקר שמתאים לך": "Pesquise do seu jeito",
     "בחר את המסלול שלך": "Escolha seu plano",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "Teste de 14 dias, 100 créditos por semana. Faça upgrade quando quiser.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "Cobrança mensal em USD. Os créditos são renovados semanalmente, sem acúmulo.",
     "גרפים וכלי מחקר": "Gráficos e ferramentas de pesquisa",
     "מעקב, שיחות וקהילה": "Acompanhamento, conversas e comunidade",
@@ -417,12 +416,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "A assinatura foi aprovada, mas o pagamento ainda não foi confirmado. Selecione Verificar pagamento.",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Sua assinatura está suspensa. Verifique a forma de pagamento no PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "O pagamento ainda não foi confirmado. Você pode verificar novamente.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancelar a renovação mensal? O acesso pago continuará até o fim do período."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancelar a renovação mensal? O acesso pago continuará até o fim do período.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Teste de 14 dias com 100 créditos no total, sem renovação. Faça upgrade quando quiser."
   },
   "ru": {
     "מחקר שמתאים לך": "Исследуйте по-своему",
     "בחר את המסלול שלך": "Выберите тариф",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "Пробный период 14 дней, 100 кредитов в неделю. Сменить тариф можно в любое время.",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "Оплата ежемесячно в USD. Кредиты обновляются еженедельно без переноса остатка.",
     "גרפים וכלי מחקר": "Графики и инструменты исследования",
     "מעקב, שיחות וקהילה": "Наблюдение, разговоры и сообщество",
@@ -487,12 +486,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "Подписка одобрена, но оплата ещё не подтверждена. Нажмите «Проверить оплату».",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Ваша подписка приостановлена. Проверьте способ оплаты в PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Оплата ещё не подтверждена. Можно проверить снова.",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Отменить ежемесячное продление? Оплаченный доступ сохранится до конца периода."
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Отменить ежемесячное продление? Оплаченный доступ сохранится до конца периода.",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Пробный период 14 дней: всего 100 кредитов без обновления. Перейти на платный тариф можно в любое время."
   },
   "zh": {
     "מחקר שמתאים לך": "按您的方式研究",
     "בחר את המסלול שלך": "选择套餐",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "14天试用，每周100额度。可随时升级。",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "按月以美元收费。额度每周更新，不结转。",
     "גרפים וכלי מחקר": "图表和研究工具",
     "מעקב, שיחות וקהילה": "自选、对话和社区",
@@ -557,12 +556,12 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "订阅已获批准，但付款尚未确认。请选择“检查付款”。",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "您的订阅已暂停。请在PayPal中检查付款方式。",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "付款尚未确认。您可以再次检查。",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "取消每月续订？已付费的访问权限将保留至当前周期结束。"
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "取消每月续订？已付费的访问权限将保留至当前周期结束。",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "14天试用，共100积分，不续发。可随时升级。"
   },
   "ja": {
     "מחקר שמתאים לך": "自分に合ったリサーチ",
     "בחר את המסלול שלך": "プランを選択",
-    "14 ימי ניסיון, 100 קרדיטים לשבוע. אפשר לשדרג בכל עת.": "14日間の試用、週100クレジット。いつでもアップグレードできます。",
     "חיוב חודשי בדולרים. הקרדיטים מתחדשים מדי שבוע ואינם נצברים.": "米ドルで月額請求。クレジットは毎週更新され、繰り越されません。",
     "גרפים וכלי מחקר": "チャートと調査ツール",
     "מעקב, שיחות וקהילה": "ウォッチリスト、会話、コミュニティ",
@@ -627,6 +626,7 @@ export const polishTranslations={
     "המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.": "購読は承認されましたが、支払いはまだ確認されていません。「支払いを確認」を選択してください。",
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "購読は一時停止中です。PayPalで支払い方法を確認してください。",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "支払いはまだ確認されていません。再度確認できます。",
-    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "毎月の更新をキャンセルしますか？支払い済みのアクセスは期間終了まで継続します。"
+    "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "毎月の更新をキャンセルしますか？支払い済みのアクセスは期間終了まで継続します。",
+    "14 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "14日間の試用で合計100クレジット。補充はありません。いつでもアップグレードできます。"
   }
 };

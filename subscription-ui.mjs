@@ -19,7 +19,7 @@ function renderPlan(){
  document.querySelector('.subscription-price bdi').textContent='$'+plan.price;
  $('billingConsentText').textContent=copy('consent',values);
  $('billingSubscribe').textContent=copy('checkout',values);
- $('billingCredits').textContent=state?.credits?copy('balance',{remaining:state.credits.remaining,limit:state.credits.limit,date:date(state.credits.resetsAt)}):'';
+ $('billingCredits').textContent=state?.credits?copy(state.credits.planId==='trial'?'trialBalance':'balance',{remaining:state.credits.remaining,limit:state.credits.limit,date:date(state.credits.resetsAt)}):'';
 }
 function render(){
  renderPlan();

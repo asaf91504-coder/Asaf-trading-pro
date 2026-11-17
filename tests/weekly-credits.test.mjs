@@ -8,10 +8,10 @@ import {fixture,seed,env as authEnv,request} from './identity-fixture.mjs';
 const now=Date.parse('2026-11-16T10:00:00Z');
 const env={...authEnv,ASAF_PUBLIC_PAID_LAUNCH:'true',ASAF_WEEKLY_CREDITS_ENABLED:'true',ASAF_BILLING_ENABLED:'true',PAYPAL_ENVIRONMENT:'sandbox',PAYPAL_CLIENT_ID:'mock',PAYPAL_CLIENT_SECRET:'mock',PAYPAL_WEBHOOK_ID:'mock',...Object.fromEntries(Object.keys(PLANS).map(id=>['PAYPAL_PLAN_'+id.toUpperCase()+'_ID','P-'+id.toUpperCase()]))};
 const trial={trialStartedAt:now,trialEndsAt:now+2*WEEK};
-test('weekly trial resets exactly at seven days, expires at fourteen; no calendar/day reset',()=>{
+test('trial has 100 total credits through day fourteen and extensions, without weekly reset',()=>{
  assert.equal(creditWindow(trial,now).limit,100);
  assert.equal(creditWindow(trial,now+WEEK-1).key,creditWindow(trial,now).key);
- assert.notEqual(creditWindow(trial,now+WEEK).key,creditWindow(trial,now).key);
+ assert.equal(creditWindow(trial,now+WEEK).key,creditWindow(trial,now).key);
  assert.equal(creditWindow(trial,now+2*WEEK),null);assert.equal(creditWindow(trial,now-1),null);
 });
 test('paid bonus ends at calendar month without resetting weekly consumption; legacy is untouched',()=>{
@@ -27,6 +27,8 @@ test('unknown/nonfinite costs fail, whole-credit rounding never underprices',()=
  assert.equal(creditPlansReady(env),true);assert.equal(creditPlansReady({...env,PAYPAL_PLAN_PLUS_ID:env.PAYPAL_PLAN_PRO_ID}),false);
 });
 function creditFixture(){const f=fixture();const run=async a=>{
+ if(a[0]==='EVAL'&&a[1].includes('trial-total-migration')){const keys=a.slice(3,3+Number(a[2]));if(!f.db.has(keys[0]))f.db.set(keys[0],String(keys.slice(1).reduce((n,k)=>n+Number(f.db.get(k)||0),0)));return 1}
+
  if(a[0]==='EVAL'&&a[1].includes('weekly-credit-reserve')){const [key,res,cost,limit]=a.slice(3),used=Number(f.db.get(key)||0);if(used+Number(cost)>Number(limit))return -1;f.db.set(key,String(used+Number(cost)));f.db.set(res,cost);return used+Number(cost)}
  if(a[0]==='EVAL'&&a[1].includes('weekly-credit-refund')){const [key,res]=a.slice(3),cost=f.db.get(res);if(!cost)return 0;f.db.delete(res);f.db.set(key,String(Number(f.db.get(key))-Number(cost)));return 1}
  return f.run(a);
@@ -36,7 +38,7 @@ test('concurrent requests stop at weekly balance, refunds idempotent and reset s
  const options={env,run:f.run,now};const results=await Promise.allSettled(Array.from({length:105},()=>reserveCredits(user.record.id,.02,options)));
  assert.equal(results.filter(r=>r.status==='fulfilled').length,100);assert.equal((await creditStatus(user.record.id,options)).remaining,0);
  const ticket=results.find(r=>r.status==='fulfilled').value;await ticket.refund();await ticket.refund();assert.equal((await creditStatus(user.record.id,options)).remaining,1);
- const next={...options,now:now+WEEK};assert.equal((await creditStatus(user.record.id,next)).remaining,100);await ticket.refund();assert.equal((await creditStatus(user.record.id,next)).remaining,100);
+ const next={...options,now:now+WEEK};assert.equal((await creditStatus(user.record.id,next)).remaining,1);await ticket.refund();assert.equal((await creditStatus(user.record.id,next)).remaining,1);
 });
 test('early upgrade selects verified price and consent; pending approval never grants paid credits',async()=>{
  const f=fixture(),user=seed(f),identity=await billingIdentity(user.record.id,{env,run:f.run});await saveBilling(identity,trial,{env,run:f.run});let created;
@@ -62,4 +64,10 @@ test('payment pilot rejects non-admin checkout before contacting PayPal',async()
  assert.equal(calls,0);
  const admin=createBillingHandler({env:{...pilot,ASAF_ADMIN_MEMBER_IDS:user.record.id},run:f.run});
  assert.equal((await (await admin(request('billing',null,user.cookie))).json()).checkoutAllowed,true);
+});
+
+test('trial migration retains both prior weeks usage once and extensions do not refill',async()=>{
+ const f=creditFixture(),user=seed(f),identity=await billingIdentity(user.record.id,{env,run:f.run});await saveBilling(identity,{...trial,complimentaryUntil:now+4*WEEK},{env,run:f.run});
+ const {storageKey}=await import('../server/storage.mjs');for(const [i,n] of [[0,60],[1,30]])f.db.set(storageKey(`credits:${identity}:trial:${now}:${i}`,env),String(n));
+ const options={env,run:f.run,now:now+WEEK};assert.equal((await creditStatus(user.record.id,options)).remaining,10);await reserveCredits(user.record.id,.02,options);assert.equal((await creditStatus(user.record.id,{...options,now:now+3*WEEK})).remaining,9);
 });
