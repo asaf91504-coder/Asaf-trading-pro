@@ -10,6 +10,17 @@ export const configuredMarketIntervals=(env=process.env)=>twelveSettings(env).in
 const settingsValid=env=>{try{twelveSettings(env);return true}catch{return false}};
 export function approvedMarketSymbols(env=process.env){const symbols=[...new Set((env.ASAF_MARKET_ALLOWED_SYMBOLS||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))];return symbols.length>0&&symbols.length<=50&&symbols.every(s=>/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(s))?symbols:[]}
 const baseMarketConfigured=(env=process.env)=>publicAuthConfigured(env)&&settingsValid(env)&&env.ASAF_MARKET_ENABLED==='true'&&env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED==='true'&&!!env.TWELVE_DATA_API_KEY&&/^\d{1,4}$/.test(env.ASAF_MARKET_DELAY_MINUTES||'')&&approvedMarketSymbols(env).length>0;
+export function marketConfigurationIssues(env=process.env){
+ const issues=[];
+ if(!publicAuthConfigured(env))issues.push('authenticated-storage');
+ if(!settingsValid(env))issues.push('provider-settings');
+ if(env.ASAF_MARKET_ENABLED!=='true')issues.push('market-disabled');
+ if(env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED!=='true')issues.push('display-not-configured');
+ if(!env.TWELVE_DATA_API_KEY)issues.push('provider-key-missing');
+ if(!/^\d{1,4}$/.test(env.ASAF_MARKET_DELAY_MINUTES||''))issues.push('delay-not-configured');
+ if(!approvedMarketSymbols(env).length)issues.push('symbols-not-configured');
+ return issues;
+}
 export class MarketError extends Error{constructor(message,status=503){super(message);this.status=status}}
 export const privateMarketTrial=(env=process.env)=>env.ASAF_TWELVE_PRIVATE_TRIAL==='true';
 export const publicMarketConfigured=(env=process.env)=>!privateMarketTrial(env)&&baseMarketConfigured(env)&&env.ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED==='true';

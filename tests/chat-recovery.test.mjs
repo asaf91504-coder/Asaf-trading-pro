@@ -21,6 +21,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
  ctx.$('marketInterval').value='1day';ctx.window.dispatchEvent=()=>{};
  ctx.intrinioFeed=Promise.resolve({enabled:false,aiAnalysisEnabled:false});
+ ctx.providerFeed={get:async()=>({intrinio:await ctx.intrinioFeed})};
  ctx.loadMarketData=async()=>{ctx.loaded=analysisData(ctx.normSymbol());ctx.currentContext=()=>ctx.loaded.context;return ctx.loaded};
  ctx.localChart.settings=()=>({style:'candles',indicators:[]});
  vm.createContext(ctx);vm.runInContext(askSource,ctx);return {ctx,message,bubbles,button,payloads,calls:()=>calls};
