@@ -1,3 +1,4 @@
+import {VENTURE_AI_POLICY,rawMarketExportRequest} from '../../server/venture-policy.mjs';
 import {MARKET_QA_POLICY,SCOPE_MARKER,unsupportedChatRequest,scopeError} from '../../server/chat-scope.mjs';
 import {creditsEnabled} from '../../server/plans.mjs';
 import {reserveCredits} from '../../server/credits.mjs';
@@ -145,6 +146,7 @@ async function handler(request){
  const selectedArticleId=payload.newsArticleId;
  if(selectedArticleId!=null&&(typeof selectedArticleId!=='string'||!selectedArticleId.trim()||selectedArticleId.length>1000||payload.includeNews!==true))return reply({error:'בחירת הכותרת אינה תקינה. בחר אותה מחדש בלשונית החדשות.'},400);
  const symbol=String(payload?.symbol||"").trim().toUpperCase().slice(0,30).replace(/[^A-Z0-9:._-]/g,"");
+ if((payload.useServerMarket===true||payload.source==='Twelve Data')&&rawMarketExportRequest(question))return reply({error:'אפשר לקבל ניתוח ותמונת גרף. ייצוא נתוני מקור וסדרות מחירים אינו זמין במסלול הזה.',code:'raw_market_export_unavailable'},422);
  const intrinioRequested=payload.source==='Intrinio'||payload.useServerIntrinio===true;
  const intrinioAllowed=publicMode&&!!member&&(process.env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(s=>s.trim()).includes(member.id)&&process.env.ASAF_INTRINIO_AI_LICENSE_CONFIRMED==='true';
  if(intrinioRequested&&(payload.source!=='Intrinio'||payload.useServerIntrinio!==true||payload.useServerMarket===true||payload.useServerCrypto===true))return reply({error:'נתוני Intrinio חייבים להגיע מעותק שרת מאומת.'},400);
@@ -212,7 +214,7 @@ async function handler(request){
   const response=await fetch("https://openrouter.ai/api/v1/chat/completions",{
    method:"POST",signal:controller.signal,
    headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","X-Title":"ASAF Trading Pro"},
-   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency",data_collection:"deny",zdr:true},stream:false})
+   body:JSON.stringify({model:MODEL,messages:[{role:"system",content:SYSTEM+MARKET_QA_POLICY+(meta.source==='Twelve Data'?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:"user",content}],max_tokens:1800,temperature:0.35,provider:{sort:"latency",data_collection:"deny",zdr:true},stream:false})
   });
   if(!response.ok){
    return reply({error:response.status===429?"מכסת החינם של מודל ה-AI נוצלה; נסה מאוחר יותר.":"מודל ה-AI החינמי אינו זמין כרגע ("+response.status+")"},response.status===429?429:502);

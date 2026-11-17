@@ -14,5 +14,5 @@ export function requestsChartAnalysis(question,{command}={}){
 }
 
 export function hasAnalysisCandles(data,symbol,interval){
- return !!data&&data.symbol===symbol&&data.interval===interval&&Array.isArray(data.bars)&&data.bars.length>=21;
+ return !!data&&data.symbol===symbol&&data.interval===interval&&(data.presentation==='server-raster'&&data.source==='Twelve Data'&&typeof data.receivedAt==='string'&&Number.isInteger(data.context?.bars)&&data.context.bars>=21||Array.isArray(data.bars)&&data.bars.length>=21);
 }

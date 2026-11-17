@@ -1,3 +1,4 @@
+import {createVentureChartView} from './venture-chart-view.mjs';
 import {showCreditPlans} from './exhausted-credits-ui.mjs';
 import {createMarketFeedClient} from './market-feed-client.mjs';
 import {journalIntent} from './journal-chat-core.mjs';
@@ -27,7 +28,8 @@ const key="asaf_market_candles_v1";
 const privateAccessKey="asaf_market_access_v1";
 const marketStatus=$("marketFetchStatus");
 const marketButton=$("marketFetch");
-const localChart=initLocalChart();
+const localChart=createVentureChartView(initLocalChart());
+let ventureActions=[];
 let loaded=null,lastVisibleChart=null,chartRevision=0;
 const normSymbol=()=>String(chartSymbol.value||"").trim().toUpperCase().replace(/[^A-Z0-9:._-]/g,"").slice(0,30);
 function say(role,content){
@@ -74,6 +76,7 @@ setInterval(()=>{if(!document.hidden)renderStatus()},15000);
 function restore(){
  try{
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
+  if(saved?.source==='Twelve Data'){sessionStorage.removeItem(key);return;}
   if(saved&&(saved.source==="Twelve Data"||saved.source==='CoinLore'&&saved.internalResearchOnly===true&&cryptoResearchSymbol(saved.symbol)===saved.symbol&&cryptoIntervals.has(saved.interval))&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
     saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT);if(!new URLSearchParams(location.search).has("symbol"))chartSymbol.value=saved.symbol;
     chartRevision++;const meta={source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,...marketSnapshotMetadata(saved),...(saved.source==='CoinLore'?{internalResearchOnly:true,coverage:saved.coverage||'CoinLore aggregated crypto data',quote:saved.quote,latestBarMayBePartial:saved.latestBarMayBePartial===true}:{})};loaded={symbol:saved.symbol,bars:saved.bars,...meta,context:datasetContext(saved.symbol,saved.bars,meta)};
@@ -95,7 +98,7 @@ let pendingImage=null,chatBusy=false,requestController=null,requestInvalidated=n
 let conversation=[];
 mountConversationArchive({readCurrent:()=>({symbol:normSymbol(),messages:conversation.slice(-8)}),isBusy:()=>chatBusy});
 function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL(location.href);url.searchParams.set("symbol",symbol);history.replaceState(null,"",url)}}
-function datasetReady(){rememberSymbol();if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
+function datasetReady(){rememberSymbol();if(loaded?.presentation==='server-raster'){window.dispatchEvent(new Event('asaf:dataset-cleared'));window.dispatchEvent(new CustomEvent('asaf:provider-image-ready',{detail:{symbol:loaded.symbol,interval:loaded.interval,receivedAt:loaded.receivedAt,latestBarTime:loaded.context.date}}));return;}if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 // Changing the chart invalidates pending analysis, not the conversation itself.
 // Previous messages retain their own chartContext and are historical references.
 const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){renderChatText(say(m.role==='user'?'user':'bot',''),m.content)}}});
@@ -133,7 +136,34 @@ async function shrinkImage(source){
   return data;
  }finally{if(isFile)URL.revokeObjectURL(url)}
 }
+function installVentureSnapshot(result,symbol){
+ if(result.presentation!=='server-raster'||result.source!=='Twelve Data'||result.symbol!==symbol.split(':').at(-1)||result.interval!==$('marketInterval').value||!Number.isInteger(result.candleCount)||result.candleCount<21)throw Error('תמונת הגרף אינה תואמת לבחירה.');
+ chartRevision++;lastVisibleChart=null;
+ const meta={source:'Twelve Data',interval:result.interval,receivedAt:result.receivedAt,...marketSnapshotMetadata(result)};
+ loaded={symbol,presentation:'server-raster',...meta,context:{symbol,date:result.latestBarTime,bars:result.candleCount,...meta},image:result.image,firstVisibleBarTime:result.firstVisibleBarTime,chartSettings:result.chartSettings};
+ localChart.setSnapshot({...result,symbol});sessionStorage.removeItem(key);renderStatus();datasetReady();
+}
+async function runVentureActions(actions,{signal,epoch}={}){
+ const selection=actions.filter(a=>a.type==='symbol'),symbols=[...new Set(selection.map(a=>a.symbol))];
+ if(symbols.length>1)return {changed:false,messages:['אפשר לפתוח מניה אחת בכל בקשה.']};
+ const selected=symbols[0];
+ if(selected&&selected!==normSymbol()){chartRevision++;loaded=null;ventureActions=[];chartSymbol.value=selected;$('activeSymbol').textContent=selected;localChart.clear();rememberSymbol();renderStatus();}
+ const current=()=>epoch===conversationEpoch&&!signal?.aborted;
+ if(!loaded||loaded.symbol!==normSymbol()||loaded.interval!==$('marketInterval').value){
+  try{await loadMarketData({fromChat:true,signal,isCurrent:current});}catch(e){return {changed:false,dataLoadAttempted:true,messages:['לא נטענו נתונים: '+e.message]};}
+ }
+ if(!current())throw new DOMException('Cancelled','AbortError');
+ const render=actions.filter(a=>a.type!=='symbol');
+ if(!render.length){window.dispatchEvent(new Event('asaf:chart-actions'));return {changed:true,dataLoadAttempted:true,messages:['נפתחה תמונת מחקר מהשרת עבור '+normSymbol()+'.']};}
+ const next=[...ventureActions,...render].slice(-12),symbol=normSymbol(),interval=$('marketInterval').value;
+ const response=await fetch('/.netlify/functions/public-market',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol,interval,actions:next,cachedOnly:true}),signal});
+ const result=await response.json();if(!response.ok)throw Error(result.error||'לא ניתן לעדכן את תמונת המחקר.');
+ if(!current()||normSymbol()!==symbol||$('marketInterval').value!==interval)throw new DOMException('Cancelled','AbortError');
+ installVentureSnapshot(result,symbol);ventureActions=next;window.dispatchEvent(new Event('asaf:chart-actions'));
+ return {changed:true,dataLoadAttempted:true,messages:['תמונת המחקר עודכנה בשרת.',...(result.messages||[])]};
+}
 async function runChatActions(actions,{signal,epoch}={}){
+ if(!cryptoResearchSymbol(actions.find(a=>a.type==='symbol')?.symbol||normSymbol())&&loaded?.source!=='Intrinio')return runVentureActions(actions,{signal,epoch});
  const result=await executeChartActions(actions,{
   signal,isCurrent:()=>epoch===conversationEpoch,
   getSymbol:normSymbol,
@@ -212,7 +242,7 @@ async function ask(q,extra={}){
    if(epoch!==conversationEpoch)return;
    if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))throw Error('לא התקבלו נרות תואמים לגרף הנבחר; לא נשלחה בקשה למודל.');
-   localReceipt=[localReceipt,'הגרף של '+loaded.symbol+' מוכן: '+loaded.bars.length+' נרות · '+loaded.source+' · '+loaded.interval+' · נר אחרון: '+loaded.bars.at(-1).date+'.'].filter(Boolean).join('\n');
+   localReceipt=[localReceipt,'הגרף של '+loaded.symbol+' מוכן: '+(loaded.context.bars||loaded.bars?.length)+' נרות בשרת · '+loaded.source+' · '+loaded.interval+' · נר אחרון: '+loaded.context.date+'.'].filter(Boolean).join('\n');
   }
   const context=currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
@@ -239,7 +269,7 @@ async function ask(q,extra={}){
   }
   if(!authState.enabled&&code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
   let image=null;
-  const candidate=chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
+  const candidate=chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if(activeData?.presentation==='server-raster')return localChart.snapshot();if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
@@ -348,8 +378,9 @@ $('exportConversation')?.addEventListener('click',()=>{
  const text=[...log.querySelectorAll('.bubble')].map(el=>(el.classList.contains('user')?'אתה: ':'ASAF AI: ')+el.textContent).join('\n\n');
  const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='asaf-conversation.txt';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
+window.addEventListener('asaf:open-provider-chart',event=>{const symbol=String(event.detail?.symbol||'');if(!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(symbol))return;chartSymbol.value=symbol;chartSymbol.dispatchEvent(new Event('input'));$('marketInterval').value='1day';$('marketInterval').dispatchEvent(new Event('change'));loadMarketData().catch(e=>{marketStatus.textContent=e.message});});
 window.addEventListener('asaf:load-dataset',event=>{
- const data=event.detail;if(!data||!['Twelve Data','CoinLore'].includes(data.source)||data.source==='CoinLore'&&data.internalResearchOnly!==true||!Array.isArray(data.bars))return;
+ const data=event.detail;if(data?.source==='Twelve Data')return;if(!data||!['Twelve Data','CoinLore'].includes(data.source)||data.source==='CoinLore'&&data.internalResearchOnly!==true||!Array.isArray(data.bars))return;
  const symbol=String(data.symbol||'').toUpperCase().replace(/[^A-Z0-9:._-]/g,'').slice(0,30);
  try{const bars=data.bars.slice(-CHART_HISTORY_LIMIT);if(data.source==='CoinLore'&&(cryptoResearchSymbol(symbol)!==symbol||!cryptoIntervals.has(data.interval)))throw Error('סימול הקריפטו או טווח הזמן אינם נתמכים.');
  const interval=['intraday','1min','5min','15min','30min','1h','1day','1week','1month'].includes(data.interval)?data.interval:'1day',meta={source:data.source,interval,receivedAt:data.receivedAt||null,...marketSnapshotMetadata(data),...(data.source==='CoinLore'?{internalResearchOnly:true,coverage:data.coverage||'CoinLore aggregated crypto data',quote:data.quote,latestBarMayBePartial:data.latestBarMayBePartial===true}:{})},context=datasetContext(symbol,bars,meta);
@@ -364,6 +395,7 @@ $("forgetFreeAiCode")?.addEventListener("click",()=>{
 });
 $("offlineAnalysis")?.addEventListener("click",()=>{
  const context=currentContext();
+ if(loaded?.presentation==='server-raster'){say("bot","החישובים עבור נתוני Twelve Data מתבצעים בשרת. בקש ניתוח בצ׳אט.");return;}
  say("bot","🧮 ניתוח מתמטי מקומי (ללא AI):\\n"+answerStockQuestion("תנתח את הגרף ואת המגמה",context));
 });
 const lastFetchBySymbol=new Map();
@@ -375,7 +407,7 @@ const providerFeed=createMarketFeedClient({onChange:({intrinio,publicMarket})=>{
   $('marketProviderScope').textContent=intrinio.aiAnalysisEnabled?'ניתוח AI של נתוני Intrinio מופעל למנהל, בכפוף לזמינות השירות.':'הגרף והאינדיקטורים המקומיים זמינים לאחר טעינה. העברת נתוני Intrinio למודל AI חיצוני עדיין כבויה.';
  }else if(publicMarket.enabled){
   $('marketProviderTitle').textContent=publicMarket.privateTrial?'Twelve Data · ניסיון פרטי לחשבון שלך':'Twelve Data · חיבור נתוני שוק';
-  $('marketProviderScope').textContent=publicMarket.privateTrial?'בדיקה פנימית לבעל החשבון בלבד. נפח המסחר חלקי; אין להציג או לשתף את נתוני הניסיון עם לקוחות.':'היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
+  $('marketProviderScope').textContent=publicMarket.privateTrial?'בדיקה פנימית לבעל החשבון בלבד. נפח תוך־יומי חלקי; הסורק משתמש בנפח סוף יום. אין להציג או לשתף את נתוני הניסיון עם לקוחות.':'היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
  }
  if(!loaded)marketStatus.textContent=intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'Twelve Data מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
 }});
@@ -416,7 +448,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   });
   let result;try{result=await response.json()}catch{throw Error('פונקציית הנתונים החזירה תשובה לא תקינה.');}
   if(!response.ok){if(response.status===401&&!crypto)sessionStorage.removeItem(privateAccessKey);throw Error(result.error||'קריאת נתונים נכשלה');}
-  if(!Array.isArray(result.bars)||result.bars.length<21)throw Error('התקבלו פחות מ־21 נרות.');
+  if(result.presentation!=='server-raster'&&(!Array.isArray(result.bars)||result.bars.length<21))throw Error('התקבלו פחות מ־21 נרות.');
   if(!isCurrent()||signal?.aborted)throw new DOMException('Cancelled','AbortError');
   if(normSymbol()!==symbol||$('marketInterval').value!==interval)throw Error('הסימול או טווח הזמן השתנו בזמן הטעינה. שלח בקשה חדשה.');
   if(result.symbol!==(crypto?symbol:symbol.split(':').at(-1)))throw Error('הספק החזיר סימול שונה מהנבחר.');
@@ -424,6 +456,13 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true}={}){
   if(crypto&&(!Number.isFinite(result.quote?.price)||result.quote.price<=0||result.quote.quoteTime!==null||result.quote.receivedAt!==result.receivedAt))throw Error('ציטוט הקריפטו אינו תקין.');
   if(crypto&&(result.source!=='CoinLore'||result.interval!==interval||result.internalResearchOnly!==true))throw Error('מקור הקריפטו או תחום הניסוי לא אומתו.');
   if(intrinio&&(result.source!=='Intrinio'||result.internalResearchOnly!==true))throw Error('מקור Intrinio לא אומת.');
+  if(!crypto&&!intrinio){
+   installVentureSnapshot(result,symbol);ventureActions=[];lastFetchBySymbol.set(fetchKey,Date.now());
+   marketStatus.textContent='תמונת גרף מהשרת · '+symbol+' · '+interval+' · נר אחרון '+result.latestBarTime+' · '+(result.coverage||'');
+   status.textContent='נתוני Twelve Data נשארים בשרת. אפשר לבקש ניתוח וסימונים בצ׳אט.';
+   if(!fromChat){say('bot','נפתחה תמונת המחקר של '+symbol+'. ניתוח וסימונים מחושבים בשרת.');document.querySelector('[data-tab="charts"]').click();}
+   return loaded;
+  }
   const bars=result.bars.slice(-CHART_HISTORY_LIMIT),meta={source:crypto?'CoinLore':intrinio?'Intrinio':'Twelve Data',...(intrinio?{internalResearchOnly:true}:{} ),interval,receivedAt:result.receivedAt,...marketSnapshotMetadata(result),...(crypto?{internalResearchOnly:true,coverage:result.coverage||'CoinLore aggregated crypto data',quote:result.quote,latestBarMayBePartial:result.latestBarMayBePartial===true}:{})};
   const context=datasetContext(symbol,bars,meta);
   chartRevision++;lastVisibleChart=null;loaded={symbol,bars,context,...meta};localChart.setData(symbol,bars);
@@ -496,7 +535,7 @@ $("marketInterval").addEventListener("change",()=>{
  try{sessionStorage.removeItem(key)}catch{}
  renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));
 });
-chartSymbol.addEventListener("input",()=>{chartRevision++;rememberSymbol();resetRequest();renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));if(loaded&&normSymbol()===loaded.symbol){localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
+chartSymbol.addEventListener("input",()=>{chartRevision++;rememberSymbol();resetRequest();renderStatus();window.dispatchEvent(new Event("asaf:dataset-cleared"));if(loaded&&normSymbol()===loaded.symbol){if(loaded.presentation==='server-raster')localChart.setSnapshot({...loaded,symbol:loaded.symbol,latestBarTime:loaded.context.date});else localChart.setData(loaded.symbol,loaded.bars);datasetReady()}else localChart.clear()});
 document.querySelector('[data-tab="charts"]').addEventListener("click",()=>requestAnimationFrame(()=>localChart.redraw()));
 window.addEventListener('asaf:layout',()=>requestAnimationFrame(()=>localChart.redraw()));
 restore();

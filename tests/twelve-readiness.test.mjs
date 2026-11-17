@@ -11,8 +11,8 @@ const now=Date.parse('2026-11-16T16:00:00Z');
 const sample=()=>({meta:{symbol:'AAPL',interval:'1day',currency:'USD'},values:Array.from({length:501},(_,i)=>({datetime:new Date(Date.UTC(2024,0,i+1)).toISOString().slice(0,10),open:'100',high:'102',low:'99',close:'101',volume:'1000'}))});
 test('500-bar history is ordered, bounded and identical for chart and AI without a second provider call',async()=>{
  const s=fixture();let calls=0;const result=await readMarketSnapshot({selected:'AAPL',env,run:s.run,now,fetcher:async url=>{calls++;assert.equal(url.searchParams.get('outputsize'),'501');assert.equal(url.searchParams.get('prepost'),'false');return Response.json(sample())}});
- assert.equal(result.bars.length,500);assert.equal(result.volumeCoverage,'unconfirmed');assert.equal(result.priceAdjustment,'splits');
- const analysis=await analysisMarket({symbol:'AAPL',receivedAt:result.receivedAt},{env,run:s.run,now});assert.deepEqual(analysis.bars,result.bars);assert.equal(analysis.meta.volumeCoverage,'unconfirmed');assert.equal(calls,1);
+ assert.equal(result.bars.length,500);assert.equal(result.volumeCoverage,'consolidated');assert.equal(result.priceAdjustment,'splits');
+ const analysis=await analysisMarket({symbol:'AAPL',receivedAt:result.receivedAt},{env,run:s.run,now});assert.deepEqual(analysis.bars,result.bars);assert.equal(analysis.meta.volumeCoverage,'consolidated');assert.equal(calls,1);
 });
 test('restricted interval is rejected before any provider call',async()=>{
  let calls=0;await assert.rejects(readMarketSnapshot({selected:'AAPL',interval:'1min',env:{...env,ASAF_MARKET_INTERVALS:'1day'},run:fixture().run,now,fetcher:async()=>{calls++}}),e=>e.status===403);assert.equal(calls,0);

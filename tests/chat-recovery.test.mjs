@@ -328,13 +328,13 @@ test('journal drafting never calls the market provider or LLM and does not claim
  assert.match(s.ctx.conversation.at(-1).content,/רק בכפתור/);
 });
 
-test('scanner dataset opens in the native chart with no removed embed element',()=>{
+test('old scanner raw-data events cannot reopen a provider canvas',()=>{
  const s=setup(),events=mountLifecycle(s),c=s.ctx,originalDollar=c.$;
  c.$=id=>id==='chart'?null:originalDollar(id);
  c.status=c.$('chatStatus');c.CHART_HISTORY_LIMIT=2000;c.cryptoIntervals=new Set();c.marketSnapshotMetadata=()=>({});c.datasetContext=(symbol,bars,meta)=>({symbol,bars,...meta});
  c.sessionStorage.setItem=()=>{};let rendered;c.localChart.setData=(symbol,bars)=>{rendered={symbol,bars}};
  vm.runInContext(source.slice(source.indexOf("window.addEventListener('asaf:load-dataset'"),source.indexOf('$("forgetFreeAiCode")')),c);
  const data=analysisData('NVDA');events.get('asaf:load-dataset')({detail:data});
- assert.equal(rendered.symbol,'NVDA');assert.equal(rendered.bars.length,30);assert.equal(c.loaded.interval,'1day');assert.equal(c.chartSymbol.value,'NVDA');
+ assert.equal(rendered,undefined);assert.equal(c.loaded,null);
  c.chartSymbol.value='MSFT';c.chartSymbol.input();assert.equal(c.chartSymbol.value,'MSFT');
 });

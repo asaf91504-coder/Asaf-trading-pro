@@ -3,10 +3,11 @@ import {command,storageKey} from './storage.mjs';
 import {publicMarketConfigured,marketSelection,reserveMarketCredits,MarketError} from './market-feed.mjs';
 import {marketCapAvailable} from '../market-quality.mjs';
 export const fundamentalsConfigured=(env=process.env)=>publicMarketConfigured(env)&&env.ASAF_MARKET_FUNDAMENTALS_ENABLED==='true';
-export async function readMarketFundamentals({selected,env=process.env,run=command,fetcher=fetch,now=Date.now()}={}){
+export async function readMarketFundamentals({selected,env=process.env,run=command,fetcher=fetch,now=Date.now(),cachedOnly=false}={}){
  if(!fundamentalsConfigured(env))throw new MarketError('אימות שווי שוק ממתין להפעלת נתוני חברה במסלול הספק.');
  const {symbol}=marketSelection(selected,'1day',env),key=storageKey('market:fundamentals:v1:'+symbol,env),raw=await run(['GET',key],{env});
  if(raw){try{const data=JSON.parse(raw);if(marketCapAvailable({symbol,fundamentals:data},now))return data}catch{}}
+ if(cachedOnly)throw new MarketError('אין שווי שוק מאומת במטמון; בצע סריקה חדשה.',409);
  const lock=key+':lock',token=randomUUID();if(await run(['SET',lock,token,'NX','EX','15'],{env})!=='OK')throw new MarketError('שווי השוק מתעדכן כרגע. נסה שוב בעוד כמה שניות.',429);
  try{
   await reserveMarketCredits({env,run,now,cost:50});

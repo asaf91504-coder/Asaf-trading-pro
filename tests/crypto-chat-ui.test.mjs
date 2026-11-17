@@ -11,14 +11,15 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../stock-chat-ui.mjs',import.meta.url),'utf8');
 const helpers=source.slice(source.indexOf('const cryptoIntervals='),source.indexOf('function currentContext('));
 const loader=source.slice(source.indexOf('async function loadMarketData('),source.indexOf('marketButton.addEventListener("click"'));
+const installer=source.slice(source.indexOf('function installVentureSnapshot('),source.indexOf('async function runVentureActions('));
 const restore=source.slice(source.indexOf('function restore('),source.indexOf('// The free AI endpoint'));
 const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,8,i+1)).toISOString().slice(0,10),open:100+i,high:102+i,low:98+i,close:101+i,volume:1000}));
 function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,resultPatch={},duringFetch}={}){
  const nodes=new Map(),requests=[],saved=[],ready=[],rendered=[];
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='symbol'?symbol:id==='marketInterval'?interval:'',textContent:'',disabled:false});return nodes.get(id)};
- const context={marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,lastFetchBySymbol:new Map(),status:node('chatStatus'),
+ const context={marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,ventureActions:[],lastFetchBySymbol:new Map(),status:node('chatStatus'),
   stockContext:(symbol,rows,meta)=>({symbol,bars:rows.length,date:rows.at(-1).date,source:'CSV',interval:meta.interval}),
-  localChart:{setData(...args){rendered.push(args)}},sessionStorage:{removeItem(){},setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
+  localChart:{setData(...args){rendered.push(args)},setSnapshot(value){rendered.push(value)}},sessionStorage:{removeItem(){},setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
   intrinioFeed:Promise.resolve({enabled:false}),
   publicFeed:{then(){throw Error('Stock feed gating must not be consulted for crypto')}},
   fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body),options});if(duringFetch)duringFetch(context);return {ok:status<400,status,json:async()=>({symbol:'COINLORE:BTCUSD',bars,source:'CoinLore',interval,receivedAt:'2026-10-29T10:00:00Z',latestBarTime:bars.at(-1).date,quote:{price:222.5,receivedAt:'2026-10-29T10:00:00Z',quoteTime:null},internalResearchOnly:true,coverage:'CoinLore aggregated crypto data',latestBarMayBePartial:true,...resultPatch})}}
@@ -26,7 +27,7 @@ function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,
  context.refreshProviderFeed=async()=>{};
  context.providerFeed={get:async()=>({intrinio:await context.intrinioFeed,publicMarket:await context.publicFeed})};
  // Lexical declarations belong to the exact source under test.
- delete context.cryptoIntervals;vm.createContext(context);vm.runInContext(helpers+loader+restore,context);return {context,nodes,requests,saved,ready,rendered};
+ delete context.cryptoIntervals;vm.createContext(context);vm.runInContext(helpers+installer+loader+restore,context);return {context,nodes,requests,saved,ready,rendered};
 }
 test('owner crypto load bypasses stock feed, canonicalizes symbol and retains CoinLore research provenance',async()=>{
  const f=fixture();await f.context.loadMarketData({fromChat:true});assert.equal(f.requests.length,1);assert.equal(f.requests[0].url,'/.netlify/functions/crypto-research');assert.equal(f.requests[0].body.symbol,'COINLORE:BTCUSD');assert.equal(f.context.chartSymbol.value,'COINLORE:BTCUSD');assert.equal(f.context.loaded.source,'CoinLore');assert.equal(f.context.loaded.context.source,'CoinLore');assert.equal(f.context.loaded.internalResearchOnly,true);assert.equal(f.saved[0].source,'CoinLore');assert.equal(f.saved[0].latestBarMayBePartial,true);assert.equal(f.saved[0].internalResearchOnly,true);assert.equal(f.context.loaded.quote.price,222.5);assert.notEqual(f.context.loaded.quote.price,bars.at(-1).close);assert.match(f.context.marketStatus.textContent,/222.5/);assert.equal(f.rendered.length,1);assert.match(f.context.marketStatus.textContent,/REST/);assert.doesNotMatch(f.context.marketStatus.textContent,/CSV|Twelve Data|ארה״ב/);
@@ -67,21 +68,14 @@ test('chart and AI retain the same provider history beyond 200 candles',async()=
 });
 
 test('stock load and session restore preserve daily policy, timezone and coverage',async()=>{
- const f=fixture({symbol:'AAPL',resultPatch:{symbol:'AAPL',source:'Twelve Data',exchangeTimezone:'America/New_York',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,coverage:'Prior daily sessions'}});
+ const f=fixture({symbol:'AAPL',resultPatch:{symbol:'AAPL',source:'Twelve Data',presentation:'server-raster',candleCount:30,image:'data:image/png;base64,test',exchangeTimezone:'America/New_York',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,coverage:'Prior daily sessions'}});
  f.context.publicFeed=Promise.resolve({enabled:true});await f.context.loadMarketData();
- assert.equal(f.context.loaded.context.latestBarMayBePartial,false);assert.equal(f.context.loaded.exchangeTimezone,'America/New_York');assert.equal(f.saved[0].coverage,'Prior daily sessions');
- const restored=fixture({symbol:'AAPL'});restored.context.sessionStorage.getItem=()=>JSON.stringify(f.saved[0]);restored.context.restore();assert.equal(restored.context.loaded.barPolicy,'previous-daily-sessions');assert.equal(restored.context.loaded.context.coverage,'Prior daily sessions');
+ assert.equal(f.context.loaded.context.latestBarMayBePartial,false);assert.equal(f.context.loaded.exchangeTimezone,'America/New_York');assert.equal(f.saved.length,0);assert.equal(f.context.loaded.bars,undefined);
+ const restored=fixture({symbol:'AAPL'});restored.context.sessionStorage.getItem=()=>JSON.stringify({source:'Twelve Data',bars});restored.context.restore();assert.equal(restored.context.loaded,null);
 });
 
-test('weekly stock session restore aligns the selector with chart and AI metadata',async()=>{
- const f=fixture({symbol:'SPY',interval:'1week',resultPatch:{symbol:'SPY',source:'Twelve Data',interval:'1week'}});
- f.context.publicFeed=Promise.resolve({enabled:true});await f.context.loadMarketData();
- const restored=fixture({symbol:'SPY',interval:'1day'});
- restored.context.$('marketInterval').options=[{value:'1day'},{value:'1week'}];
- restored.context.sessionStorage.getItem=()=>JSON.stringify(f.saved[0]);restored.context.restore();
- assert.equal(restored.nodes.get('marketInterval').value,'1week');
- assert.equal(restored.context.loaded.interval,'1week');assert.equal(restored.context.loaded.context.interval,'1week');
- assert.equal(restored.rendered.length,1);
+test('old provider sessions are removed instead of restoring raw weekly candles',()=>{
+ const f=fixture({symbol:'SPY',interval:'1day'});let removed=0;f.context.sessionStorage.removeItem=()=>removed++;f.context.sessionStorage.getItem=()=>JSON.stringify({symbol:'SPY',source:'Twelve Data',interval:'1week',bars});f.context.restore();assert.equal(f.context.loaded,null);assert.equal(removed,1);assert.equal(f.rendered.length,0);
 });
 
 test('stock loader rejects wrong intervals and late responses after selection changes',async()=>{
@@ -109,7 +103,7 @@ test('Intrinio trial rejects unsupported intervals and untrusted source without 
 
 
 test('licensed public stock feed takes priority over owner-only trial, including intraday',async()=>{
- const f=fixture({symbol:'AAPL',interval:'1h',resultPatch:{symbol:'AAPL',source:'Twelve Data',interval:'1h',internalResearchOnly:false}});
+ const f=fixture({symbol:'AAPL',interval:'1h',resultPatch:{symbol:'AAPL',source:'Twelve Data',interval:'1h',internalResearchOnly:false,presentation:'server-raster',candleCount:30,image:'data:image/png;base64,test'}});
  f.context.publicFeed=Promise.resolve({enabled:true});f.context.intrinioFeed=Promise.resolve({enabled:true});
  await f.context.loadMarketData({fromChat:true});
  assert.equal(f.requests[0].url,'/.netlify/functions/public-market');
