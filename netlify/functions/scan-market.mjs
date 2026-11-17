@@ -1,3 +1,4 @@
+import {sharedScannerEnabled,readSharedScan} from '../../server/shared-scanner.mjs';
 import {scannerBatchPlan} from '../../server/scanner-budget.mjs';
 import {currentUser} from '../../server/auth-core.mjs';
 import {subscriptionGuard} from '../../server/billing.mjs';
@@ -11,8 +12,9 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
  const access=marketAccessAllowed(viewer?.id,env,now());
  let plan={maxSymbols:0,batchDelayMs:61000};
  try{if(access)plan=scannerBatchPlan(env,{fundamentals:fundamentalsConfigured(env)})}catch{return reply({error:'הגדרות מכסת הסריקה אינן תקינות.'},503)}
- const enabled=access&&plan.maxSymbols>0;
- if(request.method==='GET')return reply({enabled,...plan,interval:'1day',fundamentalsEnabled:fundamentalsConfigured(env),barPolicy:'previous-daily-sessions',...(enabled&&viewer?{symbols:approvedMarketSymbols(env)}:{})});
+ const shared=sharedScannerEnabled(env);
+ const enabled=access&&(shared||plan.maxSymbols>0);
+ if(request.method==='GET')return reply({enabled,...plan,shared,maxSymbols:shared?10:plan.maxSymbols,interval:'1day',fundamentalsEnabled:fundamentalsConfigured(env),barPolicy:'previous-daily-sessions',...(enabled&&viewer?{symbols:approvedMarketSymbols(env)}:{})});
  if(request.method!=='POST')return reply({error:'POST only'},405);if(!enabled)return reply({error:'סריקה מספק ממתינה למנוי ולהפעלת רישוי הנתונים.'},503);
  if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
  if(!(request.headers.get('content-type')||'').includes('application/json'))return reply({error:'JSON only'},415);
@@ -20,6 +22,7 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
   const billingBlock=await subscriptionGuard(user,{env,run,now:now()});if(billingBlock)return billingBlock;
   if(!Array.isArray(body.symbols)||!body.symbols.length||body.symbols.length>10)return reply({error:'בחר 1 עד 10 מניות מורשות בכל סריקה.'},400);
   const symbols=[...new Set(body.symbols.map(s=>marketSelection(s,'1day',env).symbol))];
+  if(shared)return reply(await readSharedScan({env,run,now:now(),memberId:user.id,symbols}));
   if(symbols.length>plan.maxSymbols)return reply({error:`אפשר לסרוק עד ${plan.maxSymbols} מניות בקבוצה לפי מכסת הספק הנוכחית.`,code:'scan_batch_limit',maxSymbols:plan.maxSymbols},422);
   const slot=Math.floor(now()/60000);const quota=await run(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0');if n>=2 then return 0 end;redis.call('INCR',KEYS[1]);redis.call('EXPIRE',KEYS[1],120);return 1",'1',storageKey('market:scan:'+user.id+':'+slot,env)],{env});if(quota!==1)return reply({error:'מקסימום שתי סריקות בדקה לחשבון.'},429);
   const scanTime=now();
