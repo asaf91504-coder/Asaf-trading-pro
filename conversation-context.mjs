@@ -1,9 +1,12 @@
 // Bounded conversation context, independent of the chosen model/provider.
-export function historyForModel(input,{allowIntrinio=false}={}){
+export function historyForModel(input,{allowIntrinio=false,blockedSources=[],isolateBlockedHistory=false}={}){
  if(!Array.isArray(input))return [];
+ // Follow-ups can repeat restricted levels after a chart was cleared. Without
+ // trusted transitive provenance, don't forward any inherited turn in that case.
+ if(isolateBlockedHistory&&input.some(m=>blockedSources.includes(m?.chartContext?.source)))return [];
  // Earlier text and tool results retain their restrictions after switching
  // providers or clearing the chart. Default to excluding restricted history.
- return input.filter(m=>m&&!(m.chartContext?.source==='Intrinio'&&!allowIntrinio));
+ return input.filter(m=>m&&!(m.chartContext?.source==='Intrinio'&&!allowIntrinio)&&!blockedSources.includes(m.chartContext?.source));
 }
 
 // Retrieve a few relevant earlier messages without sending the whole archive.
