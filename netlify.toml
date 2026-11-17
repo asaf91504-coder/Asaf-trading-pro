@@ -37,3 +37,7 @@
 
 [functions."public-news-refresh"]
   schedule = "*/15 * * * *"
+
+# One hourly scan, processed in credit-bounded minute batches.
+[functions."scanner-refresh"]
+  schedule = "* * * * *"
