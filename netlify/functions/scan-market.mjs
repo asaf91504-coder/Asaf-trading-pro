@@ -1,23 +1,25 @@
 import {currentUser} from '../../server/auth-core.mjs';
 import {subscriptionGuard} from '../../server/billing.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
-import {publicMarketConfigured,marketSelection,readMarketSnapshot,MarketError} from '../../server/market-feed.mjs';
+import {marketAccessAllowed,approvedMarketSymbols,marketSelection,readMarketSnapshot,MarketError} from '../../server/market-feed.mjs';
 import {readMarketFundamentals,fundamentalsConfigured} from '../../server/market-fundamentals.mjs';
 import {scanBars} from '../../scanner-core.mjs';
 const reply=(v,status=200)=>Response.json(v,{status,headers:{'Cache-Control':'no-store'}});
 export function createScanMarketHandler({env=process.env,run=command,fetcher=fetch,now=()=>Date.now()}={}){return async request=>{
- if(request.method==='GET')return reply({enabled:publicMarketConfigured(env),maxSymbols:5,interval:'1day',fundamentalsEnabled:fundamentalsConfigured(env),barPolicy:'previous-daily-sessions'});
- if(request.method!=='POST')return reply({error:'POST only'},405);if(!publicMarketConfigured(env))return reply({error:'סריקה מספק ממתינה למנוי ולהפעלת רישוי הנתונים.'},503);
+ let viewer;try{viewer=await currentUser(request,{env,run})}catch{return reply({error:'Authentication unavailable'},503)}
+ const enabled=marketAccessAllowed(viewer?.id,env,now());
+ if(request.method==='GET')return reply({enabled,maxSymbols:10,batchDelayMs:31000,interval:'1day',fundamentalsEnabled:fundamentalsConfigured(env),barPolicy:'previous-daily-sessions',...(enabled&&viewer?{symbols:approvedMarketSymbols(env)}:{})});
+ if(request.method!=='POST')return reply({error:'POST only'},405);if(!enabled)return reply({error:'סריקה מספק ממתינה למנוי ולהפעלת רישוי הנתונים.'},503);
  if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
  if(!(request.headers.get('content-type')||'').includes('application/json'))return reply({error:'JSON only'},415);
- try{const user=await currentUser(request,{env,run});if(!user)return reply({error:'יש להיכנס לחשבון.'},401);const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large'},413);let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
+ try{const user=viewer;if(!user)return reply({error:'יש להיכנס לחשבון.'},401);const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large'},413);let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
   const billingBlock=await subscriptionGuard(user,{env,run,now:now()});if(billingBlock)return billingBlock;
-  if(!Array.isArray(body.symbols)||!body.symbols.length||body.symbols.length>5)return reply({error:'בחר 1 עד 5 מניות מורשות בכל סריקה.'},400);
+  if(!Array.isArray(body.symbols)||!body.symbols.length||body.symbols.length>10)return reply({error:'בחר 1 עד 10 מניות מורשות בכל סריקה.'},400);
   const symbols=[...new Set(body.symbols.map(s=>marketSelection(s,'1day',env).symbol))];
   const slot=Math.floor(now()/60000);const quota=await run(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0');if n>=2 then return 0 end;redis.call('INCR',KEYS[1]);redis.call('EXPIRE',KEYS[1],120);return 1",'1',storageKey('market:scan:'+user.id+':'+slot,env)],{env});if(quota!==1)return reply({error:'מקסימום שתי סריקות בדקה לחשבון.'},429);
   const scanTime=now();
   const results=await Promise.all(symbols.map(async symbol=>{try{
-   const snapshot=await readMarketSnapshot({selected:symbol,interval:'1day',env,run,fetcher,now:scanTime});
+   const snapshot=await readMarketSnapshot({selected:symbol,interval:'1day',memberId:user.id,env,run,fetcher,now:scanTime});
    let fundamentals;
    try{fundamentals=await readMarketFundamentals({selected:symbol,env,run,fetcher,now:scanTime})}
    catch(e){fundamentals={status:'unavailable',reason:e instanceof MarketError?e.message:'לא ניתן לאמת שווי שוק כרגע.'}}

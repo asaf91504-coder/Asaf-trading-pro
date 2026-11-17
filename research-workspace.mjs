@@ -24,6 +24,10 @@ function renderScan(){
   const actions=document.createElement('td'),open=document.createElement('button');open.type='button';open.textContent='פתח גרף';open.setAttribute('aria-label','פתח גרף · '+r.symbol);open.onclick=()=>{window.dispatchEvent(new CustomEvent('asaf:load-dataset',{detail:{symbol:r.symbol,bars:r.bars,source:r.source||'provider',interval:'1day',receivedAt:r.receivedAt||null,coverage:r.coverage,exchangeTimezone:r.exchangeTimezone,barPolicy:r.barPolicy,latestBarMayBePartial:r.latestBarMayBePartial}}));tabs.find(b=>b.dataset.tab==='charts').click()};const inspect=document.createElement('button');inspect.type='button';inspect.textContent='פרטי מחקר';inspect.setAttribute('aria-label','פרטי מחקר · '+r.symbol);inspect.onclick=()=>showScannerResearch($('scanResearchDetails'),r,{onScenario:applyScenario,selectedPattern:$('scanPattern').value});actions.append(open,inspect);row.append(actions);rows.append(row);
  }
  if(!rows.children.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=15;td.className='empty-cell';td.textContent=records.size?'אין תוצאות במסננים הנוכחיים.':'ממתינים לנתוני מניות מהספק.';tr.append(td);rows.append(tr)}
+ const shortlist=$('scanShortlist');
+ if(shortlist){shortlist.replaceChildren();const ranked=ordered().map(record=>({record,result:screenResult(record,filters())})).sort((a,b)=>a.result.reasons.length-b.result.reasons.length||(b.record.summary.volumeRatio||0)-(a.record.summary.volumeRatio||0)).slice(0,6);
+ for(const {record:r,result} of ranked){const card=document.createElement('article');card.className='scanner-candidate';const title=document.createElement('h4');title.textContent=r.symbol+' · '+(result.matches?'עברה את המסננים':'לבדיקה נוספת');const details=document.createElement('p');details.textContent='$'+pretty(r.summary.close)+' · ATR '+pretty(r.summary.atrPercent)+'% · מחזור יחסי '+pretty(r.summary.volumeRatio)+'× · נר '+r.summary.date;const reason=document.createElement('p');reason.textContent=result.matches?'עומדת במסננים שנבחרו. התאמה טכנית אינה המלצת קנייה.':result.reasons.join(' · ');const open=document.createElement('button');open.type='button';open.textContent='פתח '+r.symbol+' בגרף';open.onclick=()=>{window.dispatchEvent(new CustomEvent('asaf:load-dataset',{detail:{symbol:r.symbol,bars:r.bars,source:r.source,interval:'1day',receivedAt:r.receivedAt,coverage:r.coverage,exchangeTimezone:r.exchangeTimezone,barPolicy:r.barPolicy,latestBarMayBePartial:r.latestBarMayBePartial}}));tabs.find(b=>b.dataset.tab==='charts').click()};card.append(title,details,reason,open);shortlist.append(card)}
+ }
  const summary=$('scanSummary');summary.replaceChildren();for(const [label,value] of [['מניות נטענו',records.size],['התאמות טכניות',matched],['מעל MA20',[...records.values()].filter(r=>r.summary.aboveMA20).length],['שווי שוק זמין',[...records.values()].filter(r=>marketCapAvailable(r)).length+' / '+records.size]]){const item=document.createElement('div'),small=document.createElement('small'),strong=document.createElement('strong');small.textContent=label;strong.textContent=value;item.append(small,strong);summary.append(item)}
 }
 function applyScenario(s,record,candidate){$('riskSide').value=s.side;for(const [id,value] of [['entry',s.entry],['stop',s.stop],['target',s.target]])$(id).value=String(value);$('calc').click();$('riskScenarioSource').textContent='תרחיש ראשוני מ־'+record.symbol+' · '+candidate.label+' · נר '+record.summary.date+'. רמות גאומטריות למחקר; אינן הוראת מסחר או הבטחת ביצוע.';tabs.find(b=>b.dataset.tab==='risk').click()}
@@ -44,5 +48,41 @@ window.addEventListener('asaf:personal-loaded',e=>{if(e.detail?.section==='resea
 window.addEventListener('storage',e=>{if(e.key===researchKey)reloadResearch()});
 
 let providerScanBusy=false;
-$('scanProvider').onclick=async()=>{if(providerScanBusy)return;providerScanBusy=true;$('scanProvider').disabled=true;try{const symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);if(!symbols.length||symbols.length>5)throw Error('בחר 1 עד 5 מניות מופרדות בפסיקים');const response=await fetch('/.netlify/functions/scan-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols}),signal:AbortSignal.timeout(35000)});const data=await response.json();if(!response.ok)throw Error(data.error||'הסריקה נכשלה');for(const symbol of symbols)records.delete(symbol.toUpperCase().split(':').at(-1));for(const record of data.records){if(records.size>=50&&!records.has(record.symbol))throw Error('מקסימום 50 מניות בסריקה');records.set(record.symbol,record)}renderScan();$('scanProviderStatus').textContent='נטענו '+data.records.length+' מניות. '+data.errors.map(e=>e.symbol+': '+e.error).join(' | ')+' '+data.scope}catch(e){$('scanProviderStatus').textContent=e.message;$('scanProviderAuto').checked=false}finally{providerScanBusy=false;$('scanProvider').disabled=false}};
-setInterval(()=>{if($('scanProviderAuto').checked&&!document.hidden&&!providerScanBusy)$('scanProvider').click()},301000);window.addEventListener('asaf:logout',()=>{$('scanProviderAuto').checked=false});
+$('scanProvider').onclick=async()=>{if(providerScanBusy)return;providerScanBusy=true;$('scanProvider').disabled=true;try{const symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);if(!symbols.length||symbols.length>10)throw Error('בחר 1 עד 10 מניות מופרדות בפסיקים');const response=await fetch('/.netlify/functions/scan-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols}),signal:AbortSignal.timeout(35000)});const data=await response.json();if(!response.ok)throw Error(data.error||'הסריקה נכשלה');for(const symbol of symbols)records.delete(symbol.toUpperCase().split(':').at(-1));for(const record of data.records){if(records.size>=50&&!records.has(record.symbol))throw Error('מקסימום 50 מניות בסריקה');records.set(record.symbol,record)}renderScan();$('scanProviderStatus').textContent='נטענו '+data.records.length+' מניות. '+data.errors.map(e=>e.symbol+': '+e.error).join(' | ')+' '+data.scope}catch(e){$('scanProviderStatus').textContent=e.message;$('scanProviderAuto').checked=false}finally{providerScanBusy=false;$('scanProvider').disabled=false}};
+setInterval(()=>{if($('scanProviderAuto').checked&&!document.hidden&&!providerScanBusy)$('scanProvider').click()},301000);window.addEventListener('asaf:logout',()=>{$('scanProviderAuto').checked=false;discoveryController?.abort();records.clear();renderScan()});
+
+// Explicit, bounded discovery shares the provider endpoint and its account limits.
+let discoveryController=null;
+const pause=(ms,signal)=>new Promise((resolve,reject)=>{
+ const done=()=>{signal.removeEventListener('abort',stop);resolve()};
+ const timer=setTimeout(done,ms);const stop=()=>{clearTimeout(timer);reject(new DOMException('Stopped','AbortError'))};
+ signal.addEventListener('abort',stop,{once:true});if(signal.aborted)stop();
+});
+document.addEventListener('click',async event=>{
+ if(event.target.id==='scanDiscoverStop'){discoveryController?.abort();return}
+ if(event.target.id!=='scanDiscover'||providerScanBusy)return;
+ const controller=new AbortController();discoveryController=controller;providerScanBusy=true;
+ const button=$('scanDiscover'),stop=$('scanDiscoverStop'),status=$('scanDiscoverStatus');
+ button.disabled=true;$('scanProvider').disabled=true;stop.hidden=false;$('scanProviderAuto').checked=false;
+ let checked=0,total=0,failures=0;
+ try{
+  status.textContent='בודק את מאגר המניות הזמין בחשבון שלך…';
+  const configResponse=await fetch('/.netlify/functions/scan-market',{signal:controller.signal});
+  const config=await configResponse.json();
+  if(!configResponse.ok||!config.enabled||!config.symbols?.length)throw Error(config.error||'יש להתחבר לחשבון עם גישה פעילה לנתוני Twelve Data.');
+  const symbols=config.symbols.slice(0,50),batchSize=Math.min(10,config.maxSymbols||5);total=symbols.length;
+  records.clear();renderScan();
+  for(let offset=0;offset<total;offset+=batchSize){
+   if(offset){status.textContent=`נבדקו ${checked} מתוך ${total}. נמצאו נתונים ל־${records.size} מניות. ממתין למכסת הקבוצה הבאה…`;await pause(Math.max(31000,config.batchDelayMs||0),controller.signal)}
+   status.textContent=`סורק מניות ${offset+1}–${Math.min(total,offset+batchSize)} מתוך ${total}…`;
+   const response=await fetch('/.netlify/functions/scan-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize)}),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(35000)])});
+   const data=await response.json();if(!response.ok)throw Error(data.error||'הסריקה נכשלה');
+   if(controller.signal.aborted)throw new DOMException('Stopped','AbortError');
+   for(const record of data.records)records.set(record.symbol,record);
+   checked+=Math.min(batchSize,total-offset);failures+=data.errors.length;renderScan();
+   if(data.errors.length)$('scanProviderStatus').textContent=data.errors.map(e=>e.symbol+': '+e.error).join(' | ');
+  }
+  status.textContent=`הסריקה הסתיימה: ${checked} מניות נבדקו, ${records.size} עם נתונים, ${failures} ללא נתונים. התוצאות לפי המסננים שלמטה; שווי שוק חסר דורש אימות.`;
+ }catch(e){status.textContent=controller.signal.aborted?`הסריקה נעצרה. נבדקו ${checked} מתוך ${total}; התוצאות שהתקבלו נשמרו.`:e.message+' התוצאות שכבר התקבלו נשמרו.'}
+ finally{providerScanBusy=false;button.disabled=false;$('scanProvider').disabled=false;stop.hidden=true;discoveryController=null}
+});
