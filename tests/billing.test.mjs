@@ -125,3 +125,9 @@ test('PayPal client selects exact sandbox origin and keeps secrets in authorizat
  const calls=[],api=createPayPal({env,fetcher:async(url,options)=>{calls.push({url,options});return Response.json(url.endsWith('/token')?{access_token:'mock-token'}:plan);}});
  await api('/v1/billing/plans/'+env.PAYPAL_PLAN_ID);assert.equal(calls.length,2);assert.equal(calls[0].url,'https://api-m.sandbox.paypal.com/v1/oauth2/token');assert.equal(calls[1].options.headers.Authorization,'Bearer mock-token');assert.ok(!calls[0].url.includes(env.PAYPAL_CLIENT_SECRET));
 });
+
+test('unconfigured promo codes cannot silently create a full-price subscription',async()=>{
+ const f=setup(),identity=await billingIdentity(f.user.record.id,{env,run:f.run}),p=provider(identity),handler=createBillingHandler({env,run:f.run,now:()=>now+14*DAY,api:p.api});
+ for(const promoCode of ['FRIENDS',123,{discount:100}]){const r=await handler(request('billing',{action:'subscribe',consent:'USD10_MONTHLY_V1',promoCode},f.user.cookie));assert.equal(r.status,422);assert.equal((await r.json()).code,'promo_unavailable');}
+ assert.equal(p.calls.length,0);
+});

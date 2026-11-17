@@ -31,6 +31,7 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
    const active=await currentUser(request,{env,run});if(active?.id!==user.id)return reply({error:'הכניסה פגה. יש להיכנס שוב.'},401);
    let record=await readBilling(identity,{env,run});
    if(body.action==='subscribe'){
+    if(body.promoCode!=null&&body.promoCode!=='')return reply({error:'אין כרגע קודי הטבה פעילים. המחיר לא השתנה. יש להסיר את הקוד כדי להמשיך במחיר הרגיל.',code:'promo_unavailable'},422);
     if(!config.checkoutAllowed)return reply({error:'התשלום החדש פתוח כרגע לבדיקת מנהל בלבד.'},403);
     if(creditsEnabled(env)&&!Object.hasOwn(PLANS,body.planId))return reply({error:'Invalid plan'},400);
     if(body.consent!==(creditsEnabled(env)?consentFor(body.planId):'USD10_MONTHLY_V1'))return reply({error:'נדרש אישור לסכום המסלול ולחיוב החודשי.'},400);
