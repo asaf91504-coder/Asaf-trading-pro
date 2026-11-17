@@ -1,0 +1,103 @@
+/* Shared sizing and spacing across the research workspace and account pages. */
+:root{--ui-radius:12px;--ui-space:12px}
+*,*::before,*::after{box-sizing:border-box}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+img,video,canvas{max-width:100%}
+button,input,select,textarea{max-width:100%}
+button,summary,a{touch-action:manipulation}
+button{white-space:normal;overflow-wrap:anywhere}
+input,select,textarea{min-width:0}
+textarea{line-height:1.65}
+main,section,article,aside,form,.row,.panel{min-width:0}
+.site-footer nav{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.site-footer nav a,.site-footer nav button{min-height:44px;display:inline-flex;align-items:center}
+body .asaf-support-launcher{position:static;display:block;width:fit-content;max-width:calc(100% - 32px);margin:20px auto 0;box-shadow:none;inset:auto}
+.display-settings{position:relative;margin-inline-start:auto;font-size:13px}
+.display-settings>summary{list-style:none;cursor:pointer;padding:12px 14px;min-height:44px;border:1px solid #385166;border-radius:10px;background:#172938}
+.display-settings-content{position:absolute;inset-inline-end:0;top:calc(100% + 8px);z-index:60;width:280px;max-width:calc(100vw - 24px);padding:14px;border:1px solid #385166;border-radius:14px;background:#15212e;box-shadow:0 12px 36px #0006;display:grid;gap:10px}
+.display-settings-content>*{margin:0!important;max-width:100%}
+.display-settings-content .terminal-layout-menu{position:static;width:100%;box-shadow:none;margin-top:8px}
+.terminal-app header{gap:10px;padding:12px 20px!important}
+.terminal-app .tabs{gap:8px;padding:12px 0;position:static}
+.terminal-app .tabs button{border-radius:10px;min-height:44px;font-size:14px}
+.terminal-app .panel{border-radius:14px}
+.terminal-app .terminal-global-tools{position:static;width:auto;max-width:none;margin:8px 0}
+.terminal-app .terminal-stage{gap:16px}
+.terminal-app #chat{gap:10px}
+.terminal-app .terminal-conversation-nav{position:static!important;flex-wrap:wrap;margin:0;padding:0!important}
+.terminal-app .terminal-conversation-nav button{min-height:44px;font-size:13px}
+.conversation-history-drawer{border:1px solid #304354;border-radius:10px;padding:0 12px}
+.conversation-history-drawer>summary{min-height:44px;padding:12px 0;cursor:pointer;color:#bfcedd}
+.conversation-history-drawer .chat-history{padding-bottom:12px;margin:0;min-width:0}
+.conversation-history-drawer select{width:100%;font-size:16px}
+.terminal-app #chat .bubble{font-size:15px;line-height:1.85}
+.terminal-app #chat .bubble button{display:block;max-width:100%;margin-top:8px;min-height:44px;line-height:1.5}
+.terminal-app #chatLog{scrollbar-width:thin;scroll-padding:16px}
+.terminal-app .chart-workbench-top{gap:10px;flex-wrap:wrap;align-items:center}
+.terminal-app #localChartTitle{font-size:14px;line-height:1.6;margin:0;flex:1 1 240px}
+.terminal-app .chart-navigation-strip{display:flex;flex-wrap:wrap;gap:8px}
+.terminal-app .chart-navigation-strip button{min-height:44px;font-size:13px}
+.terminal-app .chart-load-status{font-size:12px;line-height:1.7;overflow-wrap:anywhere;padding:10px 12px}
+.terminal-app #scanner .scanner-fields{gap:14px}
+.terminal-app #scanner input:not([type=checkbox]),.terminal-app #scanner select{width:100%}
+.terminal-app #scanner .scanner-candidate p{line-height:1.8}
+.terminal-app #scanner .scanner-candidate button{width:100%;margin-top:8px}
+.terminal-app #news .source-card{border-radius:14px}
+.terminal-app .table-scroll{max-width:100%;overscroll-behavior-x:contain}
+@media(min-width:901px){
+ .terminal-app[data-view=chat] #chat{max-width:920px;margin:auto;padding:24px}
+ .terminal-app[data-view=charts].chart-chat-open #chat{height:calc(100dvh - 28px);max-height:1000px}
+ .terminal-app[data-view=charts].chart-chat-open .terminal-conversation-nav button{flex:1}
+ .terminal-app[data-view=charts].chart-chat-open #chatLog{min-height:180px}
+}
+@media(max-width:900px){
+ body{font-size:15px}
+ main{padding:16px 12px!important;max-width:100%}
+ header{flex-wrap:wrap;gap:10px;padding:12px!important}
+ button,input,select,textarea{font-size:16px;min-height:44px}
+ input[type=checkbox],input[type=radio]{min-height:0;flex-shrink:0}
+ .row{flex-wrap:wrap;gap:10px}
+ .row>input:not([type=checkbox]),.row>select{flex:1 1 160px}
+ .panel{padding:16px 12px!important}
+ .terminal-app .brand{font-size:12px;max-width:55%}
+ .terminal-app header{padding:10px 12px!important;gap:8px}
+ .terminal-app header>.environment-badge,.terminal-app header>.subscription-header-link{display:none}
+ .terminal-app .terminal-account-button{margin-inline-start:auto}
+ .display-settings{margin-inline-start:0}
+ .display-settings-content{position:absolute;max-height:65dvh;overflow:auto}
+ .terminal-app .terminal-command{display:flex;flex-wrap:wrap;gap:8px;flex-basis:100%;width:100%;min-width:0}
+ .terminal-app .terminal-command #symbol{width:0;flex:1;min-width:95px}
+ .terminal-app .terminal-command button{font-size:13px;min-height:44px;padding:9px}
+ .terminal-app .tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;overflow:visible;position:static!important;padding:12px 0}
+ .terminal-app .tabs button{min-width:0;min-height:48px;font-size:12px;padding:8px 4px!important;line-height:1.4}
+ .terminal-app .terminal-stage{padding-top:8px;min-height:0}
+ .terminal-app[data-view=chat] #chat{padding:14px 10px!important;border-radius:14px;min-height:0}
+ .terminal-app[data-view=chat] #chatLog{height:clamp(260px,50dvh,560px);min-height:220px;padding:10px}
+ .terminal-app[data-view=chat] #chatForm{position:static!important;display:flex;gap:8px;padding:10px 0;margin:0;background:transparent}
+ .terminal-app #chatForm #chatInput{width:0;flex:1;font-size:16px;min-height:64px;max-height:180px}
+ .terminal-app #chatForm button{flex:0 0 62px;min-width:0;padding:10px 6px}
+ .terminal-app #chat .bubble{max-width:100%;padding:12px;line-height:1.8}
+ .terminal-app #chat .conversation-prompts{display:grid;grid-template-columns:1fr 1fr;overflow:visible;gap:8px}
+ .terminal-app #chat .conversation-prompts button{font-size:13px;min-width:0;padding:10px;line-height:1.5}
+ .terminal-app .conversation-intro{margin:0;font-size:14px}
+ .terminal-app .composer-hint{margin:0;font-size:12px}
+ .terminal-app .chart-workbench-top{display:grid;grid-template-columns:1fr auto}
+ .terminal-app #localChartTitle{grid-column:1/-1;font-size:13px}
+ .terminal-app #localChartPanel{padding:10px!important}
+ .terminal-app #localChartCanvas{height:clamp(320px,55dvh,520px)!important}
+ .terminal-app #chartEmpty{min-height:320px!important;padding:36px 18px!important}
+ .terminal-app .chart-ohlc{font-size:11px;overflow-wrap:anywhere;white-space:normal}
+ .terminal-app .chart-quick-ranges{display:flex;flex-wrap:wrap}
+ .terminal-app .section-heading{flex-wrap:wrap;gap:12px}
+ .terminal-app .section-heading h2{font-size:23px}
+ .terminal-app .research-layout,.terminal-app .setup-fields{grid-template-columns:1fr}
+ .terminal-app .scanner-discovery{padding:16px 12px}
+ .terminal-app .scanner-discovery .row>button{flex:1 1 130px}
+ .terminal-app .scanner-shortlist{grid-template-columns:1fr}
+ .terminal-app .scanner-result-actions{display:flex;flex-wrap:wrap}
+ .subscription-banner{font-size:12px;line-height:1.6;gap:10px;flex-wrap:wrap}
+ .terminal-app.composer-focused #nl-badge-frame{visibility:hidden!important}
+ .terminal-app .terminal-ai-advanced>summary,.terminal-app .terminal-conversation-context>summary{line-height:1.6}
+}
+@media(max-width:380px){.terminal-app .brand{font-size:10px}.display-settings>summary{font-size:12px;padding:10px}.terminal-app .tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.terminal-app #chat .conversation-prompts{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}

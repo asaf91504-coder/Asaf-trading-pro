@@ -5,5 +5,5 @@ if(!document.querySelector('.asaf-support-launcher')&&!document.getElementById('
  const labels={he:'שירות לקוחות',en:'Customer support',ar:'خدمة العملاء',es:'Atención al cliente',fr:'Service client',de:'Kundenservice',pt:'Atendimento',ru:'Поддержка',zh:'客户支持',ja:'サポート'};
  const launcher=document.createElement('a');launcher.className='asaf-support-launcher';launcher.setAttribute('translate','no');launcher.href='mailto:asaf91504@gmail.com?subject=ASAF%20Trading%20Pro%20Support';
  const render=()=>{launcher.textContent=labels[languageCode(document.documentElement.lang)];};
- render();document.body.append(launcher);window.addEventListener('asaf:language',render);
+ render();(document.querySelector('.site-footer')||document.querySelector('footer')||document.body).append(launcher);window.addEventListener('asaf:language',render);
 }
