@@ -16,7 +16,7 @@ import {patternResearch} from '../../pattern-research.mjs';
  * Authenticated members (or explicitly configured legacy owner access); durable quotas gate model requests.
  */
 import {analysisMarket,analysisNews} from '../../server/analysis-sources.mjs';
-import {MarketError} from '../../server/market-feed.mjs';
+import {MarketError,marketAccessAllowed,privateMarketTrial} from '../../server/market-feed.mjs';
 import {readIntrinioSnapshot,IntrinioError} from '../../server/intrinio-research.mjs';
 import {readCryptoSnapshot,CryptoResearchError} from '../../server/crypto-research.mjs';
 import {chartStyles} from '../../chart-styles.mjs';
@@ -153,6 +153,15 @@ async function handler(request){
  // An unlabelled screenshot/CSV may contain the trial feed. Until permission is
  // confirmed, do not allow it to bypass the source-specific server gate.
  if(ai.provider==='openai'&&process.env.ASAF_TWELVE_PRIVATE_TRIAL==='true'&&blockedSources.includes('Twelve Data')&&(payload.image||payload.bars||payload.chartToolReceipt))return reply({error:'צירוף נתוני גרף ל-OpenAI ממתין לאישור הספק.',code:'ai_provider_license_pending'},403);
+ const privateTrial=privateMarketTrial(),twelveRequested=payload.source==='Twelve Data'||payload.useServerMarket===true;
+ const trialAccess=privateTrial&&marketAccessAllowed(member?.id,process.env,Date.now());
+ // During the private trial, relabelling the displayed feed as CSV/none must
+ // not bypass the owner/expiry check or the authenticated server snapshot.
+ const trialChartAttached=privateTrial&&(twelveRequested||payload.bars!=null||!!payload.image||!!payload.chartToolReceipt);
+ if(trialChartAttached){
+  if(!trialAccess)return reply({error:'נתוני הניסיון זמינים לניתוח רק לבעל החשבון ובמהלך הניסיון הפעיל.',code:'market_trial_unavailable'},403);
+  if(payload.source!=='Twelve Data'||payload.useServerMarket!==true||payload.useServerIntrinio===true||payload.useServerCrypto===true)return reply({error:'ניתוח גרף במהלך הניסיון דורש עותק Twelve Data מאומת מהשרת. טען מחדש את הגרף.',code:'market_snapshot_required'},400);
+ }
  const intrinioRequested=payload.source==='Intrinio'||payload.useServerIntrinio===true;
  const intrinioAllowed=publicMode&&!!member&&(process.env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(s=>s.trim()).includes(member.id)&&process.env.ASAF_INTRINIO_AI_LICENSE_CONFIRMED==='true';
  if(intrinioRequested&&(payload.source!=='Intrinio'||payload.useServerIntrinio!==true||payload.useServerMarket===true||payload.useServerCrypto===true))return reply({error:'נתוני Intrinio חייבים להגיע מעותק שרת מאומת.'},400);
@@ -184,8 +193,11 @@ async function handler(request){
  }catch(e){const known=e instanceof MarketError||e instanceof CryptoResearchError||e instanceof IntrinioError;return reply({error:known?e.message:'נתוני הגרף או המקור אינם תקינים.'},known?e.status:cryptoRequested?503:400)}
  // If a chart is supplied, require a symbol to reduce mismatched-chart analysis.
  if(bars&&!symbol)return reply({error:"חובה לציין סימול לגרף"},400);
- const historyRestricted=ai.provider==='openai'&&Array.isArray(payload.history)&&payload.history.some(m=>blockedSources.includes(m?.chartContext?.source));
- const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed,blockedSources,isolateBlockedHistory:ai.provider==='openai',question});
+ const historyBlockedSources=[...new Set([...blockedSources,...(privateTrial&&!trialAccess?['Twelve Data']:[])])];
+ const hasTwelveHistory=Array.isArray(payload.history)&&payload.history.some(m=>m?.chartContext?.source==='Twelve Data');
+ const isolateHistory=ai.provider==='openai'||privateTrial;
+ const historyRestricted=isolateHistory&&Array.isArray(payload.history)&&payload.history.some(m=>historyBlockedSources.includes(m?.chartContext?.source));
+ const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed,blockedSources:historyBlockedSources,isolateBlockedHistory:isolateHistory,question});
  const context=marketDataContext(symbol,bars,meta);
  const needsScenario=requestsChartAnalysis(question,{command:parseChartCommand(question,{currentSymbol:symbol})});
  const tradeScenario=needsScenario?entryStopScenario(bars,meta,scenarioSide(question)):null;
@@ -218,6 +230,9 @@ async function handler(request){
  if(remainingMs<=0)return reply({error:'הכנת הנתונים התעכבה. השאלה נשמרה ואפשר לנסות שוב.',code:'preparation_timeout'},504);
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),remainingMs);
  try{
+  // Storage/quota preparation can cross the trial boundary. Do not send a
+  // previously authorized snapshot or inherited derived prices after expiry.
+  if(privateTrial&&(twelveRequested||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
   const result=await requestAI({signal:controller.signal,messages:[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(payload.language)},...history,{role:'user',content}]});
   const {answer,truncated}=result;
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);

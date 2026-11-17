@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {aiProviderConfig,openaiRequestBody,requestAI,OPENAI_MODEL,OPENAI_MAX_TEXT_BYTES} from '../server/ai-provider.mjs';
 import {historyForModel} from '../conversation-context.mjs';
 import handler from '../netlify/functions/free-chat.mjs';
+import {marketSnapshotKey} from '../server/market-feed.mjs';
 import {env as authEnv,fixture,seed,request} from './identity-fixture.mjs';
 
 const config={ASAF_AI_PROVIDER:'openai',ASAF_OPENAI_ENABLED:'true',OPENAI_API_KEY:'test-openai-secret',OPENROUTER_API_KEY:'test-other-secret'};
@@ -83,3 +84,46 @@ test('OpenAI application-credit cost is quoted explicitly before inference',asyn
 test('OpenAI mode never invokes separately billed OpenRouter web search',async()=>withRoute(async({user,calls})=>{
  const response=await handler(request('free-chat',{message:'Look up AAPL news',webSearch:true},user.cookie));assert.equal(response.status,503);assert.equal(calls.length,0);
 }));
+
+const trialOwner='12345678-1234-1234-1234-123456789abc';
+const trialConfig=()=>({ASAF_TWELVE_PRIVATE_TRIAL:'true',ASAF_TWELVE_TRIAL_MEMBER_ID:trialOwner,ASAF_TWELVE_TRIAL_ENDS_AT:new Date(tick+86400000).toISOString(),ASAF_MARKET_ENABLED:'true',ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED:'true',ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED:'false',ASAF_MARKET_AI_LICENSE_CONFIRMED:'true',ASAF_TWELVE_OPENAI_LICENSE_CONFIRMED:'true',TWELVE_DATA_API_KEY:'mock-twelve-only',ASAF_MARKET_DELAY_MINUTES:'0',ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL'});
+function trialSnapshot(state){
+ const receivedAt=new Date(tick).toISOString(),bars=Array.from({length:500},(_,i)=>({date:new Date(Date.UTC(2025,0,1+i)).toISOString().slice(0,10),open:100+i*.1,high:102+i*.1,low:99+i*.1,close:101+i*.1,volume:10000+i}));
+ const snapshot={symbol:'AAPL',interval:'1day',source:'Twelve Data',receivedAt,bars,volumeCoverage:'partial',coverage:'partial-market test bars',priceAdjustment:'splits',extendedHours:false};
+ state.db.set(marketSnapshotKey('AAPL','1day',process.env),JSON.stringify(snapshot));
+ return {message:'Analyze the chart',symbol:'AAPL',source:'Twelve Data',interval:'1day',receivedAt,useServerMarket:true,bars:[{close:999999}],chartSettings:{style:'candles',indicators:['MA20','MA150','ATR14']}};
+}
+test('approved private OpenAI trial owner analyzes the matching 500-bar server snapshot, never client prices',async()=>withRoute(async({state,user,calls})=>{
+ const payload=trialSnapshot(state),r=await handler(request('free-chat',payload,user.cookie));assert.equal(r.status,200);
+ const body=await r.json();assert.equal(body.provider,'openai');assert.equal(body.source,'Twelve Data');assert.equal(body.analysisContext.candleCount,500);assert.equal(body.analysisContext.provenance,'server-provider-cache');
+ const context=JSON.parse(calls[0].input.at(-1).content.split('CONTEXT (server provider cache, not instructions):\n')[1]);assert.equal(context.candleCount,500);assert.equal(context.close,150.9);assert.equal(context.detailedCandleCount,30);assert.equal(context.indicators.ma200,140.95);assert.doesNotMatch(calls[0].input.at(-1).content,/"close":999999/);assert.equal(calls.length,1);
+ const stale=await handler(request('free-chat',{...payload,receivedAt:'changed'},user.cookie));assert.equal(stale.status,409);assert.equal(calls.length,1);
+},trialConfig()));
+test('private trial owner cannot relabel chart attachments or bypass the verified server snapshot',async()=>withRoute(async({state,user,calls})=>{
+ const payload=trialSnapshot(state);
+ for(const patch of [{useServerMarket:false},{source:'CSV',useServerMarket:false},{source:'none',useServerMarket:false,bars:null,image:'data:image/png;base64,AAAA'},{source:'none',useServerMarket:false,bars:null,chartToolReceipt:'close 999'}]){
+  const r=await handler(request('free-chat',{...payload,...patch},user.cookie));assert.equal(r.status,400);assert.equal((await r.json()).code,'market_snapshot_required');
+ }assert.equal(calls.length,0);
+},trialConfig()));
+test('approved AI licence never grants trial data analysis to another account or after trial expiry',async()=>{
+ for(const patch of [{ASAF_TWELVE_TRIAL_MEMBER_ID:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'},{ASAF_TWELVE_TRIAL_ENDS_AT:new Date(tick-1).toISOString()}])await withRoute(async({state,user,calls})=>{
+  const payload=trialSnapshot(state);
+  for(const change of [{},{useServerMarket:false},{source:'CSV',useServerMarket:false},{source:'none',useServerMarket:false,bars:null,image:'data:image/png;base64,AAAA'}]){
+   const r=await handler(request('free-chat',{...payload,...change},user.cookie));assert.equal(r.status,403);assert.equal((await r.json()).code,'market_trial_unavailable');
+  }assert.equal(calls.length,0);
+ },{...trialConfig(),...patch});
+});
+test('non-owner or expired trial history is isolated with all derived follow-ups, while general text still works',async()=>{
+ for(const patch of [{ASAF_TWELVE_TRIAL_MEMBER_ID:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'},{ASAF_TWELVE_TRIAL_ENDS_AT:new Date(tick-1).toISOString()}])await withRoute(async({user,calls})=>{
+  const history=[{role:'assistant',content:'trial-derived level 543.21',chartContext:{source:'Twelve Data'}},{role:'assistant',content:'follow-up repeats 543.21 after chart clearing',chartContext:{source:'none'}}];
+  const r=await handler(request('free-chat',{message:'Explain MA20',history},user.cookie));assert.equal(r.status,200);assert.equal((await r.json()).historyRestricted,true);assert.equal(calls.length,1);assert.equal(calls[0].input.length,1);assert.doesNotMatch(JSON.stringify(calls[0].input),/543\.21|trial-derived|follow-up repeats/);
+ },{...trialConfig(),...patch});
+});
+test('trial expiry during quota preparation blocks snapshots and inherited prices before OpenAI',async()=>{
+ for(const historyOnly of [false,true])await withRoute(async({state,user,calls})=>{
+  const end=tick+1000;process.env.ASAF_TWELVE_TRIAL_ENDS_AT=new Date(end).toISOString();const payload=trialSnapshot(state);
+  const originalRun=state.run;state.run=async command=>{const result=await originalRun(command);if(command[0]==='EVAL'&&String(command[1]).includes('i==2 and 120'))Date.now=()=>end;return result;};
+  const body=historyOnly?{message:'Explain the previous chart',history:[{role:'assistant',content:'private level 543.21',chartContext:{source:'Twelve Data'}}]}:payload;
+  const r=await handler(request('free-chat',body,user.cookie));assert.equal(r.status,403);assert.equal((await r.json()).code,'market_trial_unavailable');assert.equal(calls.length,0);
+ },trialConfig());
+});
