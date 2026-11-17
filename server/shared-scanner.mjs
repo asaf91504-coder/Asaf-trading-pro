@@ -5,14 +5,15 @@ import {approvedMarketSymbols,marketSnapshotKey,marketAccessAllowed,privateMarke
 import {fundamentalsConfigured,readMarketFundamentals} from './market-fundamentals.mjs';
 import {scannerBatchPlan} from './scanner-budget.mjs';
 import {scanBars} from '../scanner-core.mjs';
+export const SCAN_PERIOD_MS=3*60*60*1000;
 export const sharedScannerEnabled=env=>env.ASAF_HOURLY_SCANNER_ENABLED==='true';
-export function sharedScannerKey(env){return storageKey('scanner:hourly:v1:'+createHash('sha256').update(JSON.stringify({symbols:approvedMarketSymbols(env),feed:marketSnapshotKey('_','1day',env),fundamentals:fundamentalsConfigured(env)})).digest('hex').slice(0,24),env)}
+export function sharedScannerKey(env){return storageKey('scanner:three-hour:v2:'+createHash('sha256').update(JSON.stringify({symbols:approvedMarketSymbols(env),feed:marketSnapshotKey('_','1day',env),fundamentals:fundamentalsConfigured(env)})).digest('hex').slice(0,24),env)}
 const parse=raw=>{try{return JSON.parse(raw)}catch{return null}};
 export async function readSharedScan({env=process.env,run=command,now=Date.now(),memberId,symbols}={}){
  if(!sharedScannerEnabled(env)||!marketAccessAllowed(memberId,env,now))throw new MarketError('הסריקה המשותפת אינה זמינה לחשבון זה.',403);
  const snapshot=parse(await run(['GET',sharedScannerKey(env)+':snapshot'],{env}));
  const age=now-Date.parse(snapshot?.completedAt);
- if(!snapshot||!Array.isArray(snapshot.records)||!Number.isFinite(age)||age<0||age>86400000)throw new MarketError('הסריקה השעתית עדיין אינה זמינה. נסה שוב לאחר העדכון הבא.',503);
+ if(!snapshot||!Array.isArray(snapshot.records)||!Number.isFinite(age)||age<0||age>86400000)throw new MarketError('הסריקה התלת־שעתית עדיין אינה זמינה. נסה שוב לאחר העדכון הבא.',503);
  const selected=new Set(symbols||approvedMarketSymbols(env));
  return {...snapshot,records:snapshot.records.filter(r=>selected.has(r.symbol)),errors:snapshot.errors.filter(e=>selected.has(e.symbol)),shared:true,stale:now>=snapshot.nextUpdateAt,scope:'סריקה משותפת של המניות המורשות בלבד, לפי נרות יומיים קודמים. הבקשה לא פנתה לספק הנתונים.'};
 }
@@ -30,7 +31,7 @@ export async function refreshSharedScan({env=process.env,run=command,fetcher=fet
  const key=sharedScannerKey(env),token=randomUUID(),lock=key+':lock';
  if(await run(['SET',lock,token,'NX','EX','55'],{env})!=='OK')return {status:'busy'};
  try{
-  const hour=Math.floor(now/3600000),minute=Math.floor(now/60000);
+  const hour=Math.floor(now/SCAN_PERIOD_MS),minute=Math.floor(now/60000);
   let state=parse(await run(['GET',key+':state'],{env}));
   if(state?.hour===hour&&state.done)return {status:'current'};
   // A lost invocation cannot retry within the same minute and double its batch spend.
@@ -44,10 +45,10 @@ export async function refreshSharedScan({env=process.env,run=command,fetcher=fet
      fundamentalsConfigured(env)?readFundamentals({selected:symbol,env,run,fetcher,now}).catch(()=>({status:'unavailable',reason:'שווי שוק לא אומת בסריקה זו.'})):Promise.resolve({status:'unavailable',reason:'נתוני שווי שוק אינם מופעלים.'})
     ]);
     return {record:{...scanBars(symbol,snapshot.bars),source:snapshot.source,interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,exchangeTimezone:snapshot.exchangeTimezone,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,fundamentals}};
-   }catch{return {symbol,error:'נתוני המניה לא היו זמינים בעדכון השעתי.'}}
+   }catch{return {symbol,error:'נתוני המניה לא היו זמינים בעדכון האחרון.'}}
   }));
   state.cursor+=batch.length;state.records.push(...results.filter(x=>x.record).map(x=>x.record));state.errors.push(...results.filter(x=>x.error));state.done=state.cursor>=symbols.length;
-  const snapshot=state.done&&state.records.length?JSON.stringify({records:state.records,errors:state.errors,startedAt:state.startedAt,completedAt:new Date(now).toISOString(),nextUpdateAt:(hour+1)*3600000,partial:state.errors.length>0,total:symbols.length}):'';
+  const snapshot=state.done&&state.records.length?JSON.stringify({records:state.records,errors:state.errors,startedAt:state.startedAt,completedAt:new Date(now).toISOString(),nextUpdateAt:(hour+1)*SCAN_PERIOD_MS,partial:state.errors.length>0,total:symbols.length}):'';
   const committed=await run(['EVAL',SCANNER_COMMIT,'3',lock,key+':state',key+':snapshot',token,JSON.stringify(state),snapshot],{env});
   return {status:committed!==1?'superseded':state.done?(snapshot?'updated':'failed'):'progress',processed:state.cursor,total:symbols.length};
  }finally{try{await run(['EVAL',"if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",'1',lock,token],{env})}catch{}}

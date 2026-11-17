@@ -5,7 +5,7 @@ import {screenResult,safeSourceUrl,csvCell} from './scanner-core.mjs';
 const $=id=>document.getElementById(id),records=new Map();
 const scenarioLabel=document.createElement('label');scenarioLabel.textContent='כיוון תרחיש ';const scenarioSide=document.createElement('select');scenarioSide.id='scanScenarioSide';for(const [value,label] of [['any','לונג ושורט'],['long','לונג בלבד'],['short','שורט בלבד']]){const option=document.createElement('option');option.value=value;option.textContent=label;scenarioSide.append(option)}scenarioLabel.append(scenarioSide);$('scanPattern').closest('.row').append(scenarioLabel);
 let sharedScanStatus='';
-function rememberSharedScan(data){if(!data.shared)return;sharedScanStatus='סריקה שעתית משותפת · עודכנה '+new Date(data.completedAt).toLocaleString('he-IL')+(data.stale?' · העדכון הבא מתעכב': '')+(data.partial?' · תוצאות חלקיות':'')+' · נרות יומיים קודמים. שינוי המסננים אינו מפעיל סריקה.'}
+function rememberSharedScan(data){if(!data.shared)return;sharedScanStatus='סריקה משותפת בכל 3 שעות · עודכנה '+new Date(data.completedAt).toLocaleString('he-IL')+(data.stale?' · העדכון הבא מתעכב': '')+(data.partial?' · תוצאות חלקיות':'')+' · נרות יומיים קודמים. שינוי המסננים אינו מפעיל סריקה.'}
 const pretty=n=>n==null?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:2});
 function download(name,type,content){const url=URL.createObjectURL(new Blob([content],{type})),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function clock(){$('workspaceClock').textContent=new Intl.DateTimeFormat('he-IL',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit'}).format(new Date())}clock();setInterval(clock,60000);
@@ -77,7 +77,7 @@ document.addEventListener('click',async event=>{
   records.clear();renderScan();
   for(let offset=0;offset<total;offset+=batchSize){
    if(offset&&!config.shared){status.textContent=`נבדקו ${checked} מתוך ${total}. נמצאו נתונים ל־${records.size} מניות. ממתין למכסת הקבוצה הבאה…`;await pause(Math.max(31000,config.batchDelayMs||0),controller.signal)}
-   status.textContent=config.shared?'טוען סטאפים מהסריקה השעתית…':`סורק מניות ${offset+1}–${Math.min(total,offset+batchSize)} מתוך ${total}…`;
+   status.textContent=config.shared?'טוען סטאפים מהסריקה האחרונה…':`סורק מניות ${offset+1}–${Math.min(total,offset+batchSize)} מתוך ${total}…`;
    const response=await fetch('/.netlify/functions/scan-market',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize)}),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(35000)])});
    const data=await response.json();if(!response.ok)throw Error(data.error||'הסריקה נכשלה');
    if(controller.signal.aborted)throw new DOMException('Stopped','AbortError');

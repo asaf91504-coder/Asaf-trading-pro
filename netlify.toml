@@ -38,6 +38,6 @@
 [functions."public-news-refresh"]
   schedule = "*/15 * * * *"
 
-# One hourly scan, processed in credit-bounded minute batches.
+# One scan every three hours, processed in credit-bounded minute batches.
 [functions."scanner-refresh"]
   schedule = "* * * * *"

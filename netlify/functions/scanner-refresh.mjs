@@ -1,6 +1,6 @@
 import {refreshSharedScan} from '../../server/shared-scanner.mjs';
 import {command} from '../../server/storage.mjs';
-// Minute ticks spread one hourly cycle across bounded batches; idle ticks do not
+// Minute ticks spread one three-hour cycle across bounded batches; idle ticks do not
 // contact Twelve Data. Netlify does not expose scheduled functions as public URLs.
 export default async function handler(){
  const signal=AbortSignal.timeout(24000);
