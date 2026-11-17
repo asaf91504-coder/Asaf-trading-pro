@@ -37,3 +37,20 @@
 
 [functions."public-news-refresh"]
   schedule = "*/15 * * * *"
+
+# Private owner trial preview only. Never enables the public feed or AI.
+[context.deploy-preview.environment]
+  ASAF_TWELVE_RASTER_TRIAL_ENABLED = "false"
+  ASAF_TWELVE_RASTER_TRIAL_SCOPE_CONFIRMED = "true"
+  ASAF_TWELVE_RASTER_TRIAL_EXPIRES_AT = "2026-11-28T22:00:00Z"
+  ASAF_MARKET_ENABLED = "false"
+  ASAF_MARKET_AI_LICENSE_CONFIRMED = "false"
+  ASAF_FREE_AI_ENABLED = "false"
+  ASAF_INTRINIO_ENABLED = "false"
+  ASAF_BILLING_ENABLED = "false"
+  ASAF_MARKET_ALLOWED_SYMBOLS = "AAPL"
+  ASAF_MARKET_INTERVALS = "1day,1min"
+  ASAF_MARKET_DELAY_MINUTES = "15"
+  ASAF_MARKET_HISTORY_BARS = "500"
+  ASAF_MARKET_REQUESTS_PER_MINUTE = "4"
+  ASAF_MARKET_REQUESTS_PER_DAY = "20"
