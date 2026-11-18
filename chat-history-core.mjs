@@ -1,9 +1,17 @@
+import {languageNames} from './interface-language.mjs';
 // Stored text is historical context, never a replacement for current chart data.
 export const CHAT_STORE_LIMIT=2000000;
 export const validChatId=value=>typeof value==='string'&&/^[a-zA-Z0-9-]{1,80}$/.test(value);
 export function cleanChatMessage(value,role){
  if(!value||value.role!==role||typeof value.content!=='string'||!value.content.trim()||value.content.length>30000)throw Error('הודעה אינה תקינה או ארוכה מדי לשמירה.');
  const result={role,content:value.content};
+ if(role==='assistant'&&Object.hasOwn(languageNames,value.responseLanguage))result.responseLanguage=value.responseLanguage;
+ // Preserve only bounded, inert scenario values for deterministic historical display.
+ if(role==='assistant'&&value.tradeScenario&&typeof value.tradeScenario==='object'){
+  const p=value.tradeScenario;
+  if(p.available===false)result.tradeScenario={available:false,reason:String(p.reason||'').slice(0,500)};
+  else if(p.available===true&&['long','short'].includes(p.side)&&[p.entry,p.stop,p.riskPercent].every(Number.isFinite))result.tradeScenario={available:true,side:p.side,entry:p.entry,stop:p.stop,riskPercent:p.riskPercent,asOf:String(p.asOf||'').slice(0,40),interval:String(p.interval||'').slice(0,20),stage:p.stage==='already-crossed'?'already-crossed':'waiting',excludedLatest:p.excludedLatest===true};
+ }
  if(value.chartContext){const c=value.chartContext;result.chartContext={symbol:String(c.symbol||'').slice(0,30),source:String(c.source||'unknown').slice(0,30),interval:String(c.interval||'').slice(0,20),receivedAt:typeof c.receivedAt==='string'?c.receivedAt.slice(0,40):null}}
  return result;
 }

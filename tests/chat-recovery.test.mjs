@@ -1,3 +1,6 @@
+import {languageCode} from '../interface-language.mjs';
+import {entryStopText} from '../entry-stop-scenario.mjs';
+import {localizedChatReply} from '../chat-reply-ui.mjs';
 import {journalIntent} from '../journal-chat-core.mjs';
 import {renderSearchSources} from '../web-search-ui.mjs';
 import test from 'node:test';
@@ -16,6 +19,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
+ ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};

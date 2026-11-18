@@ -110,7 +110,11 @@ export const extraTranslations = {
     "עמוד המנוי": "subscription page",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "External providers’ sign-in windows are also subject to the provider’s interface. Physical iPhone, VoiceOver and TalkBack testing is still required. If an action is not accessible to you, please report it so we can consider an alternative.",
     "הצג גרף": "Show chart",
-    "בחר שיחה": "Select a conversation"
+    "בחר שיחה": "Select a conversation",
+    "בחר קובץ גיבוי": "Choose backup file",
+    "לא נבחר קובץ": "No file selected",
+    "שנה-חודש-יום (YYYY-MM-DD)": "Year-month-day (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Enter a valid date in YYYY-MM-DD format."
   },
   "es": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Las alertas detectan cruces en velas diarias cerradas de acciones autorizadas. Se muestran en la web y, opcionalmente, en el navegador mientras la pestaña está abierta; sin correo ni notificaciones push en segundo plano. La supervisión en segundo plano requiere suscripción y activación de la programación. Guardar una regla no la activa.",
@@ -222,7 +226,11 @@ export const extraTranslations = {
     "עמוד המנוי": "página de suscripción",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "Las ventanas de inicio de sesión de proveedores externos también dependen de la interfaz del proveedor. Aún hacen falta pruebas en iPhone físico, VoiceOver y TalkBack. Si alguna acción no te resulta accesible, comunícanoslo para que podamos estudiar una alternativa.",
     "הצג גרף": "Mostrar gráfico",
-    "בחר שיחה": "Selecciona una conversación"
+    "בחר שיחה": "Selecciona una conversación",
+    "בחר קובץ גיבוי": "Elegir archivo de respaldo",
+    "לא נבחר קובץ": "Ningún archivo seleccionado",
+    "שנה-חודש-יום (YYYY-MM-DD)": "Año-mes-día (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Introduce una fecha válida en formato YYYY-MM-DD."
   },
   "fr": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Les alertes détectent les croisements sur les bougies journalières clôturées des actions autorisées. Elles apparaissent sur le site et, en option, dans le navigateur lorsque l’onglet est ouvert ; aucun e-mail ni notification push en arrière-plan. La surveillance en arrière-plan nécessite un abonnement et l’activation de la planification. Enregistrer une règle ne l’active pas.",
@@ -334,7 +342,11 @@ export const extraTranslations = {
     "עמוד המנוי": "page d’abonnement",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "Les fenêtres de connexion des fournisseurs externes dépendent également de leur interface. Des tests sur iPhone physique, VoiceOver et TalkBack restent nécessaires. Si une action vous est inaccessible, signalez-la afin que nous puissions envisager une alternative.",
     "הצג גרף": "Afficher le graphique",
-    "בחר שיחה": "Choisir une conversation"
+    "בחר שיחה": "Choisir une conversation",
+    "בחר קובץ גיבוי": "Choisir un fichier de sauvegarde",
+    "לא נבחר קובץ": "Aucun fichier sélectionné",
+    "שנה-חודש-יום (YYYY-MM-DD)": "Année-mois-jour (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Saisissez une date valide au format YYYY-MM-DD."
   },
   "de": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Alarme prüfen Kreuzungen anhand abgeschlossener Tageskerzen zugelassener Aktien. Sie erscheinen auf der Website und optional im Browser, solange der Tab geöffnet ist; keine E-Mails oder Push-Nachrichten im Hintergrund. Die Hintergrundüberwachung erfordert ein Abonnement und eine aktivierte Zeitplanung. Das Speichern einer Regel aktiviert sie nicht.",
@@ -446,7 +458,11 @@ export const extraTranslations = {
     "עמוד המנוי": "Abonnementseite",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "Anmeldefenster externer Anbieter unterliegen auch deren eigener Benutzeroberfläche. Tests mit physischem iPhone, VoiceOver und TalkBack sind weiterhin erforderlich. Ist eine Aktion für dich nicht zugänglich, melde sie bitte, damit wir eine Alternative prüfen können.",
     "הצג גרף": "Chart anzeigen",
-    "בחר שיחה": "Unterhaltung auswählen"
+    "בחר שיחה": "Unterhaltung auswählen",
+    "בחר קובץ גיבוי": "Sicherungsdatei auswählen",
+    "לא נבחר קובץ": "Keine Datei ausgewählt",
+    "שנה-חודש-יום (YYYY-MM-DD)": "Jahr-Monat-Tag (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Gib ein gültiges Datum im Format YYYY-MM-DD ein."
   },
   "pt": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Os alertas verificam cruzamentos em velas diárias fechadas de ações autorizadas. Aparecem no site e, opcionalmente, no navegador enquanto a aba está aberta; sem e-mail ou notificações push em segundo plano. O monitoramento em segundo plano exige assinatura e ativação do agendamento. Salvar uma regra não o ativa.",
@@ -558,7 +574,11 @@ export const extraTranslations = {
     "עמוד המנוי": "página de assinatura",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "As telas de login de provedores externos também dependem da interface do provedor. Ainda são necessários testes com iPhone físico, VoiceOver e TalkBack. Se uma ação não for acessível para você, informe-nos para que possamos avaliar uma alternativa.",
     "הצג גרף": "Mostrar gráfico",
-    "בחר שיחה": "Selecionar conversa"
+    "בחר שיחה": "Selecionar conversa",
+    "בחר קובץ גיבוי": "Escolher arquivo de backup",
+    "לא נבחר קובץ": "Nenhum arquivo selecionado",
+    "שנה-חודש-יום (YYYY-MM-DD)": "Ano-mês-dia (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Insira uma data válida no formato YYYY-MM-DD."
   },
   "ru": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Оповещения проверяют пересечения по закрытым дневным свечам разрешённых акций. Они появляются на сайте и, по желанию, в браузере при открытой вкладке; фоновые письма и push-уведомления не отправляются. Фоновое наблюдение требует подписки и включения расписания. Сохранение правила не включает его.",
@@ -670,7 +690,11 @@ export const extraTranslations = {
     "עמוד המנוי": "странице подписки",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "Окна входа внешних поставщиков также зависят от интерфейса поставщика. Проверки на физическом iPhone, VoiceOver и TalkBack всё ещё необходимы. Если действие для вас недоступно, сообщите нам, чтобы мы могли рассмотреть альтернативу.",
     "הצג גרף": "Показать график",
-    "בחר שיחה": "Выберите разговор"
+    "בחר שיחה": "Выберите разговор",
+    "בחר קובץ גיבוי": "Выбрать файл резервной копии",
+    "לא נבחר קובץ": "Файл не выбран",
+    "שנה-חודש-יום (YYYY-MM-DD)": "Год-месяц-день (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Введите корректную дату в формате YYYY-MM-DD."
   },
   "ar": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "تتحقق التنبيهات من التقاطعات على الشموع اليومية المكتملة للأسهم المسموح بها فقط. تظهر في الموقع وفي المتصفح اختياريًا ما دامت علامة التبويب مفتوحة؛ لا بريد إلكتروني أو إشعارات دفع في الخلفية. تتطلب المراقبة الخلفية اشتراكًا وتفعيل الجدولة. حفظ القاعدة لا يفعّلها.",
@@ -782,7 +806,11 @@ export const extraTranslations = {
     "עמוד המנוי": "صفحة الاشتراك",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "تخضع نوافذ دخول المزوّدين الخارجيين أيضًا لواجهة المزوّد. ما زالت اختبارات iPhone الفعلي وVoiceOver وTalkBack مطلوبة. إذا كان إجراء غير ميسّر لك، فأبلغنا لنبحث عن بديل.",
     "הצג גרף": "عرض الرسم البياني",
-    "בחר שיחה": "اختر محادثة"
+    "בחר שיחה": "اختر محادثة",
+    "בחר קובץ גיבוי": "اختر ملف نسخة احتياطية",
+    "לא נבחר קובץ": "لم يُختَر ملف",
+    "שנה-חודש-יום (YYYY-MM-DD)": "سنة-شهر-يوم (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "أدخل تاريخًا صحيحًا بالتنسيق YYYY-MM-DD."
   },
   "zh": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "提醒仅检查获准股票已完成日线蜡烛的交叉。提醒显示在网站内，也可在标签页打开时通过浏览器显示；不发送后台邮件或推送通知。后台监控需要订阅并启用定时任务，保存规则不会启用监控。",
@@ -894,7 +922,11 @@ export const extraTranslations = {
     "עמוד המנוי": "订阅页面",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "外部提供商的登录窗口也受其界面设计影响。仍需进行实体iPhone、VoiceOver及TalkBack测试。如果某项操作对您不可访问，请向我们反馈，以便研究替代方案。",
     "הצג גרף": "显示图表",
-    "בחר שיחה": "选择对话"
+    "בחר שיחה": "选择对话",
+    "בחר קובץ גיבוי": "选择备份文件",
+    "לא נבחר קובץ": "未选择文件",
+    "שנה-חודש-יום (YYYY-MM-DD)": "年-月-日 (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "请输入有效日期，格式为 YYYY-MM-DD。"
   },
   "ja": {
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "アラートは許可された銘柄の確定済み日足の交差を確認します。サイト内に表示され、タブを開いている間は任意でブラウザー通知も利用できます。バックグラウンドのメールやプッシュ通知はありません。バックグラウンド監視には契約とスケジュールの有効化が必要で、ルールを保存するだけでは有効になりません。",
@@ -1006,6 +1038,10 @@ export const extraTranslations = {
     "עמוד המנוי": "契約ページ",
     "חלונות כניסה של ספקים חיצוניים כפופים גם לממשק של הספק. בדיקות iPhone פיזי, VoiceOver ו־TalkBack עדיין נדרשות. אם פעולה אינה נגישה עבורך, נשמח לקבל דיווח ולבחון חלופה.": "外部提供元のログイン画面は、その提供元のインターフェースにも左右されます。実機iPhone、VoiceOver、TalkBackでのテストは引き続き必要です。利用できない操作があればご報告ください。代替手段を検討します。",
     "הצג גרף": "チャートを表示",
-    "בחר שיחה": "会話を選択"
+    "בחר שיחה": "会話を選択",
+    "בחר קובץ גיבוי": "バックアップファイルを選択",
+    "לא נבחר קובץ": "ファイル未選択",
+    "שנה-חודש-יום (YYYY-MM-DD)": "年-月-日 (YYYY-MM-DD)",
+    "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "YYYY-MM-DD形式で有効な日付を入力してください。"
   }
 };

@@ -1,3 +1,6 @@
+import {renderChatReply} from './chat-reply-ui.mjs';
+import {languageCode} from './interface-language.mjs';
+import {entryStopText} from './entry-stop-scenario.mjs';
 import {createVentureChartView} from './venture-chart-view.mjs';
 import {showCreditPlans} from './exhausted-credits-ui.mjs';
 import {createMarketFeedClient} from './market-feed-client.mjs';
@@ -32,11 +35,16 @@ const localChart=createVentureChartView(initLocalChart());
 let ventureActions=[];
 let loaded=null,lastVisibleChart=null,chartRevision=0;
 const normSymbol=()=>String(chartSymbol.value||"").trim().toUpperCase().replace(/[^A-Z0-9:._-]/g,"").slice(0,30);
+// Deterministic calculated levels follow UI switches; model prose keeps its original language.
+const scenarioBubbles=new Map(),analysisReceipts=new Map();
+function appendScenario(bubble,plan){const section=document.createElement('div');section.className='chat-entry-stop';bubble.append(section);scenarioBubbles.set(section,plan);renderChatText(section,entryStopText(plan,document.documentElement.lang))}
+window.addEventListener('asaf:language',()=>{for(const [node,source] of analysisReceipts){if(!node.isConnected){analysisReceipts.delete(node);continue}node.textContent=window.asafTranslate?.(source)||source}for(const [section,plan] of scenarioBubbles){if(!section.isConnected){scenarioBubbles.delete(section);continue}renderChatText(section,entryStopText(plan,document.documentElement.lang))}});
 function say(role,content){
  const item=document.createElement("div");
  item.className="bubble "+role;
  item.setAttribute('role','group');
  item.setAttribute('aria-label',role==='user'?'אתה':'ASAF AI');
+ if(role==='user'){item.translate=false;item.dir='auto'}
  item.textContent=content;
  log.append(item);
  log.scrollTop=log.scrollHeight;
@@ -101,7 +109,7 @@ function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL
 function datasetReady(){rememberSymbol();if(loaded?.presentation==='server-raster'){window.dispatchEvent(new Event('asaf:dataset-cleared'));window.dispatchEvent(new CustomEvent('asaf:provider-image-ready',{detail:{symbol:loaded.symbol,interval:loaded.interval,receivedAt:loaded.receivedAt,latestBarTime:loaded.context.date}}));return;}if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 // Changing the chart invalidates pending analysis, not the conversation itself.
 // Previous messages retain their own chartContext and are historical references.
-const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){renderChatText(say(m.role==='user'?'user':'bot',''),m.content)}}});
+const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){const bubble=say(m.role==='user'?'user':'bot','');const storedScenario=m.tradeScenario?entryStopText(m.tradeScenario,m.responseLanguage||'he'):'';renderChatText(bubble,storedScenario?m.content.replace('\n\n'+storedScenario,''):m.content);if(m.tradeScenario)appendScenario(bubble,m.tradeScenario)}}});
 function resetRequest({clearHistory=false}={}){
  const invalidate=requestInvalidated;requestInvalidated=null;
  lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;
@@ -181,6 +189,7 @@ async function ask(q,extra={}){
  if(!question)return;
  chatBusy=true;
  const epoch=conversationEpoch;
+ const requestLanguage=languageCode(extra.retryPayload?.language||document.documentElement?.lang);
  const submitButton=form.querySelector('button');
  submitButton.disabled=true;if($("cancelChat"))$("cancelChat").disabled=false;
  const requestState=$('chatRequestState');
@@ -275,7 +284,7 @@ async function ask(q,extra={}){
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   preparedPayload=preparedPayload||{
     message:question,
-    language:document.documentElement?.lang||"he",
+    language:requestLanguage,
     chartControl:!extra.newsArticleId&&!localReceipt&&requestsChartControl(intentQuestion),
     chartRevision,
     chartToolReceipt:localReceipt,
@@ -320,6 +329,7 @@ async function ask(q,extra={}){
   if(!data.answer)throw Error("לא התקבלה תשובה מהמודל");
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   const followAnswer=isChatNearBottom(log);
+  waiting.translate=false;waiting.dir='auto';
   waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+data.answer;
   if(data.historyRestricted)waiting.textContent+='\n\nהשיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.';
   if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
@@ -329,16 +339,21 @@ async function ask(q,extra={}){
   }
 
   waiting.translate=false;
-  const displayAnswer=waiting.textContent;
-  const completedAnswer=displayAnswer+(data.webSearch?.sources?.length?'\n\nמקורות שנמצאו בחיפוש:\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
-  renderChatText(waiting,displayAnswer);
+  const scenarioText=data.tradeScenario?entryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
+  const displayAnswer=scenarioText?waiting.textContent.replace('\n\n'+scenarioText,''):waiting.textContent;
+  const completedAnswer=displayAnswer+(scenarioText?'\n\n'+scenarioText:'')+(data.webSearch?.sources?.length?'\n\nמקורות שנמצאו בחיפוש:\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
+  const modelAnswer=scenarioText?data.answer.replace('\n\n'+scenarioText,''):data.answer;
+  const rawPrefix=localReceipt?localReceipt+'\n\n':'';
+  const suffix=displayAnswer.slice(rawPrefix.length+modelAnswer.length);
+  renderChatReply(waiting,{before:localReceipt,answer:modelAnswer,after:suffix});
+  if(data.tradeScenario)appendScenario(waiting,data.tradeScenario);
   renderSearchSources(waiting,data.webSearch);
 
   if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 
-  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
+  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   chatHistory.complete(conversation);conversation=conversation.slice(-400);
-  if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';receipt.textContent=analysisReceipt(data.analysisContext);waiting.append(receipt)}
+  if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);waiting.append(receipt)}
   if(followAnswer)log.scrollTop=log.scrollHeight;
   pendingImage=null;
   if(imageInput)imageInput.value="";

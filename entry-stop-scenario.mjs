@@ -1,3 +1,5 @@
+import {scenarioLocales} from './entry-stop-locales.mjs';
+import {languageCode} from './interface-language.mjs';
 import {chartIndicators} from './chart-indicators.mjs';
 import {validCandleTime} from './candle-time.mjs';
 
@@ -27,7 +29,16 @@ export function scenarioSide(question){
  return /שורט|\bshort\b/iu.test(String(question))?'short':'long';
 }
 
-export function entryStopText(plan){
+export function entryStopText(plan,language='he'){
+ const code=languageCode(language),copy=scenarioLocales[code];
+ if(copy){
+  if(!plan?.available)return copy.heading+'\n'+copy.unavailable;
+  const number=v=>Number(v).toLocaleString('en-US',{maximumSignificantDigits:8});
+  const fill=(text,values)=>text.replace(/\{(\w+)\}/g,(_,key)=>values[key]??'');
+  const long=plan.side==='long';
+  return [copy.heading,fill(long?copy.scenarioLong:copy.scenarioShort,{date:plan.asOf,interval:plan.interval||copy.unspecified}),fill(copy.entry,{value:number(plan.entry)}),fill(copy.stop,{value:number(plan.stop)}),long?copy.triggerLong:copy.triggerShort,...(plan.stage==='already-crossed'?[copy.crossed]:[]),fill(long?copy.methodLong:copy.methodShort,{risk:number(plan.riskPercent)}),...(plan.excludedLatest?[copy.excluded]:[]),copy.caveat].join('\n');
+ }
+
  const heading='**כניסה וסטופ־לוס — תרחיש מחושב**';
  if(!plan?.available)return heading+'\nנקודת כניסה: לא זמינה.\nסטופ־לוס: לא זמין.\n'+(plan?.reason||'אין נתונים מאומתים לבניית תרחיש.');
  const number=v=>Number(v).toLocaleString('en-US',{maximumSignificantDigits:8}),isLong=plan.side==='long';

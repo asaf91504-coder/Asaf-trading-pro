@@ -1,6 +1,9 @@
 // Render only emphasis and inline code. Model text is never HTML, executable
 // markup, embedded media, or an automatically followed link.
 export function renderChatText(element,value,doc=element.ownerDocument){
+ // Historical and generated prose must never undergo dictionary fragment substitution.
+ element.translate=false;
+ element.dir='auto';
  const text=String(value??'');
  element.replaceChildren();
  let offset=0;

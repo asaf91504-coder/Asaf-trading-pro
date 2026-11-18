@@ -26,3 +26,6 @@ test('unclosed delimiters remain intact and rerendering replaces rather than dup
  const {root}=fixture();renderChatText(root,'**not closed\n`unfinished');assert.equal(root.textContent,'**not closed\n`unfinished');
  renderChatText(root,'`**literal**`');assert.equal(root.textContent,'**literal**');assert.equal(root.children[0].tag,'code');renderChatText(root,'');assert.equal(root.textContent,'');
 });
+test('free text is excluded from interface dictionary translation and uses automatic direction',()=>{
+ const {root}=fixture();renderChatText(root,'Original עברית text');assert.equal(root.translate,false);assert.equal(root.dir,'auto');assert.equal(root.textContent,'Original עברית text');
+});

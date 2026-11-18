@@ -46,3 +46,10 @@ test('client-supplied provenance cannot unlock numeric entry/stop and general co
   const general=await (await s.send({...payload,message:'שלום, מה נשמע?'})).json();assert.equal(general.tradeScenario,null);assert.equal(general.answer,'Analysis');
  },{licensed:false});
 });
+test('selected English locale governs model prompt and computed suffix even for Hebrew question',async()=>{
+ await scenario(async s=>{
+  const response=await s.send({...s.payload,message:'תנתח AAPL',language:'en-US'}),data=await response.json();
+  assert.equal(response.status,200);assert.equal(data.responseLanguage,'en');assert.match(data.answer,/102\.75/);assert.doesNotMatch(data.answer,/[\u0590-\u05ff]/);
+  assert.match(s.models[0].messages[0].content,/Response language: English/);
+ });
+});
