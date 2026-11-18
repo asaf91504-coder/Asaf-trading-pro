@@ -7,7 +7,8 @@ const nativeConfirm=window.confirm.bind(window),nativePrompt=window.prompt.bind(
 window.confirm=message=>nativeConfirm(translate(String(message)));
 window.prompt=(message,value)=>nativePrompt(translate(String(message)),value);
 const label=document.createElement('label');label.className='interface-language-picker';label.translate=false;
-const caption=document.createElement('span');caption.textContent='🌐';caption.setAttribute('aria-hidden','true');
+const caption=document.createElement('span');caption.textContent='🌐 שפה / Language';caption.className='interface-language-caption';
+const languageCaptions={he:'שפה / Language',en:'Language',es:'Idioma',ar:'اللغة',fr:'Langue',de:'Sprache',pt:'Idioma',ru:'Язык',zh:'语言',ja:'言語'};
 const select=document.createElement('select');select.id='interfaceLanguage';select.setAttribute('aria-label','Language / שפה');
 for(const [code,name] of Object.entries(languageNames)){const option=document.createElement('option');option.value=code;option.textContent=name;option.lang=code;select.append(option)}
 label.append(caption,select);(document.querySelector('header')||document.body).append(label);
@@ -20,7 +21,7 @@ const observer=new MutationObserver(records=>{observer.disconnect();for(const re
 function observe(){observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label','alt']})}
 async function applyLanguage(value){const code=languageCode(value),request=++revision;select.disabled=true;status.textContent='';try{
  let catalog={};if(code!=='he'){const response=await fetch('./locales/'+code+'.json',{signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('language');catalog=await response.json();if(!catalog||Array.isArray(catalog)||typeof catalog!=='object')throw Error('catalog')}
- if(request!==revision)return;catalog={...catalog,...launchTranslations[code]};translate=createTranslator(catalog);for(const [source,translated] of Object.entries(catalog))canonicalPrompts.set(translated,source);window.asafCanonicalPrompt=question=>canonicalPrompts.get(question)||question;window.asafTranslate=translate;selected=code;document.documentElement.lang=code;document.documentElement.dir=languageDirection(code);try{saveLanguage(window.localStorage,code)}catch{};select.value=code;observer.disconnect();scan(document.body);observe();window.dispatchEvent(new CustomEvent('asaf:language',{detail:{language:code}}));window.dispatchEvent(new Event('asaf:layout'));
+ if(request!==revision)return;catalog={...catalog,...launchTranslations[code]};translate=createTranslator(catalog);for(const [source,translated] of Object.entries(catalog))canonicalPrompts.set(translated,source);window.asafCanonicalPrompt=question=>canonicalPrompts.get(question)||question;window.asafTranslate=translate;selected=code;document.documentElement.lang=code;document.documentElement.dir=languageDirection(code);try{saveLanguage(window.localStorage,code)}catch{};select.value=code;caption.textContent='🌐 '+languageCaptions[code];observer.disconnect();scan(document.body);observe();window.dispatchEvent(new CustomEvent('asaf:language',{detail:{language:code}}));window.dispatchEvent(new Event('asaf:layout'));
  }catch{if(request===revision){select.value=selected;status.textContent='Language unavailable. Try again. / טעינת השפה נכשלה; נסה שוב.'}}finally{if(request===revision)select.disabled=false}}
 select.addEventListener('change',()=>applyLanguage(select.value));
 let initial='he';try{initial=savedLanguage(window.localStorage)}catch{}observe();applyLanguage(initial);
