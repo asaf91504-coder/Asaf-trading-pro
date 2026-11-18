@@ -14,7 +14,7 @@ if(header){
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){event.preventDefault();closeMenu(true)}});
  window.addEventListener('asaf:language',()=>closeMenu());
  window.addEventListener('asaf:tab',()=>closeMenu());
- content.addEventListener('click',event=>{if(event.target.closest('a,button'))closeMenu()});
+ content.addEventListener('click',event=>{if(event.target.closest('a,button')&&!event.target.closest('.terminal-layout-menu'))closeMenu()});
 
  const chat=document.getElementById('chat'),history=chat?.querySelector('.chat-history');
  if(history){const drawer=document.createElement('details');drawer.className='conversation-history-drawer';const title=document.createElement('summary');title.textContent='השיחות השמורות שלי';history.before(drawer);drawer.append(title,history)}
