@@ -410,7 +410,7 @@ const providerFeed=createMarketFeedClient({onChange:({intrinio,publicMarket})=>{
   $('marketProviderTitle').textContent=publicMarket.privateTrial?'Twelve Data · ניסיון פרטי לחשבון שלך':'Twelve Data · חיבור נתוני שוק';
   $('marketProviderScope').textContent=publicMarket.privateTrial?'בדיקה פנימית לבעל החשבון בלבד. נפח תוך־יומי חלקי; הסורק משתמש בנפח סוף יום. אין להציג או לשתף את נתוני הניסיון עם לקוחות.':'היכנס לחשבון וטען נתונים. מקור הנתונים ומועד הנר האחרון יוצגו לאחר טעינה מוצלחת.';
  }
- if(!loaded)marketStatus.textContent=intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'Twelve Data מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
+ if(!loaded)marketStatus.textContent=!authState.authenticated?'חיפוש המניות זמין. להצגת תמונת גרף, היכנס לחשבון בעל הרשאת נתונים.':intrinio.enabled&&!publicMarket.enabled?'Intrinio מוגדר · היכנס כמנהל ובחר מניה בטווח יומי. זמינות הנתונים תיבדק בטעינה.':publicMarket.enabled?'Twelve Data מוגדר · טען גרף לאימות.':'נתוני מניות טרם הופעלו. ממתינים להגדרת ספק מורשה.';
 }});
 const refreshProviderFeed=()=>providerFeed.refresh(JSON.stringify([authState.enabled,authState.authenticated,authState.memberId]));
 window.addEventListener('asaf:auth',refreshProviderFeed);
