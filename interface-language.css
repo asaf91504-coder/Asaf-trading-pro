@@ -11,3 +11,9 @@ html[dir=ltr] body{text-align:start}html[dir=ltr] .terminal-app main,html[dir=lt
 html[dir=ltr] table,html[dir=ltr] .scenario-grid dd,html[dir=ltr] .levels dd{text-align:start}
 html[dir=ltr] .session-clock{direction:ltr;text-align:start}
 .interface-language-picker{overflow-wrap:anywhere}
+
+/* Keep language selection discoverable on every page, outside settings. */
+.interface-language-picker{padding:6px 8px;border:1px solid #385166;border-radius:10px;background:#142331;color:#e8edf5}
+.interface-language-caption{font-size:13px;font-weight:600;white-space:nowrap}
+.interface-language-picker select{min-width:110px;border-color:#568f88;cursor:pointer}
+.interface-language-picker:focus-within{outline:2px solid #5eead4;outline-offset:2px}
