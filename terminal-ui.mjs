@@ -115,7 +115,8 @@ for(const node of [...chartPanel.children])if(node!==chartTop&&node!==chartBody&
 const exactRange=document.createElement('div');exactRange.className='row';const rangeLabel=chartNav.querySelector('label[for="localChartRange"]');if(rangeLabel)exactRange.append(rangeLabel);exactRange.append($('localChartRange'));advancedChart.append(exactRange);
 
 // Chart workspace occupies the page; retain a single conversation and chart instance.
-mountAssetSearch({host:command,open(symbol){$('symbol').value=symbol;$('symbol').dispatchEvent(new Event('input'));selectTab('charts');$('marketFetch').click()}});
+const searchBar=document.createElement('div');searchBar.className='workspace-asset-search';searchBar.setAttribute('aria-label','חיפוש מניה ופתיחת גרף');main.querySelector('.tabs').before(searchBar);
+mountAssetSearch({host:searchBar,open(symbol){$('symbol').value=symbol;$('symbol').dispatchEvent(new Event('input'));selectTab('charts');$('marketFetch').click()}});
 const workspaceChat=document.createElement('button');workspaceChat.type='button';workspaceChat.className='workspace-chat-toggle';workspaceChat.textContent='✦ ASAF AI';workspaceChat.setAttribute('aria-expanded','false');command.append(workspaceChat);
 function toggleWorkspaceChat(open){if(open&&!wide.matches){document.body.classList.remove('chart-chat-open');workspaceChat.setAttribute('aria-expanded','false');workspaceChat.textContent='✦ ASAF AI';selectTab('chat');$('chatInput').focus();return}document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
 workspaceChat.onclick=()=>toggleWorkspaceChat(!document.body.classList.contains('chart-chat-open'));
@@ -155,6 +156,10 @@ quickActions.after(composerHint);
 const navLabels={charts:'גרפים',scanner:'סורק מניות',news:'חדשות',chat:'ASAF AI',risk:'מחשבון סיכון',watch:'מעקב'};
 for(const tab of document.querySelectorAll('.tabs [data-tab]'))tab.textContent=navLabels[tab.dataset.tab]||tab.textContent;
 $('journalLink').textContent='יומן מסחר';
+
+// Keep stock discovery visible from the default chat and every workspace tab.
+const searchHint=document.createElement('span');searchHint.textContent='חפש לפי שם חברה או סימול ופתח את הגרף';searchBar.append(searchHint);
+const emptySearch=document.createElement('button');emptySearch.type='button';emptySearch.textContent='חפש מניה והצג גרף';emptySearch.onclick=()=>searchBar.querySelector('button').click();$('chartEmpty').append(emptySearch);
 
 // Keep a phone conversation on its own page after rotation or resizing.
 wide.addEventListener('change',()=>{if(!wide.matches&&document.body.classList.contains('chart-chat-open'))toggleWorkspaceChat(true)});
