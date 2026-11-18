@@ -9,6 +9,12 @@ export const marketIntervals=twelveIntervals;
 export const configuredMarketIntervals=(env=process.env)=>twelveSettings(env).intervals;
 const settingsValid=env=>{try{twelveSettings(env);return true}catch{return false}};
 export function approvedMarketSymbols(env=process.env){const symbols=[...new Set((env.ASAF_MARKET_ALLOWED_SYMBOLS||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))];return symbols.length>0&&symbols.length<=50&&symbols.every(s=>/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(s))?symbols:[]}
+// Additional chart symbols do not expand the scheduled scanner universe.
+export function approvedChartSymbols(env=process.env){
+ const extra=[...new Set((env.ASAF_MARKET_CHART_SYMBOLS||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))];
+ if(extra.length>200||extra.some(s=>!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(s)))return approvedMarketSymbols(env);
+ return [...new Set([...approvedMarketSymbols(env),...extra])];
+}
 const baseMarketConfigured=(env=process.env)=>publicAuthConfigured(env)&&settingsValid(env)&&env.ASAF_MARKET_ENABLED==='true'&&env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED==='true'&&!!env.TWELVE_DATA_API_KEY&&/^\d{1,4}$/.test(env.ASAF_MARKET_DELAY_MINUTES||'')&&approvedMarketSymbols(env).length>0;
 export function marketConfigurationIssues(env=process.env){
  const issues=[];
@@ -34,7 +40,7 @@ export function marketSelection(selected,interval='1day',env=process.env){
  if(parts.length>2||(parts.length===2&&!['NASDAQ','NYSE','AMEX','NYSEARCA','BATS'].includes(parts[0])))throw new MarketError('החיבור תומך במניות ארה״ב מורשות בלבד.',400);
  const symbol=parts.at(-1);if(!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(symbol)||!marketIntervals.includes(interval))throw new MarketError('סימול או טווח זמן אינם תקינים.',400);
  if(!configuredMarketIntervals(env).includes(interval))throw new MarketError('טווח הזמן אינו כלול בחיבור הנתונים הנוכחי.',403);
- if(!approvedMarketSymbols(env).includes(symbol))throw new MarketError('הסימול אינו כלול בחיבור הנתונים הנוכחי.',403);return {symbol,interval};
+ if(!approvedChartSymbols(env).includes(symbol))throw new MarketError('המניה '+symbol+' אינה מופעלת בחיבור הנתונים. בחר מניה זמינה בחיפוש.',403);return {symbol,interval};
 }
 export const marketSnapshotKey=(symbol,interval,env=process.env)=>storageKey('market:snapshot:v3:'+symbol+':'+interval+':'+env.ASAF_MARKET_DELAY_MINUTES+':'+createHash('sha256').update(JSON.stringify({...twelveSettings(env),privateOwner:privateMarketTrial(env)?env.ASAF_TWELVE_TRIAL_MEMBER_ID:null,trialEnd:privateMarketTrial(env)?env.ASAF_TWELVE_TRIAL_ENDS_AT:null})).digest('hex').slice(0,16),env);
 export function applyMarketDelay(bars,interval,delay,now){

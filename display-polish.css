@@ -101,3 +101,8 @@ body .asaf-support-launcher{position:static;display:block;width:fit-content;max-
 }
 @media(max-width:380px){.terminal-app .brand{font-size:10px}.display-settings>summary{font-size:12px;padding:10px}.terminal-app .tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.terminal-app #chat .conversation-prompts{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Keep stock search beside the chart, including narrow displays. */
+.terminal-app #charts>.terminal-command{display:flex;flex-wrap:wrap;max-width:none;width:100%;padding:12px;background:#142337;border:1px solid #304158;border-radius:12px;margin-bottom:12px!important}
+.terminal-app #charts>.terminal-command #symbol{flex:1;min-width:100px;max-width:220px}
+.terminal-app #charts>.terminal-command .asset-search-trigger{min-height:44px;color:#82ead8;border-color:#348e80}
