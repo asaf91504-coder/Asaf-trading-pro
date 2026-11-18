@@ -116,3 +116,33 @@ body .asaf-support-launcher{position:static;display:block;width:fit-content;max-
 .workspace-asset-search .asset-search-trigger{min-height:48px;flex:1 1 220px;max-width:480px;font-size:16px;border:1px solid #348e80;color:var(--text,#e8edf5)}
 .workspace-asset-search>span{font-size:13px;color:var(--muted,#92a3b7)}
 @media(max-width:600px){.workspace-asset-search{gap:6px}.workspace-asset-search .asset-search-trigger{max-width:none;width:100%}.workspace-asset-search>span{width:100%;text-align:center}}
+
+/* Mobile usability: settings expand in page flow, never off the edge of a phone. */
+:where(button,summary,select,a,input,textarea):focus-visible{outline:3px solid #5eead4;outline-offset:3px}
+.terminal-app header>.interface-language-picker{margin-inline-start:auto;flex-shrink:0}
+.display-settings-content a{display:flex;align-items:center;min-height:44px;padding:10px;color:#91eadb;line-height:1.5}
+.display-settings-content .subscription-link{display:flex!important}
+.display-settings-content button{width:100%;text-align:start;white-space:normal;line-height:1.5}
+@media(max-width:900px){
+ .terminal-app header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+ .terminal-app header>.brand{grid-column:1;grid-row:1;max-width:100%;min-width:0}
+ .terminal-app header>.terminal-account-button{grid-column:2;grid-row:1;margin:0;max-width:145px;white-space:normal}
+ .terminal-app header>.interface-language-picker{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:space-between;width:100%;margin:0;padding:8px 10px;border:1px solid #385166;border-radius:10px;background:#121e2b}
+ .terminal-app header>.interface-language-picker select{flex:1;max-width:60%;min-width:0}
+ .terminal-app header>.display-settings{grid-column:1/-1;grid-row:3;width:100%;min-width:0;margin:0}
+ .display-settings>summary{padding:10px 12px}
+ .display-settings-content{position:static;inset:auto;width:100%;max-width:100%;max-height:none;overflow:visible;margin-top:8px;box-shadow:none}
+ .terminal-app .tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .terminal-app .tabs button{font-size:13px;white-space:normal;overflow-wrap:anywhere;padding:10px 6px!important}
+ .terminal-app[data-view=chat] #chatLog{height:auto;max-height:none;min-height:0;overflow:visible;flex:none}
+ .terminal-app[data-view=chat] #chatLog:empty{display:none}
+ .terminal-app .terminal-stage,.terminal-app .terminal-ai{min-width:0;max-width:100%}
+ .terminal-app .terminal-conversation-nav button{flex:1;white-space:normal}
+ .terminal-app .table-scroll{overflow-x:auto}
+ .terminal-app .panel p,.terminal-app .panel h2,.terminal-app .panel h3{overflow-wrap:anywhere}
+}
+@media(max-width:380px){
+ .terminal-app .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .terminal-app header>.brand{font-size:11px}
+ .terminal-app header>.terminal-account-button{max-width:120px;font-size:12px}
+}
