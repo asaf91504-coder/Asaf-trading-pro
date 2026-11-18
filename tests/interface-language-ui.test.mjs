@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as language from '../interface-language.mjs';
 const source=readFileSync(new URL('../interface-language-ui.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
-function fixture(){
+function fixture(realCatalogs=false){
  class Node{
   constructor(tag,text){this.tagName=tag;this.nodeType=tag?1:3;this.nodeValue=text;this.childNodes=[];this.attributes={};this.handlers={};this.value=''}
   append(...nodes){for(const node of nodes){node.parentElement=this;this.childNodes.push(node)}}
@@ -17,7 +17,7 @@ function fixture(){
  }
  const body=new Node('body'),header=new Node('header'),nav=new Node('button'),input=new Node('textarea'),user=new Node('p');nav.textContent='חדשות';input.value='My NVDA draft';input.setAttribute('placeholder','כתוב כאן');user.className='bubble user';user.textContent='חדשות NVDA';body.append(header,nav,input,user);
  let observer,fail=false,blocked=false;const memory=new Map(),events=[],storage={getItem:k=>memory.get(k),setItem:(k,v)=>{if(blocked)throw Error('quota');memory.set(k,v)}};
- const ctx={launchTranslations,...language,AbortSignal,Event,CustomEvent:class extends Event{constructor(t,o){super(t);this.detail=o.detail}},document:{body,documentElement:{lang:'he',dir:'rtl'},createElement:tag=>new Node(tag),querySelector:()=>header},window:{localStorage:storage,confirm:()=>true,prompt:()=>'',dispatchEvent:e=>events.push(e.type)},MutationObserver:class{constructor(callback){observer=callback}disconnect(){}observe(){}},fetch:async url=>{if(fail)throw Error('offline');return {ok:true,json:async()=>url.includes('/ar.')?{'חדשות':'أخبار','כתוב כאן':'اكتب هنا'}:{'חדשות':'News','כתוב כאן':'Write here'}}}};
+ const ctx={launchTranslations,...language,AbortSignal,Event,CustomEvent:class extends Event{constructor(t,o){super(t);this.detail=o.detail}},document:{body,documentElement:{lang:'he',dir:'rtl'},createElement:tag=>new Node(tag),querySelector:()=>header},window:{localStorage:storage,confirm:()=>true,prompt:()=>'',dispatchEvent:e=>events.push(e.type)},MutationObserver:class{constructor(callback){observer=callback}disconnect(){}observe(){}},fetch:async url=>{if(fail)throw Error('offline');return {ok:true,json:async()=>realCatalogs?JSON.parse(readFileSync(new URL('../'+url.slice(2),import.meta.url),'utf8')):url.includes('/ar.')?{'חדשות':'أخبار','כתוב כאן':'اكتب هنا'}:{'חדשות':'News','כתוב כאן':'Write here'}}}};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {ctx,body,nav,input,user,Node,memory,events,observe:r=>observer(r),fail:()=>{fail=true},block:()=>{blocked=true}};
 }
 test('a translated draft retains its canonical intent after changing language',async()=>{
@@ -41,4 +41,14 @@ test('failed locale fetch keeps working language and blocked persistence does no
 });
 test('application text updates replace original translation source without observer loops',async()=>{
  const f=fixture();await f.ctx.applyLanguage('en');const text=f.nav.childNodes[0];f.observe([{type:'characterData',target:text}]);assert.equal(text.nodeValue,'News');text.nodeValue='NVDA 123.45';f.observe([{type:'characterData',target:text}]);await f.ctx.applyLanguage('he');assert.equal(f.nav.textContent,'NVDA 123.45');
+});
+
+for(const code of Object.keys(language.languageNames))test(`language acceptance: ${code} restores UI, directions, attributes, dynamic text and drafts`,async()=>{
+ const f=fixture(true);await f.ctx.applyLanguage(code);
+ assert.equal(f.ctx.document.documentElement.lang,code);assert.equal(f.ctx.document.documentElement.dir,language.languageDirection(code));
+ const later=new f.Node('button');later.textContent='מצא לי מניות';f.body.append(later);f.observe([{type:'childList',addedNodes:[later]}]);
+ assert.equal(f.input.value,'My NVDA draft');assert.equal(f.user.textContent,'חדשות NVDA');
+ if(code!=='he'){assert.doesNotMatch(later.textContent,/[\u0590-\u05ff]/);assert.doesNotMatch(f.nav.textContent,/[\u0590-\u05ff]/)}
+ await f.ctx.applyLanguage('he');assert.equal(later.textContent,'מצא לי מניות');assert.equal(f.nav.textContent,'חדשות');
+ await f.ctx.applyLanguage(code);assert.equal(f.ctx.document.documentElement.lang,code);assert.equal(f.input.value,'My NVDA draft');
 });

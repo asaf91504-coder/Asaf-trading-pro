@@ -11,7 +11,7 @@ export function mountAppInstall({window:win=globalThis.window,document:doc=globa
  if(!win||!doc||!nav||doc.getElementById('appInstallButton'))return;
  const element=(tag,text,className)=>{const node=doc.createElement(tag);if(text)node.textContent=text;if(className)node.className=className;return node};
  const button=element('button','התקן אפליקציה','app-install-button');button.id='appInstallButton';button.type='button';button.setAttribute('aria-haspopup','dialog');
- const dialog=element('dialog',null,'app-install-dialog');dialog.id='appInstallDialog';dialog.dir='rtl';dialog.setAttribute('aria-labelledby','appInstallTitle');dialog.setAttribute('aria-describedby','appInstallDescription');
+ const dialog=element('dialog',null,'app-install-dialog');dialog.id='appInstallDialog';dialog.setAttribute('aria-labelledby','appInstallTitle');dialog.setAttribute('aria-describedby','appInstallDescription');
  const title=element('h2','ASAF Trading Pro');title.id='appInstallTitle';
  const description=element('p','פתח את ASAF AI והגרפים ממסך הבית, בחלון עצמאי. הצ׳אט, ההתחברות, החדשות ונתוני השוק דורשים חיבור לאינטרנט.');description.id='appInstallDescription';
  const instructions=element('p',null,'app-install-instructions');
