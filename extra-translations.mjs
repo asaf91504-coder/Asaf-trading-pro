@@ -1,6 +1,10 @@
 // Complete messages; do not translate user-authored content.
 export const extraTranslations = {
   "en": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "Preferences are saved on this device. You can also use your browser’s zoom.",
+    "איפוס העדפות": "Reset preferences",
+    "ההעדפות נשמרו במכשיר.": "Preferences saved on this device.",
+    "הצהרת נגישות ודיווח על קושי": "Accessibility statement and reporting a difficulty",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Alerts check crossings on completed daily candles for permitted stocks only. Alerts appear on the site and optionally in the browser while the tab is open; no background email or push notifications. Background monitoring requires a subscription and scheduling activation. Saving a rule does not activate it.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "Background monitoring is not active; no provider requests were made.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "Permission was not granted. Alerts will remain in the site inbox.",
@@ -117,6 +121,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Enter a valid date in YYYY-MM-DD format."
   },
   "es": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "Las preferencias se guardan en este dispositivo. También puedes usar el zoom del navegador.",
+    "איפוס העדפות": "Restablecer preferencias",
+    "ההעדפות נשמרו במכשיר.": "Preferencias guardadas en este dispositivo.",
+    "הצהרת נגישות ודיווח על קושי": "Declaración de accesibilidad y comunicación de dificultades",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Las alertas detectan cruces en velas diarias cerradas de acciones autorizadas. Se muestran en la web y, opcionalmente, en el navegador mientras la pestaña está abierta; sin correo ni notificaciones push en segundo plano. La supervisión en segundo plano requiere suscripción y activación de la programación. Guardar una regla no la activa.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "La supervisión en segundo plano no está activa; no se consultó al proveedor.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "No se concedió permiso. Las alertas seguirán en la bandeja del sitio.",
@@ -233,6 +241,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Introduce una fecha válida en formato YYYY-MM-DD."
   },
   "fr": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "Les préférences sont enregistrées sur cet appareil. Vous pouvez aussi utiliser le zoom du navigateur.",
+    "איפוס העדפות": "Réinitialiser les préférences",
+    "ההעדפות נשמרו במכשיר.": "Préférences enregistrées sur cet appareil.",
+    "הצהרת נגישות ודיווח על קושי": "Déclaration d’accessibilité et signalement d’une difficulté",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Les alertes détectent les croisements sur les bougies journalières clôturées des actions autorisées. Elles apparaissent sur le site et, en option, dans le navigateur lorsque l’onglet est ouvert ; aucun e-mail ni notification push en arrière-plan. La surveillance en arrière-plan nécessite un abonnement et l’activation de la planification. Enregistrer une règle ne l’active pas.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "La surveillance en arrière-plan est inactive ; aucune requête au fournisseur n’a été effectuée.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "L’autorisation n’a pas été accordée. Les alertes resteront dans la boîte du site.",
@@ -349,6 +361,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Saisissez une date valide au format YYYY-MM-DD."
   },
   "de": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "Die Einstellungen werden auf diesem Gerät gespeichert. Sie können auch den Browser-Zoom verwenden.",
+    "איפוס העדפות": "Einstellungen zurücksetzen",
+    "ההעדפות נשמרו במכשיר.": "Einstellungen auf diesem Gerät gespeichert.",
+    "הצהרת נגישות ודיווח על קושי": "Erklärung zur Barrierefreiheit und Meldung eines Problems",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Alarme prüfen Kreuzungen anhand abgeschlossener Tageskerzen zugelassener Aktien. Sie erscheinen auf der Website und optional im Browser, solange der Tab geöffnet ist; keine E-Mails oder Push-Nachrichten im Hintergrund. Die Hintergrundüberwachung erfordert ein Abonnement und eine aktivierte Zeitplanung. Das Speichern einer Regel aktiviert sie nicht.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "Die Hintergrundüberwachung ist nicht aktiv; es wurden keine Anbieteranfragen gesendet.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "Die Berechtigung wurde nicht erteilt. Alarme bleiben im Postfach der Website.",
@@ -465,6 +481,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Gib ein gültiges Datum im Format YYYY-MM-DD ein."
   },
   "pt": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "As preferências são salvas neste dispositivo. Você também pode usar o zoom do navegador.",
+    "איפוס העדפות": "Redefinir preferências",
+    "ההעדפות נשמרו במכשיר.": "Preferências salvas neste dispositivo.",
+    "הצהרת נגישות ודיווח על קושי": "Declaração de acessibilidade e relato de dificuldades",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Os alertas verificam cruzamentos em velas diárias fechadas de ações autorizadas. Aparecem no site e, opcionalmente, no navegador enquanto a aba está aberta; sem e-mail ou notificações push em segundo plano. O monitoramento em segundo plano exige assinatura e ativação do agendamento. Salvar uma regra não o ativa.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "O monitoramento em segundo plano não está ativo; nenhuma consulta foi enviada ao provedor.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "A permissão não foi concedida. Os alertas continuarão na caixa do site.",
@@ -581,6 +601,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Insira uma data válida no formato YYYY-MM-DD."
   },
   "ru": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "Настройки сохраняются на этом устройстве. Также можно использовать масштабирование браузера.",
+    "איפוס העדפות": "Сбросить настройки",
+    "ההעדפות נשמרו במכשיר.": "Настройки сохранены на этом устройстве.",
+    "הצהרת נגישות ודיווח על קושי": "Заявление о доступности и сообщение о проблеме",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "Оповещения проверяют пересечения по закрытым дневным свечам разрешённых акций. Они появляются на сайте и, по желанию, в браузере при открытой вкладке; фоновые письма и push-уведомления не отправляются. Фоновое наблюдение требует подписки и включения расписания. Сохранение правила не включает его.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "Фоновое наблюдение не включено; запросов к поставщику не было.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "Разрешение не предоставлено. Оповещения останутся во входящих на сайте.",
@@ -697,6 +721,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "Введите корректную дату в формате YYYY-MM-DD."
   },
   "ar": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "تُحفظ التفضيلات على هذا الجهاز. يمكنك أيضًا استخدام تكبير المتصفح.",
+    "איפוס העדפות": "إعادة ضبط التفضيلات",
+    "ההעדפות נשמרו במכשיר.": "تم حفظ التفضيلات على هذا الجهاز.",
+    "הצהרת נגישות ודיווח על קושי": "بيان إمكانية الوصول والإبلاغ عن صعوبة",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "تتحقق التنبيهات من التقاطعات على الشموع اليومية المكتملة للأسهم المسموح بها فقط. تظهر في الموقع وفي المتصفح اختياريًا ما دامت علامة التبويب مفتوحة؛ لا بريد إلكتروني أو إشعارات دفع في الخلفية. تتطلب المراقبة الخلفية اشتراكًا وتفعيل الجدولة. حفظ القاعدة لا يفعّلها.",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "المراقبة الخلفية غير مفعّلة؛ لم تُرسل طلبات إلى المزوّد.",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "لم يُمنح الإذن. ستبقى التنبيهات في صندوق الموقع.",
@@ -813,6 +841,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "أدخل تاريخًا صحيحًا بالتنسيق YYYY-MM-DD."
   },
   "zh": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "偏好设置保存在此设备上。您也可以使用浏览器缩放功能。",
+    "איפוס העדפות": "重置偏好设置",
+    "ההעדפות נשמרו במכשיר.": "偏好设置已保存在此设备上。",
+    "הצהרת נגישות ודיווח על קושי": "无障碍声明与问题反馈",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "提醒仅检查获准股票已完成日线蜡烛的交叉。提醒显示在网站内，也可在标签页打开时通过浏览器显示；不发送后台邮件或推送通知。后台监控需要订阅并启用定时任务，保存规则不会启用监控。",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "后台监控尚未启用，未向数据提供商发送请求。",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "未获得权限。提醒仍会保留在网站收件箱中。",
@@ -929,6 +961,10 @@ export const extraTranslations = {
     "יש להזין תאריך תקין במבנה YYYY-MM-DD.": "请输入有效日期，格式为 YYYY-MM-DD。"
   },
   "ja": {
+    "ההעדפות נשמרות במכשיר זה. אפשר גם להשתמש בזום של הדפדפן.": "設定はこの端末に保存されます。ブラウザーのズーム機能も利用できます。",
+    "איפוס העדפות": "設定をリセット",
+    "ההעדפות נשמרו במכשיר.": "設定をこの端末に保存しました。",
+    "הצהרת נגישות ודיווח על קושי": "アクセシビリティ声明と問題の報告",
     "חציות על נרות יומיים סגורים בלבד, למניות שהורשו בחיבור. תיבה באתר והודעות דפדפן אופציונליות כשהלשונית פתוחה; ללא דוא״ל/Push ברקע. מנגנון הרקע ממתין למנוי ולהפעלת תזמון; שמירת כלל אינה מפעילה אותו.": "アラートは許可された銘柄の確定済み日足の交差を確認します。サイト内に表示され、タブを開いている間は任意でブラウザー通知も利用できます。バックグラウンドのメールやプッシュ通知はありません。バックグラウンド監視には契約とスケジュールの有効化が必要で、ルールを保存するだけでは有効になりません。",
     "מנגנון הרקע טרם הופעל; לא בוצעו קריאות לספק.": "バックグラウンド監視は未稼働です。データ提供元へのリクエストは送信されていません。",
     "לא ניתנה הרשאה; ההתראות יישארו בתיבת האתר.": "許可されませんでした。アラートはサイト内の受信箱に残ります。",
