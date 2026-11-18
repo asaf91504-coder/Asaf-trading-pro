@@ -146,3 +146,14 @@ body .asaf-support-launcher{position:static;display:block;width:fit-content;max-
  .terminal-app header>.brand{font-size:11px}
  .terminal-app header>.terminal-account-button{max-width:120px;font-size:12px}
 }
+
+/* Keep empty conversations inviting; don't reserve a blank message viewport. */
+.terminal-app #chatLog:empty{display:none}
+/* Follow the chosen reading direction instead of forcing Hebrew layout. */
+.workspace-asset-search{direction:inherit}
+/* Search results remain readable with long names and on short screens. */
+.asset-search-heading{position:sticky;top:-22px;background:#141c27;z-index:1;padding-block:10px}
+.asset-search-heading button{min-width:44px;min-height:44px;flex-shrink:0}
+.asset-search-results button>*{min-width:0;overflow-wrap:anywhere}
+.asset-search-dialog{overscroll-behavior:contain;scroll-padding-block:70px}
+@media(max-width:600px){.asset-search-heading{top:-16px}.asset-search-results button{grid-template-columns:minmax(0,90px) minmax(0,1fr)}}
