@@ -26,3 +26,11 @@ test('both automatic badge and explicit health results use source-neutral config
  assert.match(source,/נתוני שוק: "\+configuredMarketLabel\(body\)/);
  assert.doesNotMatch(source,/intrinioResearchEnabled\?/);
 });
+
+test('configuration badge is translated in all nine additional languages',async()=>{
+ const {launchTranslations}=await import('../launch-translations.mjs');
+ for(const catalog of Object.values(launchTranslations)){
+  const translated=catalog['ספק נתונים מוגדר · טען גרף לאימות'];
+  assert.ok(translated);assert.doesNotMatch(translated,/[\u0590-\u05ff]|Intrinio|Twelve Data/u);
+ }
+});
