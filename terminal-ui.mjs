@@ -10,7 +10,7 @@ const center=document.createElement('div');center.className='terminal-center';ce
 const ai=document.createElement('aside');ai.className='terminal-ai';ai.dir='rtl';ai.setAttribute('aria-label','עוזר מחקר לצד הגרף');
 for(const section of [...main.querySelectorAll(':scope > section')]){section.dataset.workspacePanel='';(section.id==='chat'?ai:center).append(section)}
 stage.append(rail,center,ai);main.insertBefore(stage,main.querySelector('footer'));
-const command=$('charts').querySelector(':scope > .row');command.classList.add('terminal-command');header.append(command);
+const command=$('charts').querySelector(':scope > .row');command.classList.add('terminal-command');$('charts').prepend(command);command.setAttribute('aria-label','חיפוש והחלפת מניה בגרף');$('symbol').placeholder='סימול, למשל CRWV';$('symbol').setAttribute('aria-label','סימול מניה לגרף');$('symbol').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();$('loadChart').click()}});
 $('loadChart').textContent='פתח';$('chartChat').textContent='נתח גרף';
 const dataButton=document.createElement('button');dataButton.type='button';dataButton.className='terminal-data-button';dataButton.textContent='נתוני שוק';header.append(dataButton);
 const accountButton=document.createElement('button');accountButton.type='button';accountButton.className='terminal-account-button';accountButton.textContent='התחברות';header.append(accountButton);
