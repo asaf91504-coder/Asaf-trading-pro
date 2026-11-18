@@ -21,9 +21,9 @@ function updateCount(){const checked=advanced.querySelectorAll('input[type=check
 scanner.addEventListener('input',updateCount);scanner.addEventListener('change',updateCount);updateCount();
 const methodology=$('scanStatus').nextElementSibling;if(methodology?.tagName==='P'){const details=document.createElement('details');details.className='scanner-methodology';const summary=document.createElement('summary');summary.textContent='איך מחושבים הנתונים?';methodology.before(details);details.append(summary,methodology)}
 const resultTitle=document.createElement('h3');resultTitle.textContent='3 · תוצאות הסריקה';$('scanStatus').before(resultTitle);
-const table=$('scanRows').closest('table');table.classList.add('scanner-results-table');const headers=[...table.querySelectorAll('thead th')].map(h=>h.textContent);
-function labelCells(){for(const row of $('scanRows').rows)for(let i=0;i<row.cells.length;i++){const cell=row.cells[i];if(cell.colSpan===1)cell.dataset.label=headers[i]||''}}
-new MutationObserver(labelCells).observe($('scanRows'),{childList:true,subtree:true});labelCells();
+const table=$('scanRows').closest('table');table.classList.add('scanner-results-table');
+function labelCells(){const headers=[...table.querySelectorAll('thead th')].map(h=>h.textContent);for(const row of $('scanRows').rows)for(let i=0;i<row.cells.length;i++){const cell=row.cells[i],label=headers[i]||'';if(cell.colSpan===1&&cell.dataset.label!==label)cell.dataset.label=label}}
+new MutationObserver(labelCells).observe($('scanRows'),{childList:true,subtree:true});window.addEventListener('asaf:language',labelCells);labelCells();
 const presets=scanner.querySelector('.scanner-preset-tools');if(presets)advanced.append(presets);
 const utilities=$('scanClear').closest('.row');utilities.classList.add('scanner-result-actions');scanner.querySelector('.table-scroll').after(utilities);
 
