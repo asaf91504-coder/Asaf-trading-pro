@@ -36,3 +36,4 @@ test('dialogs opened from settings restore focus to visible summary when closed'
  assert.equal(f.menu.open,false);assert.equal(f.summary.focused,undefined);
  close();assert.equal(f.summary.focused,true);assert.equal(options.once,true);
 });
+test('translated search labels wrap at large text sizes',()=>{const css=readFileSync(new URL('../display-polish.css',import.meta.url),'utf8');assert.match(css,/\.workspace-asset-search \.asset-search-trigger\{white-space:normal;line-height:1\.5;overflow-wrap:anywhere/)});
