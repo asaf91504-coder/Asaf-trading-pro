@@ -37,3 +37,5 @@ test('dialogs opened from settings restore focus to visible summary when closed'
  close();assert.equal(f.summary.focused,true);assert.equal(options.once,true);
 });
 test('translated search labels wrap at large text sizes',()=>{const css=readFileSync(new URL('../display-polish.css',import.meta.url),'utf8');assert.match(css,/\.workspace-asset-search \.asset-search-trigger\{white-space:normal;line-height:1\.5;overflow-wrap:anywhere/)});
+
+test('journal statistics fit narrow screens and long translated labels',()=>{const html=readFileSync(new URL('../journal.html',import.meta.url),'utf8');assert.match(html,/\.stat\{min-width:0;overflow-wrap:anywhere/);assert.match(html,/@media\(max-width:390px\)\{\.grid,\.stats\{grid-template-columns:minmax\(0,1fr\)/)});
