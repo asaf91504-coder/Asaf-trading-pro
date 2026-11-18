@@ -8,6 +8,13 @@ export function saveLanguage(storage,code){try{storage?.setItem('asaf_interface_
 export function createTranslator(catalog={}){
  const entries=Object.entries(catalog).filter(([key,value])=>typeof value==='string'&&key!==value&&key.length>=3).sort((a,b)=>b[0].length-a[0].length);
  const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
- const pattern=entries.length?new RegExp(entries.map(([key])=>escape(key)).join('|'),'gu'):null;
- return text=>{if(typeof text!=='string')return text;if(Object.hasOwn(catalog,text))return catalog[text];return pattern?text.replace(pattern,(key,offset,whole)=>{const letter=/[\p{L}\p{N}\p{M}_]/u;const before=whole[offset-1]||'',after=whole[offset+key.length]||'';if((letter.test(key[0])&&letter.test(before))||(letter.test(key.at(-1))&&letter.test(after)))return key;return catalog[key]}):text};
+ const fragments=entries.filter(([key])=>/[\u0590-\u05ff]/u.test(key)&&!/{[a-zA-Z]+}/.test(key));
+ const pattern=fragments.length?new RegExp(fragments.map(([key])=>escape(key)).join('|'),'gu'):null;
+ const templates=entries.filter(([key])=>/\{[a-zA-Z]+\}/.test(key)).map(([key,value])=>{
+  const names=[];let cursor=0,source='^';for(const match of key.matchAll(/\{([a-zA-Z]+)\}/g)){source+=escape(key.slice(cursor,match.index))+'(.*?)';names.push(match[1]);cursor=match.index+match[0].length}source+=escape(key.slice(cursor))+'$';return {pattern:new RegExp(source,'u'),names,value};
+ });
+ return text=>{if(typeof text!=='string')return text;if(Object.hasOwn(catalog,text))return catalog[text];
+  const trimmed=text.trim();if(Object.hasOwn(catalog,trimmed))return text.replace(trimmed,()=>catalog[trimmed]);
+  for(const template of templates){const match=trimmed.match(template.pattern);if(match)return text.replace(trimmed,()=>template.value.replace(/\{([a-zA-Z]+)\}/g,(token,name)=>{const value=match[template.names.indexOf(name)+1];return ['label','stage'].includes(name)&&Object.hasOwn(catalog,value)?catalog[value]:value??token}))}
+  return pattern?text.replace(pattern,(key,offset,whole)=>{const letter=/[\p{L}\p{N}\p{M}_]/u;const before=whole[offset-1]||'',after=whole[offset+key.length]||'';if((letter.test(key[0])&&letter.test(before))||(letter.test(key.at(-1))&&letter.test(after)))return key;return catalog[key]}):text};
 }

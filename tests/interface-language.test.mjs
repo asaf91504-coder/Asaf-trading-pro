@@ -24,3 +24,12 @@ test('partial catalog matches never corrupt longer words',()=>{
  assert.equal(tr('בחשבון'),'בחשבון');assert.equal(tr('למחקרים'),'למחקרים');
  assert.equal(tr('מחקר · 100'),'Research · 100');
 });
+
+test('full sentence templates preserve variables and translate before word fragments',()=>{
+ const tr=createTranslator({'נבדקו {count} מניות · יש לעדכן מסננים · מחקר על ימים שהסתיימו':'Checked {count} stocks · Update filters · Completed-day research','מניות':'Stocks','ללא':'None'});
+ assert.equal(tr('נבדקו 23 מניות · יש לעדכן מסננים · מחקר על ימים שהסתיימו'),'Checked 23 stocks · Update filters · Completed-day research');
+ const padded=createTranslator({'מצא לי מניות':'Find stocks'});assert.equal(padded('  מצא לי מניות\n'),'  Find stocks\n');
+});
+test('English stage names are exact-only and never rewrite provider prose',()=>{
+ const tr=createTranslator({'up':'עולה','long':'לונג'});assert.equal(tr('up'),'עולה');assert.equal(tr('Long-term outlook is up today'),'Long-term outlook is up today');
+});

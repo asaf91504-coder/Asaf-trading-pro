@@ -8,7 +8,7 @@ test('every shipped language has complete matching UI keys and preserves chart q
  for(const code of Object.keys(languageNames).filter(code=>code!=='he')){
   const catalog=JSON.parse(readFileSync(new URL('../locales/'+code+'.json',import.meta.url),'utf8'));
   assert.deepEqual(Object.keys(catalog).sort(),Object.keys(english).sort());
-  for(const [key,value] of Object.entries(catalog)){assert.equal(typeof value,'string');assert.ok(value.trim(),`${code}: ${key}`)}
+  for(const [key,value] of Object.entries(catalog)){assert.equal(typeof value,'string');assert.ok(value.trim(),`${code}: ${key}`);const vars=s=>[...s.matchAll(/\{([A-Za-z]+)\}/g)].map(m=>m[1]).sort();assert.deepEqual(vars(value),vars(key),`${code}: ${key}`)}
   const translate=createTranslator(catalog);
   for(const key of ['שלח','נתח את הגרף עם נקודת כניסה וסטופ־לוס','סמן תמיכות והתנגדויות'])assert.notEqual(translate(key),key,`${code}: ${key}`);
   assert.equal(translate('NASDAQ:NVDA 123.45'),'NASDAQ:NVDA 123.45');

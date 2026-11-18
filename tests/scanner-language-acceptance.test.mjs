@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createTranslator,languageNames} from '../interface-language.mjs';
+import {launchTranslations} from '../launch-translations.mjs';
+const samples=[
+ 'מצא לי מניות', '1 · מצא לי מניות','2 · תנאים עיקריים','מסננים מתקדמים',
+ 'סוף יום · חישוב בשרת','1 = המחזור הממוצע; 1.5 = פי אחד וחצי.',
+ 'לחץ על מצא לי מניות. נתוני המקור נשארים בשרת.',
+ 'נבדקו 0 מניות · יש לעדכן מסננים · מחקר על ימים שהסתיימו',
+ 'נבדקו 10 מניות · 3 התאמות · מחקר על ימים שהסתיימו',
+ 'בודק 1–10 מתוך 50…',
+ 'תוצאות נגזרות בלבד · Data provided by Twelve Data · ללא מחירי מקור או נתוני נרות להורדה.',
+ 'הסריקה הסתיימה: התקבלו 8 תוצאות נגזרות. החישוב בשרת; נפח יומי EOD, ללא מחירי מקור להורדה.',
+ 'ATR 4.5% · מחזור יחסי EOD 1.5× · בסיס 2026-11-17',
+ '24 מתוך 2462 תוצאות בקטלוג','NASDAQ:AAPL · 1day · עד 2026-11-17'
+];
+for(const code of Object.keys(languageNames))test(`scanner screenshot regression / ${code}`,()=>{
+ const catalog=code==='he'?{}:{...JSON.parse(readFileSync(new URL('../locales/'+code+'.json',import.meta.url))),...launchTranslations[code]};
+ const tr=createTranslator(catalog);
+ for(const source of samples){const translated=tr(source);if(code==='he')assert.equal(translated,source);else assert.doesNotMatch(translated,/[\u0590-\u05ff]/,`${code}: ${source} => ${translated}`)}
+ assert.equal(tr('NASDAQ:NVDA 123.45'),'NASDAQ:NVDA 123.45');
+});

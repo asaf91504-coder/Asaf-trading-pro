@@ -7,3 +7,7 @@ html[dir=ltr] body{text-align:start}html[dir=ltr] .terminal-app main,html[dir=lt
 .journal-chat-draft label{display:grid;gap:5px;min-width:0}
 .journal-chat-draft input,.journal-chat-draft select{width:100%;min-width:0;box-sizing:border-box;font:inherit}
 @media(max-width:420px){.journal-chat-draft{grid-template-columns:1fr}}
+/* Keep language-dependent alignment consistent on auxiliary pages and tables. */
+html[dir=ltr] table,html[dir=ltr] .scenario-grid dd,html[dir=ltr] .levels dd{text-align:start}
+html[dir=ltr] .session-clock{direction:ltr;text-align:start}
+.interface-language-picker{overflow-wrap:anywhere}
