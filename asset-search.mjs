@@ -7,12 +7,24 @@ const shortcuts=[
 const byTicker=new Map(indexStocks.map(a=>[a.symbol,a]));
 for(const a of shortcuts){const ticker=a.symbol.split(':').at(-1);byTicker.set(ticker,{...byTicker.get(ticker),...a})}
 export const assets=[...byTicker.values()];
+// The bilingual shortcut labels contain explicit company aliases. Prefer these
+// exact names over incidental substrings (Apple must precede Pineapple).
+const aliasesBySymbol=new Map(shortcuts.map(a=>[a.symbol,new Set(a.name.toLowerCase().split(/\s+/))]));
 export function searchAssets(query,type='all',availableSymbols=null,{group='all',offset=0,limit=12}={}){
  const q=String(query||'').trim().toLowerCase();
  const available=Array.isArray(availableSymbols)?new Set(availableSymbols):null;
  const catalog=available?[...assets.filter(a=>a.type==='crypto'||available.has(a.symbol.split(':').at(-1))),...[...available].filter(s=>!byTicker.has(s)).map(symbol=>({symbol,name:symbol,type:'stock'}))]:assets;
  const matches=catalog.filter(a=>(type==='all'||a.type===type)&&(group==='all'||a.groups?.includes(group))&&(!q||(a.symbol+' '+a.name).toLowerCase().includes(q)));
- const score=a=>a.symbol.split(':').at(-1).toLowerCase()===q?0:a.symbol.split(':').at(-1).toLowerCase().startsWith(q)?1:2;
+ const score=a=>{
+  if(!q)return 0;
+  const symbol=a.symbol.toLowerCase(),ticker=symbol.split(':').at(-1),name=a.name.toLowerCase();
+  if(symbol===q||ticker===q)return 0;
+  if(name===q||aliasesBySymbol.get(a.symbol)?.has(q))return 1;
+  if(ticker.startsWith(q))return 2;
+  // Match the start of a company name or a name token, not the middle of a word.
+  if(name.startsWith(q)||name.split(/[^\p{L}\p{N}]+/u).some(word=>word.startsWith(q)))return 3;
+  return 4;
+ };
  matches.sort((a,b)=>score(a)-score(b)||a.symbol.localeCompare(b.symbol));
  return matches.slice(offset,offset+limit);
 }
