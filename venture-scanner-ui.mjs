@@ -30,7 +30,7 @@ export function mountVentureScanner({filters,openCharts}){
   try{
    let symbols,batchSize=10,delay=31000,shared=false,sharedReceipt='';
    if(cachedOnly){symbols=[...records.keys()];if(!symbols.length)throw Error('יש לבצע סריקה ראשונה לפני עדכון המסננים.');}
-   else if(discover){const response=await fetch('/.netlify/functions/scan-market',{signal,credentials:'same-origin'}),config=await response.json();if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=config.symbols.slice(0,50);batchSize=Math.min(10,config.maxSymbols||10);delay=Math.max(31000,config.batchDelayMs||0);}
+   else if(discover){const response=await fetch('/.netlify/functions/scan-market',{signal:AbortSignal.any([signal,AbortSignal.timeout(15000)]),credentials:'same-origin'}),config=await response.json();if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=config.symbols.slice(0,50);batchSize=Math.min(10,config.maxSymbols||10);delay=Math.max(31000,config.batchDelayMs||0);}
    else symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);
    if(!symbols.length||(!discover&&!cachedOnly&&symbols.length>10))throw Error('בחר 1 עד 10 סימולים בכל סריקה ידנית.');
    records.clear();dirty=true;render();
