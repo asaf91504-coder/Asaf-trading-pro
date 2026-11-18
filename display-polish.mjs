@@ -4,7 +4,7 @@ if(header){
  const menu=document.createElement('details');menu.className='display-settings';
  const summary=document.createElement('summary');summary.textContent='הגדרות ועזרה';
  const content=document.createElement('div');content.className='display-settings-content';menu.append(summary,content);
- for(const selector of ['.terminal-data-button','.terminal-layouts','#appInstallButton','.terminal-accessibility-button','a[href="/setups.html"]','.subscription-link']){
+ for(const selector of ['.terminal-data-button','.terminal-layouts','#appInstallButton','.terminal-accessibility-button','a[href="/setups.html"],a[href="/setups"]','.subscription-link']){
   const control=header.querySelector(selector);if(control)content.append(control);
  }
  header.append(menu);
