@@ -157,3 +157,6 @@ body .asaf-support-launcher{position:static;display:block;width:fit-content;max-
 .asset-search-results button>*{min-width:0;overflow-wrap:anywhere}
 .asset-search-dialog{overscroll-behavior:contain;scroll-padding-block:70px}
 @media(max-width:600px){.asset-search-heading{top:-16px}.asset-search-results button{grid-template-columns:minmax(0,90px) minmax(0,1fr)}}
+
+/* Keep exchange-qualified tickers on one readable line. */
+.asset-search-results strong{font-size:12px;white-space:nowrap;overflow-wrap:normal}
