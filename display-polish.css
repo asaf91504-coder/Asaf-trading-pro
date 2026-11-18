@@ -106,3 +106,7 @@ body .asaf-support-launcher{position:static;display:block;width:fit-content;max-
 .terminal-app #charts>.terminal-command{display:flex;flex-wrap:wrap;max-width:none;width:100%;padding:12px;background:#142337;border:1px solid #304158;border-radius:12px;margin-bottom:12px!important}
 .terminal-app #charts>.terminal-command #symbol{flex:1;min-width:100px;max-width:220px}
 .terminal-app #charts>.terminal-command .asset-search-trigger{min-height:44px;color:#82ead8;border-color:#348e80}
+
+.asset-search-dialog #assetType,.asset-search-dialog #assetGroup{grid-column:1/-1;width:100%;min-height:44px}
+.asset-search-dialog form button[type=submit]{grid-column:1/-1}
+.asset-search-more{width:100%;margin-top:12px;min-height:44px}

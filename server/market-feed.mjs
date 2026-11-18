@@ -1,3 +1,4 @@
+import {indexStocks} from '../index-stock-catalogue.mjs';
 import {twelveSettings,twelveIntervals} from './twelve-config.mjs';
 import {createHash} from 'node:crypto';
 import {randomUUID} from 'node:crypto';
@@ -12,8 +13,9 @@ export function approvedMarketSymbols(env=process.env){const symbols=[...new Set
 // Additional chart symbols do not expand the scheduled scanner universe.
 export function approvedChartSymbols(env=process.env){
  const extra=[...new Set((env.ASAF_MARKET_CHART_SYMBOLS||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))];
- if(extra.length>200||extra.some(s=>!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(s)))return approvedMarketSymbols(env);
- return [...new Set([...approvedMarketSymbols(env),...extra])];
+ const base=[...approvedMarketSymbols(env),...indexStocks.map(a=>a.symbol)];
+ if(extra.length>200||extra.some(s=>!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(s)))return [...new Set(base)];
+ return [...new Set([...base,...extra])];
 }
 const baseMarketConfigured=(env=process.env)=>publicAuthConfigured(env)&&settingsValid(env)&&env.ASAF_MARKET_ENABLED==='true'&&env.ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED==='true'&&!!env.TWELVE_DATA_API_KEY&&/^\d{1,4}$/.test(env.ASAF_MARKET_DELAY_MINUTES||'')&&approvedMarketSymbols(env).length>0;
 export function marketConfigurationIssues(env=process.env){
