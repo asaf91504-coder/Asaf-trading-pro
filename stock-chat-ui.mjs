@@ -357,7 +357,8 @@ async function ask(q,extra={}){
   pendingImage=null;
   if(imageInput)imageInput.value="";
   if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";
-  setAiStatus(data.provider==='openai'?'✓ AI שיחתי מחובר · OpenAI · '+data.model+' · נתוני שוק לפי מקור/תאריך':'✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך');
+  const aiStatusBase=data.provider==='openai'?'✓ AI שיחתי מחובר · OpenAI · '+data.model+' · נתוני שוק לפי מקור/תאריך':'✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך';
+  setAiStatus(aiStatusBase+(data.ownerChatNoAppCredits===true?' · גישת בעלים: ללא ניכוי קרדיטים באתר':''));
  }catch(e){
   if(epoch!==conversationEpoch)return;
   waiting.textContent=(localReceipt?localReceipt+"\n\n":"")+"⚠️ "+(e.name==="AbortError"?(timedOut?"הזמן להמתנה לתשובה הסתיים.":"הבקשה בוטלה."):e.message);

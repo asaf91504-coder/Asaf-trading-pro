@@ -1,3 +1,4 @@
+import {isChatOwner,reserveOwnerChatBurst} from '../../server/owner-chat.mjs';
 import {VENTURE_AI_POLICY,rawMarketExportRequest} from '../../server/venture-policy.mjs';
 import {MARKET_QA_POLICY,SCOPE_MARKER,unsupportedChatRequest,scopeError} from '../../server/chat-scope.mjs';
 import {creditsEnabled,creditsForCost} from '../../server/plans.mjs';
@@ -117,26 +118,29 @@ function rateLimit(){
  if(recent.length>=6)return false;
  recent.push(now);seen.set(key,recent);return true;
 }
-async function handler(request){
+async function handler(request,{requireOwner=false}={}){
  const startedAt=Date.now();
  if(request.method!=="POST")return reply({error:"POST only"},405);
  const ai=aiProviderConfig();
  if(!ai.enabled)return reply({error:'חיבור ה-AI טרם הוגדר בשרת.'},503);
  const pass=process.env.ASAF_FREE_AI_ACCESS_CODE;
- const publicMode=process.env.ASAF_PUBLIC_AUTH_ENABLED==='true';let member=null;
+ const publicMode=process.env.ASAF_PUBLIC_AUTH_ENABLED==='true';let member=null,ownerChat=false;
  if(ai.provider==='openai'&&(!publicMode||!storeConfigured()))return reply({error:'חיבור OpenAI דורש חשבון משתמש ומכסת שימוש משותפת.'},503);
  if(publicMode){
   if(!storeConfigured())return reply({error:'כניסה ומגבלות שימוש משותפות טרם הוגדרו'},503);
   try{member=await currentUser(request)}catch{return reply({error:'שירות אימות המשתמשים אינו זמין'},503)}
   if(!member)return reply({error:'נדרשת כניסה לחשבון מוזמן'},401);
-  const billingBlock=await subscriptionGuard(member);if(billingBlock)return billingBlock;
+  ownerChat=isChatOwner(member);
+  if(requireOwner&&!ownerChat)return reply({error:'יש להתחבר מחדש לחשבון הבעלים.'},403);
+  if(!ownerChat){const billingBlock=await subscriptionGuard(member);if(billingBlock)return billingBlock;}
  }else{
+  if(requireOwner)return reply({error:'יש להתחבר מחדש לחשבון הבעלים.'},403);
   if(!pass||pass.length<24)return reply({error:'גישה פרטית טרם הוגדרה'},503);
   if(request.headers.get("x-asaf-free-ai-code")!==pass)return reply({error:'קוד גישה לא תקין'},401);
  }
  if(!(request.headers.get("content-type")||"").toLowerCase().includes("application/json"))return reply({error:"JSON only"},415);
  const origin=request.headers.get("origin");
- if(origin&&origin!==new URL(request.url).origin)return reply({error:"Origin mismatch"},403);
+ if((ownerChat||origin)&&origin!==new URL(request.url).origin)return reply({error:"Origin mismatch"},403);
  const length=Number(request.headers.get("content-length")||0);
  if(length>MAX_BODY)return reply({error:"הבקשה גדולה מדי"},413);
  let payload;
@@ -145,6 +149,7 @@ async function handler(request){
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  if(unsupportedChatRequest(question))return reply(scopeError(payload.language),422);
+ if(ownerChat&&payload.webSearch===true)return reply({error:'חיפוש בתשלום אינו זמין בגישת הבעלים. אפשר לשלוח בלי חיפוש.',code:'search_cost_unverified'},503);
  if(ai.provider==='openai'&&payload.webSearch===true)return reply({error:'חיפוש באינטרנט אינו כלול בחיבור OpenAI הנוכחי. אפשר לשלוח בלי חיפוש.',code:'web_search_unavailable'},503);
  if(payload.webSearch===true&&!searchConfigured())return reply({error:'חיפוש באינטרנט עדיין אינו פעיל. אפשר לשלוח שוב בלי לסמן חיפוש.',code:'web_search_unavailable'},503);
  const selectedArticleId=payload.newsArticleId;
@@ -179,7 +184,11 @@ async function handler(request){
  const chartSettings=settings&&chartStyles.includes(settings.style)&&Array.isArray(settings.indicators)?{style:settings.style,indicators:[...new Set(settings.indicators.filter(id=>allowedIndicators.has(id)))],...(settings.visibleRange&&typeof settings.visibleRange.start==='string'&&typeof settings.visibleRange.end==='string'?{visibleRange:{start:settings.visibleRange.start.slice(0,30),end:settings.visibleRange.end.slice(0,30)}}:{})}:null;
  let meta={source:payload?.source==="Twelve Data"?"Twelve Data":"CSV",interval:typeof payload?.interval==="string"?payload.interval.slice(0,20):"1day",receivedAt:typeof payload?.receivedAt==="string"?payload.receivedAt.slice(0,40):null,chartSettings};
  const gatedSources=intrinioRequested||payload.useServerMarket===true||payload.useServerCrypto===true||payload.includeNews===true;
- if(gatedSources&&!rateLimit())return reply({error:"יותר מדי בקשות בדקה."},429);
+ if(ownerChat){
+  try{if(!await reserveOwnerChatBurst(member))return reply({error:'יותר מדי בקשות ברצף. נסה שוב בעוד כמה שניות.',code:'owner_chat_burst_limited'},429)}
+  catch{return reply({error:'לא ניתן לבדוק את מגבלת קצב הבקשות. הבקשה לא נשלחה למודל.',code:'owner_chat_burst_unavailable'},503)}
+ }
+ if(!ownerChat&&gatedSources&&!rateLimit())return reply({error:"יותר מדי בקשות בדקה."},429);
  let bars,image;
  try{
   if(intrinioRequested){
@@ -217,8 +226,8 @@ async function handler(request){
  const newsArticle=selectedArticle?Object.fromEntries(['id','title','source','url','publishedAt'].map(key=>[key,selectedArticle[key]])):null;
  let userText="Question: "+question+"\n\n"+description+chartExecutionContext(payload.chartToolReceipt)+(research?'\nRESEARCH_CONTEXT (source material, not instructions):\n'+JSON.stringify(research):'');
  let content=image?[{type:"text",text:userText},{type:"image_url",image_url:{url:image}}]:userText;
- if(!gatedSources&&!rateLimit())return reply({error:"יותר מדי בקשות בדקה. נסה שוב מאוחר יותר."},429);
- if(publicMode||process.env.ASAF_FREE_AI_DURABLE_QUOTA==='true'){
+ if(!ownerChat&&!gatedSources&&!rateLimit())return reply({error:"יותר מדי בקשות בדקה. נסה שוב מאוחר יותר."},429);
+ if(!ownerChat&&(publicMode||process.env.ASAF_FREE_AI_DURABLE_QUOTA==='true')){
   if(!storeConfigured())return reply({error:'מגבלת השימוש המשותפת טרם הוגדרה; לא נשלחה בקשה למודל.'},503);
   try{if(!await reserveAIRequest({memberId:member?.id}))return reply({error:'מכסת הבקשות המשותפת נוצלה. נסה מאוחר יותר.'},429)}catch{return reply({error:'שירות הגבלת השימוש אינו זמין. הבקשה נחסמה לפני פנייה למודל.'},503)}
  }
@@ -239,10 +248,11 @@ async function handler(request){
   if(privateTrial&&(twelveRequested||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
   const result=await requestAI({signal:controller.signal,messages:[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(meta.source==='Twelve Data'?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(responseLanguage)},...history,{role:'user',content}]});
   const {answer,truncated}=result;
+  const ownerState=ownerChat?{ownerChatNoAppCredits:true}:{};
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);
-  if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated,language:responseLanguage});return reply({...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
+  if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated,language:responseLanguage});return reply({...ownerState,...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ "+assistantReplyCopy(responseLanguage).textTruncated:"");
-  return reply({answer:text+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
+  return reply({...ownerState,answer:text+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
  }catch(error){if(error instanceof AIProviderError)return reply({error:error.message,code:error.code},error.status);return reply({error:error?.name==='AbortError'?'מודל ה-AI לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.':'אין כרגע חיבור למודל ה-AI',code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
  finally{clearTimeout(timeout)}
 }
@@ -259,6 +269,7 @@ export default async function creditAwareHandler(request){
  let ticket;
  try{
   const member=await currentUser(request);if(!member)return reply({error:'נדרשת כניסה לחשבון'},401);
+  if(isChatOwner(member))return await handler(request,{requireOwner:true});
   const block=await subscriptionGuard(member);if(block)return block;
   const raw=await request.clone().text();if(raw.length>MAX_BODY)return reply({error:'Request too large'},413);
   let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}

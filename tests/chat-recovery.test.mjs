@@ -409,3 +409,15 @@ for(const locale of replyLocales){
   }finally{globalThis.window=originalWindow}
  });
 }
+
+test('the owner success response is accepted on the first request without a credit quote or plan dialog',async()=>{
+ const s=setup();let confirms=0,requests=0,plans=0,status;
+ s.ctx.window.confirm=()=>{confirms++;return false};s.ctx.showCreditPlans=()=>{plans++};
+ s.ctx.setAiStatus=text=>{status=text};s.ctx.fetch=async(_url,opts)=>{
+  requests++;const payload=JSON.parse(opts.body);assert.equal(payload.creditConsent,undefined);
+  return {status:200,ok:true,json:async()=>({answer:'Answer on the first request.',provider:'openai',model:'fixture',ownerChatNoAppCredits:true})};
+ };
+ await s.ctx.ask('Explain an indicator');
+ assert.equal(requests,1);assert.equal(confirms,0);assert.equal(plans,0);
+ assert.match(s.bubbles[1].textContent,/Answer on the first request/);assert.match(status,/ללא ניכוי קרדיטים באתר/);
+});
