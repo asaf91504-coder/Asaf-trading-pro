@@ -1,6 +1,6 @@
 # Weekly credit plans: staging only
 
-Approved commercial proposal: USD 55/75/115/359 monthly for 150/300/600/2500 weekly credits, first-calendar-month bonuses 10/12/20/20 percent. A fourteen-day trial gets 100 each week, no carryover. Mail support goes directly to asaf91504@gmail.com.
+Approved commercial proposal: USD 55/75/115/359 monthly for 150/300/600/2500 weekly credits, first-calendar-month bonuses 10/12/20/20 percent. New seven-day trials receive 55 total credits, without renewal. Existing grants retain their stored allowance (legacy records without an allowance retain 100 total). Admin duration extensions do not refill credits. Mail support goes directly to asaf91504@gmail.com.
 
 This branch is not a completed paid-AI launch. Keep ASAF_WEEKLY_CREDITS_ENABLED unset/false in production until the following gates pass. No provider or payment settings were changed by this code update.
 
