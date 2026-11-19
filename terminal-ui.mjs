@@ -120,7 +120,14 @@ mountAssetSearch({host:searchBar,open(symbol){$('symbol').value=symbol;$('symbol
 const workspaceChat=document.createElement('button');workspaceChat.type='button';workspaceChat.className='workspace-chat-toggle';workspaceChat.textContent='✦ ASAF AI';workspaceChat.setAttribute('aria-expanded','false');command.append(workspaceChat);
 function toggleWorkspaceChat(open){if(open&&!wide.matches){document.body.classList.remove('chart-chat-open');workspaceChat.setAttribute('aria-expanded','false');workspaceChat.textContent='✦ ASAF AI';selectTab('chat');$('chatInput').focus();return}document.body.classList.toggle('chart-chat-open',open);workspaceChat.setAttribute('aria-expanded',String(open));workspaceChat.textContent=open?'סגור צ׳אט':'✦ ASAF AI';if(open)$('chatInput').focus();window.dispatchEvent(new Event('asaf:layout'))}
 workspaceChat.onclick=()=>toggleWorkspaceChat(!document.body.classList.contains('chart-chat-open'));
-chartChatOnly.onclick=()=>{chartFocus(false);toggleWorkspaceChat(true);if(!$('chatInput').value.trim())$('chatInput').value='נתח את הגרף והצג נקודת כניסה וסטופ־לוס עם התנאים לתרחיש';$('chatInput').dispatchEvent(new Event('input'));$('chatInput').focus()};
+chartChatOnly.onclick=()=>{
+ chartFocus(false);
+ toggleWorkspaceChat(true);
+ const input=$('chatInput'),suggestion='נתח את הגרף והצג נקודת כניסה וסטופ־לוס עם התנאים לתרחיש';
+ if(!input.value.trim())input.value=window.asafTranslate?.(suggestion)??suggestion;
+ input.dispatchEvent(new Event('input'));
+ input.focus();
+};
 // Reveal executed chart changes, including requests made from the full chat page.
 window.addEventListener('asaf:chart-actions',()=>{
  selectTab('charts');

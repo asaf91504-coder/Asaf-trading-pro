@@ -45,7 +45,7 @@ export async function requestAI({messages,signal,env=process.env,fetcher=fetch})
  if(!response.ok){
   let errorCode;try{errorCode=(await response.json())?.error?.code}catch{}
   if(response.status===429&&['credit_balance_exhausted','insufficient_quota'].includes(errorCode))throw new AIProviderError('יתרת הקרדיטים של שירות ה-AI אינה זמינה. לא בוצעה טעינה או בקשה חוזרת.','provider_credits_exhausted',429);
-  throw new AIProviderError(response.status===429?'מכסת הבקשות של שירות ה-AI נוצלה. נסה מאוחר יותר.':'שירות ה-AI אינו זמין כרגע.','model_unavailable',response.status===429?429:502);
+  throw new AIProviderError(response.status===429?'מכסת הבקשות של שירות ה-AI נוצלה. נסה מאוחר יותר.':'שירות ה-AI אינו זמין כרגע.',response.status===429?'provider_rate_limited':'model_unavailable',response.status===429?429:502);
  }
  const output=await response.json();
  let answer,truncated;

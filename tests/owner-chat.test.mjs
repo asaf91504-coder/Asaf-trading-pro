@@ -1,3 +1,4 @@
+import {chatThrottleCopy} from "../chat-throttle-copy.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import handler from '../netlify/functions/free-chat.mjs';
@@ -145,3 +146,19 @@ test('owner burst rejection runs before gated market cache work',async()=>isolat
  assert.equal(r.status,429);assert.equal((await r.json()).code,'owner_chat_burst_limited');
  assert.equal(calls.length,4);assert.ok(!commands.some(cmd=>cmd[0]==='GET'&&cmd[1].includes('market:snapshot:')));
 },{patch:{ASAF_MARKET_ENABLED:'true',ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED:'true',ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED:'true',ASAF_MARKET_AI_LICENSE_CONFIRMED:'true',ASAF_TWELVE_OPENAI_LICENSE_CONFIRMED:'true',TWELVE_DATA_API_KEY:'fixture-only',ASAF_MARKET_DELAY_MINUTES:'0',ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL'}}));
+
+for(const locale of Object.keys(languageNames))for(const offline of [false,true]){
+ test(`owner technical burst status in ${locale} keeps existing admission controls (${offline?'store unavailable':'limit reached'})`,async()=>isolated(async({go,calls,commands,control})=>{
+  const options={language:locale};
+  if(offline)control.failBurst();
+  else for(let n=0;n<4;n++)assert.equal((await go('owner',options)).status,200);
+  const code=offline?'owner_chat_burst_unavailable':'owner_chat_burst_limited';
+  const r=await go('owner',options);
+  assert.equal(r.status,offline?503:429);
+  const data=await r.json();
+  assert.deepEqual(data,{code,error:chatThrottleCopy(code,locale)});
+  if(locale!=='he')assert.doesNotMatch(data.error,/[\u0590-\u05ff]/u);
+  assert.equal(calls.length,offline?0:4);
+  assert.equal(ofType(commands,'i==2 and 120').length,0);
+ }));
+}
