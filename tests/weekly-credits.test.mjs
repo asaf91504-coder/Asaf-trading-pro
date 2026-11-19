@@ -71,3 +71,41 @@ test('trial migration retains both prior weeks usage once and extensions do not 
  const {storageKey}=await import('../server/storage.mjs');for(const [i,n] of [[0,60],[1,30]])f.db.set(storageKey(`credits:${identity}:trial:${now}:${i}`,env),String(n));
  const options={env,run:f.run,now:now+WEEK};assert.equal((await creditStatus(user.record.id,options)).remaining,10);await reserveCredits(user.record.id,.02,options);assert.equal((await creditStatus(user.record.id,{...options,now:now+3*WEEK})).remaining,9);
 });
+
+test('new grants persist 55 credits; repeated trial starts preserve old grants and usage',async()=>{
+ const {startTrial,readBilling}=await import('../server/billing.mjs');
+ const f=creditFixture(),user=seed(f),identity=await billingIdentity(user.record.id,{env,run:f.run});
+ const options={env,run:f.run,now};
+ const fresh=await startTrial(identity,options);
+ assert.equal(fresh.trialTotalCredits,55);assert.equal(fresh.trialEndsAt,now+WEEK);
+ const results=await Promise.allSettled(Array.from({length:56},()=>reserveCredits(user.record.id,.02,options)));
+ assert.equal(results.filter(r=>r.status==='fulfilled').length,55);
+ assert.match(results.find(r=>r.status==='rejected').reason.message,/55/);
+ await startTrial(identity,{...options,now:now+1000});
+ assert.equal((await creditStatus(user.record.id,options)).remaining,0);
+ const ticket=results.find(r=>r.status==='fulfilled').value;await ticket.refund();await ticket.refund();
+ assert.equal((await creditStatus(user.record.id,options)).remaining,1);
+ await saveBilling(identity,{...trial,complimentaryUntil:now+3*WEEK},options);
+ await startTrial(identity,options);
+ assert.equal((await readBilling(identity,options)).trialTotalCredits,undefined);
+ const legacy=await creditStatus(user.record.id,options);assert.equal(legacy.limit,100);assert.equal(legacy.remaining,46);
+ assert.equal((await creditStatus(user.record.id,{...options,now:now+2*WEEK})).remaining,46);
+});
+test('stored allowances survive extensions, invalid allowances fail closed and paid tiers are unchanged',()=>{
+ const fresh={trialStartedAt:now,trialEndsAt:now+WEEK,trialTotalCredits:55,complimentaryUntil:now+3*WEEK};
+ assert.equal(creditWindow(fresh,now+2*WEEK).limit,55);
+ assert.equal(creditWindow({...fresh,trialTotalCredits:100},now).limit,100);
+ for(const n of [null,-1,1.5,'55'])assert.throws(()=>creditWindow({...fresh,trialTotalCredits:n},now));
+ assert.deepEqual(Object.values(PLANS).map(p=>[p.price,p.weeklyCredits]),[[55,150],[75,300],[115,600],[359,2500]]);
+});
+test('public billing advertises 55 without creating an account and balance copy uses personal entitlement',async()=>{
+ const {subscriptionCopy}=await import('../subscription-copy.mjs');
+ const f=creditFixture();const handler=createBillingHandler({env,run:f.run,now:()=>now});
+ const state=await (await handler(request('billing',null))).json();
+ assert.equal(state.trialTotalCredits,55);assert.equal(state.trialDays,7);
+ assert.equal([...f.db.keys()].some(k=>k.includes('billing:account:')),false);
+ for(const language of ['he','en','es','ar','fr','de','pt','ru','zh','ja'])for(const limit of [55,100]){
+  const copy=subscriptionCopy(language,'trialBalance',{remaining:12,limit,date:'DATE'});
+  assert.ok(copy.includes(String(limit)));assert.ok(copy.includes('12'));assert.ok(!copy.includes('{limit}'));
+ }
+});
