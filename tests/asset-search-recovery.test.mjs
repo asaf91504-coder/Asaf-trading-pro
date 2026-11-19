@@ -6,7 +6,7 @@ import {searchAssets} from '../asset-search.mjs';
 const source=readFileSync(new URL('../asset-search-ui.mjs',import.meta.url),'utf8');
 const handler=source.slice(source.indexOf('trigger.onclick=async()=>'),source.indexOf(";dialog.addEventListener('close'"));
 function fixture(){
- const rendered=[],context={trigger:{},dialog:{open:false,showModal(){this.open=true}},input:{focus(){}},status:{textContent:''},availableSymbols:['APLE'],AbortSignal,
+ const rendered=[],context={trigger:{},dialog:{open:false,showModal(){this.open=true}},input:{focus(){}},status:{textContent:''},availableSymbols:['APLE'],availabilityAttempt:0,AbortSignal,
  render(){rendered.push(searchAssets('Apple','stock',context.availableSymbols).map(a=>a.symbol));context.status.textContent='Catalogue results'},reset(){context.render()},fetch:async()=>{throw Error('Offline')}};
  vm.createContext(context);vm.runInContext(handler,context);return {context,rendered};
 }

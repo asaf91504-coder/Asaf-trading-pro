@@ -37,7 +37,7 @@ const parseDate = raw => {
   }
   return null;
 };
-export function parseCSV(csv) {
+export function parseCSV(csv, {deduplicate = true} = {}) {
   if (typeof csv !== 'string' || csv.length > 2_000_000) throw Error('קובץ גדול מדי או לא תקין');
   const lines=csv.replace(/^\uFEFF/, '').split(/\r?\n/).filter(x=>x.trim());
   if (lines.length<3) throw Error('נדרשות לפחות שתי שורות נתונים');
@@ -53,6 +53,7 @@ export function parseCSV(csv) {
     rows.push({date,open,high,low,close,volume:Number.isFinite(volume)&&volume>=0?volume:null,ticker});
   }
   rows.sort((a,b)=>a.date.localeCompare(b.date));
+  if (!deduplicate) return rows;
   const uniq=new Map(rows.map(x=>[x.date,x]));
   return [...uniq.values()];
 }

@@ -6,7 +6,12 @@ export function setupInput(body){
  const interval=setupInterval(body.interval);if(!interval)throw Error('בחר טווח נרות');
  const holdingPeriod=setupHoldingPeriod(body.holdingPeriod);if(!holdingPeriod)throw Error('בחר טווח החזקה');
  const result={symbol,side,interval,holdingPeriod,title:text('title',4,100),thesis:text('thesis',10,2000)};
- for(const key of ['entry','stop','target']){const v=body[key];if(v===''||v===null||v===undefined)result[key]=null;else{const n=Number(v);if(!Number.isFinite(n)||n<=0||n>1e12)throw Error('רמת מחיר לא תקינה');result[key]=n}}
+ for(const key of ['entry','stop','target']){
+  const v=body[key];
+  if(v===''||v===null||v===undefined){result[key]=null;continue;}
+  if(typeof v!=='number'&&(typeof v!=='string'||!/^\+?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(v.trim())))throw Error('רמת מחיר לא תקינה');
+  const n=Number(v);if(!Number.isFinite(n)||n<=0||n>1e12)throw Error('רמת מחיר לא תקינה');result[key]=n;
+ }
  const {entry,stop,target}=result;
  if(side!=='watch'&&[entry,stop,target].some(x=>x===null))throw Error('בסטאפ לונג או שורט יש למלא כניסה, סטופ ויעד');
  if(side==='long'&&!(stop<entry&&entry<target)||side==='short'&&!(target<entry&&entry<stop))throw Error('סדר רמות המחיר אינו מתאים לכיוון');

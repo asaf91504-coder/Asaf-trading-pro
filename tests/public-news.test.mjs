@@ -22,3 +22,40 @@ test('market feed drops unrelated entertainment and general politics while retai
  assert.equal(isMarketHeadline({id:'markets:3',title:'Nvidia shares climb after earnings'}),true);
  assert.equal(isMarketHeadline({id:'economy:4',title:'Federal Reserve Board announces a decision'}),true);
 });
+
+test('new quarter replaces a prior snapshot with newly published headlines and a new time',async()=>{
+ const s=state();
+ const refresh=(at,title)=>refreshPublicNews({env,now:at,run:s.run,fetcher:async()=>new Response(rss(title))});
+ await refresh(now,'Apple reports earnings');const first=await readPublicNews({env,now,run:s.run});
+ await refresh(now+900000,'Apple announces higher dividend');const second=await readPublicNews({env,now:now+900000,run:s.run});
+ assert.equal(Date.parse(second.updatedAt)-Date.parse(first.updatedAt),900000);assert.deepEqual(second.articles.map(a=>a.title),['Apple announces higher dividend']);
+});
+
+test('simultaneous callers reserve one quarter-hour source refresh',async()=>{
+ const s=state();let hits=0;const options={env,now,run:s.run,fetcher:async()=>{hits++;return new Response(rss())}};
+ const results=await Promise.all(Array.from({length:8},()=>refreshPublicNews(options)));
+ assert.equal(hits,PUBLIC_NEWS_FEEDS.length);assert.equal(results.filter(x=>x.status==='updated').length,1);assert.equal(results.filter(x=>x.status==='cached').length,7);
+});
+
+test('repeated failures eventually make old headlines stale without destroying them',async()=>{
+ const s=state();await refreshPublicNews({env,now,run:s.run,fetcher:async()=>new Response(rss())});
+ const failure=async()=>new Response('',{status:503});
+ await refreshPublicNews({env,now:now+15*60000,run:s.run,fetcher:failure});
+ await refreshPublicNews({env,now:now+30*60000,run:s.run,fetcher:failure});
+ const snapshot=await readPublicNews({env,now:now+30*60000+1,run:s.run});
+ assert.equal(snapshot.stale,true);assert.equal(snapshot.articles.length,1);assert.equal(snapshot.updatedAt,new Date(now).toISOString());
+});
+
+test('recovering source after a failed quarter replaces stale content and resets freshness',async()=>{
+ const s=state();const refresh=(at,fetcher)=>refreshPublicNews({env,now:at,run:s.run,fetcher});
+ await refresh(now,async()=>new Response(rss()));
+ await refresh(now+15*60000,async()=>new Response('',{status:503}));
+ const at=now+45*60000;await refresh(at,async()=>new Response(rss('New Apple market update')));
+ const snapshot=await readPublicNews({env,now:at,run:s.run});assert.equal(snapshot.stale,false);assert.equal(snapshot.updatedAt,new Date(at).toISOString());assert.equal(snapshot.articles[0].title,'New Apple market update');
+});
+
+test('a recent scheduler execution marker does not make an old snapshot fresh',async()=>{
+ const s=state();await refreshPublicNews({env,now,run:s.run,fetcher:async()=>new Response(rss())});
+ const at=now+45*60000;await s.run(['SET','asaf:production:news:public:scheduled',JSON.stringify({at:new Date(at).toISOString(),status:'unavailable'})]);
+ const snapshot=await readPublicNews({env,now:at,run:s.run});assert.equal(snapshot.lastScheduledAt,new Date(at).toISOString());assert.equal(snapshot.updatedAt,new Date(now).toISOString());assert.equal(snapshot.stale,true);
+});

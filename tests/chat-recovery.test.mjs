@@ -1,8 +1,9 @@
-import {languageCode} from '../interface-language.mjs';
+import {launchTranslations} from "../launch-translations.mjs";
+import {languageCode,createTranslator} from '../interface-language.mjs';
 import {entryStopText} from '../entry-stop-scenario.mjs';
 import {localizedChatReply} from '../chat-reply-ui.mjs';
 import {journalIntent} from '../journal-chat-core.mjs';
-import {renderSearchSources} from '../web-search-ui.mjs';
+import {renderSearchSources,labelChatSource} from '../web-search-ui.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -19,7 +20,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
+ ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -342,3 +343,69 @@ test('old scanner raw-data events cannot reopen a provider canvas',()=>{
  assert.equal(rendered,undefined);assert.equal(c.loaded,null);
  c.chartSymbol.value='MSFT';c.chartSymbol.input();assert.equal(c.chartSymbol.value,'MSFT');
 });
+
+const replyLocales=['he','en','es','ar','fr','de','pt','ru','zh','ja'];
+const reviewModel='Keep model prose untouched: טקסט מקורי, NASDAQ:NVDA and 102.75.';
+function setupLocalizedReply(locale){
+ const s=setup();
+ s.ctx.document.documentElement={lang:locale};
+ const raw=locale==='he'?{}:JSON.parse(readFileSync(new URL('../locales/'+locale+'.json',import.meta.url),'utf8'));
+ s.ctx.window.asafTranslate=createTranslator({...raw,...launchTranslations[locale]});
+ return s;
+}
+for(const locale of replyLocales){
+ function checkedCopy(rendered,canonical,translate){
+  const copy=translate(canonical);
+  assert.ok(rendered.includes(copy),copy);
+  if(locale!=='he'){assert.notEqual(copy,canonical);assert.doesNotMatch(copy,/[\u0590-\u05ff]/u)}
+ }
+ test(`client chat ${locale}: an active-chart change localizes both warnings without running stale actions`,async()=>{
+  const s=setupLocalizedReply(locale);let executions=0;
+  s.ctx.runChatActions=async()=>{executions++};
+  s.ctx.fetch=async()=>{s.ctx.chartRevision++;return {ok:true,json:async()=>({answer:reviewModel,actions:[{type:'indicator',indicator:'MA20',enabled:true}]})}};
+  await s.ctx.ask('Review this snapshot');
+  const rendered=s.bubbles[1].textContent, saved=s.ctx.conversation.at(-1).content;
+  assert.equal(executions,0);assert.equal(rendered,saved);assert.ok(rendered.startsWith(reviewModel));
+  for(const text of ['שים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.','לא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.'])checkedCopy(rendered,text,s.ctx.window.asafTranslate);
+ });
+ test(`client chat ${locale}: history restriction and validated execution receipt preserve OpenAI and MA20`,async()=>{
+  const s=setupLocalizedReply(locale);
+  s.ctx.runChatActions=async()=>({messages:['הופעל MA20.']});
+  s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:reviewModel,historyRestricted:true,actions:[{type:'indicator',indicator:'MA20',enabled:true}]})});
+  await s.ctx.ask('Propose a chart action');
+  const rendered=s.bubbles[1].textContent;
+  assert.equal(rendered,s.ctx.conversation.at(-1).content);assert.ok(rendered.startsWith(reviewModel));assert.match(rendered,/OpenAI/);assert.match(rendered,/MA20/);
+  for(const text of ['השיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.','תוצאת הביצוע בפועל:','הופעל MA20.'])checkedCopy(rendered,text,s.ctx.window.asafTranslate);
+ });
+ test(`client chat ${locale}: a chart execution error gets a localized message and no raw internal error`,async()=>{
+  const s=setupLocalizedReply(locale);
+  s.ctx.runChatActions=async()=>{throw Error('INTERNAL ERROR שגיאת מערכת')};
+  s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:reviewModel,actions:[{type:'indicator',indicator:'MA20',enabled:true}]})});
+  await s.ctx.ask('Propose a chart action');
+  const rendered=s.bubbles[1].textContent;
+  assert.equal(rendered,s.ctx.conversation.at(-1).content);assert.ok(rendered.startsWith(reviewModel));
+  assert.doesNotMatch(rendered,/INTERNAL ERROR|שגיאת מערכת/);
+  checkedCopy(rendered,'לא ניתן לבצע את פעולות הגרף. נסה שוב.',s.ctx.window.asafTranslate);
+ });
+ test(`client chat ${locale}: search labels and linked-news fallback are localized, but source titles are unchanged`,async()=>{
+  const s=setupLocalizedReply(locale), originalWindow=globalThis.window;
+  globalThis.window=s.ctx.window;
+  try{
+   s.ctx.URL=URL;s.ctx.labelChatSource=labelChatSource;s.ctx.document.createElement=()=>({textContent:'',children:[],attributes:{},setAttribute(k,v){this.attributes[k]=v},append(n){this.children.push(n)}});
+   s.ctx.renderSearchSources=(parent,data)=>renderSearchSources(parent,data,s.ctx.document);
+   const source={id:'SMOKE_1',title:'Reuters — כותרת שלא מתרגמים',url:'https://example.test/market'};
+   s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:reviewModel,webSearch:{status:'available',searchedAt:'2026-11-19T13:00:00Z',sources:[source]},newsArticle:{url:'https://example.test/news',source:'Reuters'}})});
+   await s.ctx.ask('Can you check market research?');
+   const [sources,article]=s.bubbles[1].children;
+   assert.ok(s.bubbles[1].textContent.startsWith(reviewModel));
+   const [heading,row]=sources.children;
+   checkedCopy(heading.textContent,'מקורות מהחיפוש באינטרנט',s.ctx.window.asafTranslate);
+   assert.equal(sources.attributes['aria-label'],heading.textContent);
+   assert.equal(row.children[0].textContent,'[SMOKE_1] '+source.title);
+   checkedCopy(article.children[0].textContent,'כותרת המקור',s.ctx.window.asafTranslate);
+   const saved=s.ctx.conversation.at(-1).content;
+   checkedCopy(saved,'מקורות שנמצאו בחיפוש:',s.ctx.window.asafTranslate);
+   assert.ok(saved.includes(source.title));assert.ok(saved.includes(source.url));
+  }finally{globalThis.window=originalWindow}
+ });
+}
