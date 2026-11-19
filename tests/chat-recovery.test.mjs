@@ -1,3 +1,4 @@
+import {chatThrottleCopy,chatThrottleDisplay} from '../chat-throttle-copy.mjs';
 import {launchTranslations} from "../launch-translations.mjs";
 import {languageCode,createTranslator} from '../interface-language.mjs';
 import {entryStopText} from '../entry-stop-scenario.mjs';
@@ -20,7 +21,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
+ ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -420,4 +421,22 @@ test('the owner success response is accepted on the first request without a cred
  await s.ctx.ask('Explain an indicator');
  assert.equal(requests,1);assert.equal(confirms,0);assert.equal(plans,0);
  assert.match(s.bubbles[1].textContent,/Answer on the first request/);assert.match(status,/ללא ניכוי קרדיטים באתר/);
+});
+
+const rateLimitResponses=[
+ ['known owner request burst',()=>Response.json({code:'owner_chat_burst_limited',error:'LEGACY שגיאה'},{status:429}),'owner_chat_burst_limited'],
+ ['known owner burst service failure',()=>Response.json({code:'owner_chat_burst_unavailable',error:'LEGACY שגיאה'},{status:503}),'owner_chat_burst_unavailable'],
+ ['known shared throttle',()=>Response.json({code:'chat_shared_quota_exhausted',error:'LEGACY שגיאה'}, {status:429}),'chat_shared_quota_exhausted'],
+ ['missing body fields',()=>Response.json(null,{status:429}),'chat_throttle_unknown'],
+ ['non-JSON gateway body',()=>new Response('<html>GATEWAY שגיאה</html>',{status:429}),'chat_throttle_unknown'],
+ ['unexpected code and untranslated body',()=>Response.json({code:'not_known',error:'LEGACY שגיאה'},{status:429}),'chat_throttle_unknown'],
+ ['known quota service failure',()=>Response.json({code:'chat_quota_unavailable',error:'LEGACY שגיאה'},{status:503}),'chat_quota_unavailable'],
+];
+for(const locale of replyLocales)for(const [name,response,code] of rateLimitResponses)test(`client chat ${locale}: ${name} keeps the draft and matches the requested locale`,async()=>{
+ const s=setupLocalizedReply(locale);let attempts=0;
+ s.ctx.fetch=async()=>{attempts++;return response()};
+ const question='Please explain volatility';await s.ctx.ask(question);
+ assert.equal(attempts,1);assert.equal(s.message.value,question);assert.equal(s.ctx.conversation.length,0);
+ const actual=s.bubbles[1].textContent;assert.equal(actual,'⚠️ '+chatThrottleCopy(code,locale));
+ assert.doesNotMatch(actual,/LEGACY|GATEWAY/);if(locale!=='he')assert.doesNotMatch(actual,/[\u0590-\u05ff]/u);
 });

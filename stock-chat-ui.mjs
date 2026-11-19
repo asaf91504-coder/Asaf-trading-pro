@@ -1,3 +1,4 @@
+import {chatThrottleDisplay} from './chat-throttle-copy.mjs';
 import {localizedChatReply,renderChatReply} from './chat-reply-ui.mjs';
 import {languageCode} from './interface-language.mjs';
 import {entryStopText} from './entry-stop-scenario.mjs';
@@ -318,12 +319,13 @@ async function ask(q,extra={}){
   }
   let data;try{data=await response.json()}catch(error){
    if(error.name==='AbortError')throw error;
+   const limited=chatThrottleDisplay(response.status,null,preparedPayload.language);if(limited)throw Error(limited);
    throw Error(response.ok?'התקבלה תשובה לא תקינה משירות ה-AI. השאלה נשמרה; אפשר לנסות שוב.':'שירות ה-AI החזיר שגיאת חיבור (HTTP '+response.status+'). השאלה נשמרה; אפשר לנסות שוב.');
   }
-  if(response.status===402&&['credits_exhausted','subscription_required'].includes(data.code)){showCreditPlans();}
+  if(response.status===402&&['credits_exhausted','subscription_required'].includes(data?.code)){showCreditPlans();}
   if(!response.ok){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
-   throw Error(data.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
+   throw Error(chatThrottleDisplay(response.status,data?.code,preparedPayload.language)||data?.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
   }
   if(data.credits?.remaining===0)showCreditPlans();
   if(epoch!==conversationEpoch)return;
