@@ -67,7 +67,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Your subscription is suspended. Check your payment method in PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Payment has not been confirmed yet. You can check again.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancel monthly renewal? Paid access will remain until the end of the period.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7-day trial with 100 credits total, without renewal. Upgrade anytime."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7-day trial with 55 credits total, without renewal. Upgrade anytime."
   },
   "es": {
     "מחקר שמתאים לך": "Investiga a tu manera",
@@ -137,7 +137,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Tu suscripción está suspendida. Revisa tu método de pago en PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "El pago aún no está confirmado. Puedes comprobarlo de nuevo.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "¿Cancelar la renovación mensual? El acceso pagado continuará hasta el final del período.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Prueba de 7 días con 100 créditos en total, sin renovación. Mejora cuando quieras."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Prueba de 7 días con 55 créditos en total, sin renovación. Mejora cuando quieras."
   },
   "ar": {
     "מחקר שמתאים לך": "ابحث بطريقتك",
@@ -207,7 +207,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "تم تعليق اشتراكك. تحقق من وسيلة الدفع في PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "لم يتم تأكيد الدفع بعد. يمكنك التحقق مرة أخرى.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "هل تريد إلغاء التجديد الشهري؟ يستمر الوصول المدفوع حتى نهاية الفترة.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "تجربة 7 يومًا مع 100 رصيد إجمالاً دون تجديد. يمكنك الترقية في أي وقت."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "تجربة 7 يومًا مع 55 رصيد إجمالاً دون تجديد. يمكنك الترقية في أي وقت."
   },
   "fr": {
     "מחקר שמתאים לך": "La recherche à votre façon",
@@ -277,7 +277,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Votre abonnement est suspendu. Vérifiez votre moyen de paiement dans PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Le paiement n’est pas encore confirmé. Vous pouvez vérifier à nouveau.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Annuler le renouvellement mensuel ? L’accès payé reste disponible jusqu’à la fin de la période.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Essai de 7 jours avec 100 crédits au total, sans renouvellement. Passez à une offre payante à tout moment."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Essai de 7 jours avec 55 crédits au total, sans renouvellement. Passez à une offre payante à tout moment."
   },
   "de": {
     "מחקר שמתאים לך": "Recherche nach deinen Bedürfnissen",
@@ -347,7 +347,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Dein Abonnement ist ausgesetzt. Prüfe deine Zahlungsmethode bei PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Die Zahlung wurde noch nicht bestätigt. Du kannst erneut prüfen.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Monatliche Verlängerung kündigen? Der bezahlte Zugang bleibt bis zum Ende des Zeitraums bestehen.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7 Tage testen mit insgesamt 100 Credits, ohne Erneuerung. Jederzeit upgraden."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7 Tage testen mit insgesamt 55 Credits, ohne Erneuerung. Jederzeit upgraden."
   },
   "pt": {
     "מחקר שמתאים לך": "Pesquise do seu jeito",
@@ -417,7 +417,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Sua assinatura está suspensa. Verifique a forma de pagamento no PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "O pagamento ainda não foi confirmado. Você pode verificar novamente.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancelar a renovação mensal? O acesso pago continuará até o fim do período.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Teste de 7 dias com 100 créditos no total, sem renovação. Faça upgrade quando quiser."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Teste de 7 dias com 55 créditos no total, sem renovação. Faça upgrade quando quiser."
   },
   "ru": {
     "מחקר שמתאים לך": "Исследуйте по-своему",
@@ -487,7 +487,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Ваша подписка приостановлена. Проверьте способ оплаты в PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Оплата ещё не подтверждена. Можно проверить снова.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Отменить ежемесячное продление? Оплаченный доступ сохранится до конца периода.",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Пробный период 7 дней: всего 100 кредитов без обновления. Перейти на платный тариф можно в любое время."
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "Пробный период 7 дней: всего 55 кредитов без обновления. Перейти на платный тариф можно в любое время."
   },
   "zh": {
     "מחקר שמתאים לך": "按您的方式研究",
@@ -557,7 +557,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "您的订阅已暂停。请在PayPal中检查付款方式。",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "付款尚未确认。您可以再次检查。",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "取消每月续订？已付费的访问权限将保留至当前周期结束。",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7天试用，共100积分，不续发。可随时升级。"
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7天试用，共55积分，不续发。可随时升级。"
   },
   "ja": {
     "מחקר שמתאים לך": "自分に合ったリサーチ",
@@ -627,6 +627,6 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "購読は一時停止中です。PayPalで支払い方法を確認してください。",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "支払いはまだ確認されていません。再度確認できます。",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "毎月の更新をキャンセルしますか？支払い済みのアクセスは期間終了まで継続します。",
-    "7 ימי ניסיון עם 100 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7日間の試用で合計100クレジット。補充はありません。いつでもアップグレードできます。"
+    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש. אפשר לשדרג בכל עת.": "7日間の試用で合計55クレジット。補充はありません。いつでもアップグレードできます。"
   }
 };
