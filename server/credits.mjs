@@ -28,9 +28,18 @@ async function initializeTrial(identity,window,{env,run,now}){
  const keys=[storageKey(`credits:${identity}:${window.key}`,env),...Array.from({length:count},(_,i)=>storageKey(`credits:${identity}:trial:${window.startsAt}:${i}`,env))];
  if(await run(['EVAL',MIGRATE_TRIAL,String(keys.length),...keys],{env})!==1)throw Error('Trial migration failed');
 }
+// Two internal testers may receive 100 total credits on their existing
+// trials. Require a complete strictly validated private configuration; never
+// change a trial anchor, saved entitlement, or usage key.
+function accountCreditWindow(record,identity,env,now){
+ const configured=env.ASAF_INTERNAL_TESTER_BILLING_IDS?.split(',')||[];
+ const window=creditWindow(record,now);
+ return window?.planId==='trial'&&configured.length===2&&configured[0]!==configured[1]&&configured.every(value=>/^[a-f0-9]{64}$/.test(value))&&configured.includes(identity)
+  ?{...window,limit:Math.max(window.limit,100)}:window;
+}
 export async function creditStatus(memberId,{env=process.env,run=command,now=Date.now()}={}){
  if(!creditsEnabled(env))return null;
- const identity=await billingIdentity(memberId,{env,run}),record=await readBilling(identity,{env,run}),window=creditWindow(record,now);
+ const identity=await billingIdentity(memberId,{env,run}),record=await readBilling(identity,{env,run}),window=accountCreditWindow(record,identity,env,now);
  if(!window)return null;
  await initializeTrial(identity,window,{env,run,now});
  const key=storageKey(`credits:${identity}:${window.key}`,env),used=Number(await run(['GET',key],{env})||0);
@@ -41,7 +50,7 @@ export async function reserveCredits(memberId,maxCostUsd,{env=process.env,run=co
  if(!creditsEnabled(env))return null;
  const identity=await billingIdentity(memberId,{env,run}),record=await readBilling(identity,{env,run});
  if(record?.paidUntil>now&&!record.planId)return null;
- const window=creditWindow(record,now);if(!window)throw Error('No credit entitlement');
+ const window=accountCreditWindow(record,identity,env,now);if(!window)throw Error('No credit entitlement');
  await initializeTrial(identity,window,{env,run,now});
  const cost=creditsForCost(maxCostUsd),key=storageKey(`credits:${identity}:${window.key}`,env),reservation=key+':request:'+randomUUID();
  const used=await run(['EVAL',RESERVE,'2',key,reservation,String(cost),String(window.limit),window.planId],{env});
