@@ -161,3 +161,10 @@ body .asaf-support-launcher{position:static;display:block;width:fit-content;max-
 .asset-search-results strong{font-size:12px;white-space:nowrap;overflow-wrap:normal}
 /* Long translated search labels must wrap when text is enlarged. */
 .workspace-asset-search .asset-search-trigger{white-space:normal;line-height:1.5;overflow-wrap:anywhere}
+
+/* Approved setups is a standalone page, not a tab or a settings control. */
+.terminal-app .workspace-setups-link{display:inline-flex;align-items:center;gap:10px;min-block-size:48px;max-inline-size:100%;padding:9px 15px;border:1px solid #3c8a79;border-radius:10px;background:#15352f;color:#bbf7e7;font-weight:700;line-height:1.4;text-decoration:none}
+.terminal-app .workspace-setups-link svg{flex:none}
+.terminal-app .workspace-setups-link span{min-inline-size:0;overflow-wrap:anywhere}
+.terminal-app .workspace-setups-link:hover{background:#224941;text-decoration:underline}
+@media(max-width:600px){.terminal-app .workspace-setups-link{display:flex;inline-size:100%}}
