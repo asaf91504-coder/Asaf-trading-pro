@@ -5,6 +5,7 @@ export const validChatId=value=>typeof value==='string'&&/^[a-zA-Z0-9-]{1,80}$/.
 export function cleanChatMessage(value,role){
  if(!value||value.role!==role||typeof value.content!=='string'||!value.content.trim()||value.content.length>30000)throw Error('הודעה אינה תקינה או ארוכה מדי לשמירה.');
  const result={role,content:value.content};
+ if(role==='assistant'&&value.uiReceipt===true)result.uiReceipt=true;
  if(role==='assistant'&&Object.hasOwn(languageNames,value.responseLanguage))result.responseLanguage=value.responseLanguage;
  // Preserve only bounded, inert scenario values for deterministic historical display.
  if(role==='assistant'&&value.tradeScenario&&typeof value.tradeScenario==='object'){

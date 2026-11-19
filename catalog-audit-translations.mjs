@@ -1,4 +1,4 @@
-// Editorial corrections and complete translations for recently added interface copy.
+// Complete interface messages and dynamic templates.
 export const catalogAuditTranslations = {
   "en": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "Select a result or enter an exact symbol that matches the selected asset type.",
@@ -165,7 +165,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "Opened the research image for {symbol}. Analysis and annotations are calculated on the server.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "Server-generated chart image · {symbol} · {interval} · Last candle {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ Data for {symbol} does not match chart {current}. Ask the chat to open the desired stock.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ The data belongs to the entered symbol {symbol}, but the selected chart is {current}. It will not be used to analyze the other symbol."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ The data belongs to the entered symbol {symbol}, but the selected chart is {current}. It will not be used to analyze the other symbol.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "Added {count} research annotations based on the loaded candles. Review their geometry and context; this does not confirm a pattern or recommend a trade."
   },
   "es": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "Selecciona un resultado o introduce un símbolo exacto que corresponda al tipo de activo seleccionado.",
@@ -332,7 +333,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "Se abrió la imagen de análisis de {symbol}. El análisis y las anotaciones se calculan en el servidor.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "Imagen del gráfico del servidor · {symbol} · {interval} · Última vela {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ Los datos de {symbol} no corresponden al gráfico {current}. Pide al chat que abra la acción deseada.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Los datos pertenecen al símbolo introducido {symbol}, pero el gráfico seleccionado es {current}. No se usarán para analizar el otro símbolo."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Los datos pertenecen al símbolo introducido {symbol}, pero el gráfico seleccionado es {current}. No se usarán para analizar el otro símbolo.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "Se añadieron {count} anotaciones de análisis basadas en las velas cargadas. Revisa su geometría y contexto; no confirman un patrón ni recomiendan una operación."
   },
   "ar": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "اختر نتيجة أو أدخل رمزًا دقيقًا يطابق نوع الأصل المحدد.",
@@ -499,7 +501,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "فُتحت صورة تحليل {symbol}. تُحسب التحليلات والعلامات على الخادم.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "صورة الرسم من الخادم · {symbol} · {interval} · آخر شمعة {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ بيانات {symbol} لا تطابق الرسم {current}. اطلب من الدردشة فتح السهم المطلوب.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ البيانات تخص الرمز المُدخل {symbol}، لكن الرسم المحدد هو {current}. لن تُستخدم لتحليل الرمز الآخر."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ البيانات تخص الرمز المُدخل {symbol}، لكن الرسم المحدد هو {current}. لن تُستخدم لتحليل الرمز الآخر.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "أُضيفت {count} علامات تحليل استنادًا إلى الشموع المحمّلة. راجع الشكل الهندسي والسياق؛ فهذا ليس تأكيدًا لنمط أو توصية بالتداول."
   },
   "fr": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "Sélectionnez un résultat ou saisissez un symbole exact correspondant au type d’actif choisi.",
@@ -666,7 +669,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "Image d’analyse de {symbol} ouverte. L’analyse et les annotations sont calculées sur le serveur.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "Image du graphique du serveur · {symbol} · {interval} · Dernière bougie {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ Les données de {symbol} ne correspondent pas au graphique {current}. Demandez au chat d’ouvrir l’action souhaitée.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Les données appartiennent au symbole saisi {symbol}, mais le graphique sélectionné est {current}. Elles ne serviront pas à analyser l’autre symbole."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Les données appartiennent au symbole saisi {symbol}, mais le graphique sélectionné est {current}. Elles ne serviront pas à analyser l’autre symbole.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "{count} annotations d’analyse ajoutées à partir des bougies chargées. Examinez leur géométrie et leur contexte ; elles ne confirment pas une figure et ne constituent pas une recommandation de trading."
   },
   "de": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "Wähle einen Treffer oder gib ein exaktes Symbol für die ausgewählte Anlageklasse ein.",
@@ -833,7 +837,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "Analysebild für {symbol} geöffnet. Analysen und Markierungen werden auf dem Server berechnet.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "Chartbild vom Server · {symbol} · {interval} · Letzte Kerze {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ Daten für {symbol} passen nicht zum Chart {current}. Bitte den Chat, die gewünschte Aktie zu öffnen.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Die Daten gehören zum eingegebenen Symbol {symbol}, der ausgewählte Chart ist jedoch {current}. Sie werden nicht für die Analyse des anderen Symbols verwendet."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Die Daten gehören zum eingegebenen Symbol {symbol}, der ausgewählte Chart ist jedoch {current}. Sie werden nicht für die Analyse des anderen Symbols verwendet.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "{count} Analysemarkierungen anhand der geladenen Kerzen hinzugefügt. Prüfe ihre Geometrie und den Kontext; dies bestätigt kein Muster und ist keine Handelsempfehlung."
   },
   "pt": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "Selecione um resultado ou digite um símbolo exato correspondente ao tipo de ativo selecionado.",
@@ -1000,7 +1005,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "Imagem de análise de {symbol} aberta. Análises e anotações são calculadas no servidor.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "Imagem do gráfico do servidor · {symbol} · {interval} · Última vela {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ Os dados de {symbol} não correspondem ao gráfico {current}. Peça ao chat para abrir a ação desejada.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Os dados pertencem ao símbolo informado {symbol}, mas o gráfico selecionado é {current}. Não serão usados para analisar o outro símbolo."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Os dados pertencem ao símbolo informado {symbol}, mas o gráfico selecionado é {current}. Não serão usados para analisar o outro símbolo.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "Foram adicionadas {count} marcações de análise com base nos candles carregados. Avalie a geometria e o contexto; isso não confirma um padrão nem recomenda uma operação."
   },
   "ru": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "Выберите результат или введите точный тикер, соответствующий выбранному типу актива.",
@@ -1167,7 +1173,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "Открыто изображение для анализа {symbol}. Анализ и разметка рассчитываются на сервере.",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "Изображение графика с сервера · {symbol} · {interval} · Последняя свеча {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ Данные {symbol} не соответствуют графику {current}. Попросите чат открыть нужную акцию.",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Данные относятся к введённому тикеру {symbol}, но выбран график {current}. Они не будут использованы для анализа другого тикера."
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ Данные относятся к введённому тикеру {symbol}, но выбран график {current}. Они не будут использованы для анализа другого тикера.",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "Добавлено {count} аналитических отметок по загруженным свечам. Оцените их геометрию и контекст: это не подтверждение фигуры и не торговая рекомендация."
   },
   "zh": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "请选择一项结果，或输入与所选资产类型匹配的准确代码。",
@@ -1334,7 +1341,8 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "已打开 {symbol} 的分析图片。分析和标注在服务器上计算。",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "服务器图表图片 · {symbol} · {interval} · 最后 K 线时间 {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ {symbol} 的数据与图表 {current} 不匹配。请通过聊天打开所需股票。",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ 数据属于输入的代码 {symbol}，但所选图表为 {current}。这些数据不会用于分析其他代码。"
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ 数据属于输入的代码 {symbol}，但所选图表为 {current}。这些数据不会用于分析其他代码。",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "已根据加载的蜡烛添加 {count} 个研究标注。请检查其几何结构与背景；这并不确认形态，也不构成交易建议。"
   },
   "ja": {
     "בחר אחת מהתוצאות או הזן סימול מדויק התואם לסוג הנכס שבחרת.": "検索結果を選ぶか、選択した資産の種類に合う正確な銘柄コードを入力してください。",
@@ -1501,6 +1509,7 @@ export const catalogAuditTranslations = {
     "נפתחה תמונת המחקר של {symbol}. ניתוח וסימונים מחושבים בשרת.": "{symbol} の分析画像を開きました。分析と注釈はサーバーで計算されます。",
     "תמונת גרף מהשרת · {symbol} · {interval} · נר אחרון {date} · {coverage}": "サーバーのチャート画像 · {symbol} · {interval} · 最終足 {date} · {coverage}",
     "⚠️ נתוני {symbol} אינם תואמים לגרף {current}. בקש בצ׳אט לפתוח את המניה הרצויה.": "⚠️ {symbol} のデータはチャート {current} と一致しません。チャットで希望の銘柄を開いてください。",
-    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ データは入力された銘柄 {symbol} のものですが、選択中のチャートは {current} です。別の銘柄の分析には使用しません。"
+    "⚠️ הנתונים שייכים לסימול {symbol} שהוזן, אבל הגרף הנבחר הוא {current}. הנתונים לא ישמשו לניתוח הסימול האחר.": "⚠️ データは入力された銘柄 {symbol} のものですが、選択中のチャートは {current} です。別の銘柄の分析には使用しません。",
+    "נוספו {count} סימוני מחקר לפי הנרות שנטענו. יש לבחון את הגאומטריה וההקשר; לא מדובר באישור לתבנית או בהמלצת מסחר.": "読み込んだローソク足に基づき、{count} 件の分析注記を追加しました。形状と背景を確認してください。パターンの確定や取引の推奨を意味するものではありません。"
   }
 };
