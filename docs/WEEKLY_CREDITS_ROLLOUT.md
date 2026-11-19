@@ -34,3 +34,6 @@ Product: PROD-27505635D31938544. Prices were reviewed in PayPal: USD55/75/115/35
 User requested publishing and personally testing a real payment. Added a server-enforced admin-only checkout pilot whenever weekly credits are enabled and ASAF_PUBLIC_PAID_LAUNCH is not true. Non-admin subscribe requests fail before PayPal is called; cancellation/sync remain available. A visible warning identifies real recurring charges and unfinished paid AI/search. No new authorization is granted by request body fields.
 
 Live Starter activation was blocked by automatic approval review pending explicit approval of its USD55 monthly recurring charge. Keep weekly credits disabled and all four plans DRAFT until resolved. Publishing this code does not activate checkout. General paid launch remains blocked on the gates above. 623 local tests pass.
+
+## New-trial allowance rollout (2026-11-19)
+New grants persist 55 total credits. Older grants retain their original allowance and usage; there is no balance migration. Verified with 864 offline tests. Deploy this revision without the intermediate upload skip markers.
