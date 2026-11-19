@@ -45,7 +45,7 @@ export async function reserveCredits(memberId,maxCostUsd,{env=process.env,run=co
  await initializeTrial(identity,window,{env,run,now});
  const cost=creditsForCost(maxCostUsd),key=storageKey(`credits:${identity}:${window.key}`,env),reservation=key+':request:'+randomUUID();
  const used=await run(['EVAL',RESERVE,'2',key,reservation,String(cost),String(window.limit),window.planId],{env});
- if(used===-1){const error=Error(window.planId==='trial'?'100 הקרדיטים החינמיים נוצלו. הם אינם מתחדשים. אפשר לשדרג למנוי.':'מכסת הקרדיטים השבועית נוצלה. אפשר לשדרג או להמתין לחידוש.');error.status=402;throw error;}
+ if(used===-1){const error=Error(window.planId==='trial'?`${window.limit} הקרדיטים החינמיים נוצלו. הם אינם מתחדשים. אפשר לשדרג למנוי.`:'מכסת הקרדיטים השבועית נוצלה. אפשר לשדרג או להמתין לחידוש.');error.status=402;throw error;}
  if(!Number.isSafeInteger(used)||used<cost)throw Error('Credit reservation failed');
  return {credits:cost,remaining:Math.max(0,window.limit-used),resetsAt:window.resetsAt,refund:()=>run(['EVAL',REFUND,'2',key,reservation],{env})};
 }

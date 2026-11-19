@@ -1,5 +1,5 @@
 import {resolvePromotion,publicPromotion} from '../../server/promotions.mjs';
-import {PLANS,creditsEnabled,consentFor} from '../../server/plans.mjs';
+import {NEW_TRIAL_CREDITS,PLANS,creditsEnabled,consentFor} from '../../server/plans.mjs';
 import {creditStatus} from '../../server/credits.mjs';
 import {currentUser} from '../../server/auth-core.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
@@ -9,7 +9,7 @@ const reply=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Contro
 export function createBillingHandler({env=process.env,run=command,now=()=>Date.now(),api=createPayPal({env})}={}){return async request=>{
  if(!['GET','POST'].includes(request.method))return reply({error:'Method not allowed'},405);
  if(request.method==='POST'&&request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
- const config={enabled:billingEnabled(env),ready:billingReady(env),pricingVersion:creditsEnabled(env)?2:1,plans:Object.values(PLANS),trialTotalCredits:100,trialDays:7,monthlyPrice:creditsEnabled(env)?null:10,currency:'USD',sandbox:env.PAYPAL_ENVIRONMENT==='sandbox'};
+ const config={enabled:billingEnabled(env),ready:billingReady(env),pricingVersion:creditsEnabled(env)?2:1,plans:Object.values(PLANS),trialTotalCredits:NEW_TRIAL_CREDITS,trialDays:7,monthlyPrice:creditsEnabled(env)?null:10,currency:'USD',sandbox:env.PAYPAL_ENVIRONMENT==='sandbox'};
  try{
   const user=await currentUser(request,{env,run});
   config.paymentPilot=creditsEnabled(env)&&env.ASAF_PUBLIC_PAID_LAUNCH!=='true';
