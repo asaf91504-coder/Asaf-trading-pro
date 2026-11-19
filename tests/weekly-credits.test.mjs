@@ -109,3 +109,70 @@ test('public billing advertises 55 without creating an account and balance copy 
   assert.ok(copy.includes(String(limit)));assert.ok(copy.includes('12'));assert.ok(!copy.includes('{limit}'));
  }
 });
+
+test('a configured tester receives 100 total, retaining original usage, expiry and plan',async()=>{
+ const f=creditFixture(),tester=seed(f,'tester@example.test'),control=seed(f,'control@example.test','22345678-1234-1234-1234-123456789abc','e'.repeat(64));
+ const testId=await billingIdentity(tester.record.id,{env,run:f.run}),controlId=await billingIdentity(control.record.id,{env,run:f.run});
+ const initial={trialStartedAt:now,trialEndsAt:now+WEEK,trialTotalCredits:55};
+ for(const id of [testId,controlId])await saveBilling(id,initial,{env,run:f.run});
+ const baseline={env,run:f.run,now};
+ for(const user of [tester,control])await reserveCredits(user.record.id,.10,baseline);
+ const updated={...baseline,env:{...env,ASAF_INTERNAL_TESTER_BILLING_IDS:testId+','+'0'.repeat(64)}};
+ const status=await creditStatus(tester.record.id,updated);
+ assert.equal(status.limit,100);assert.equal(status.remaining,95);
+ assert.equal(status.resetsAt,initial.trialEndsAt);assert.equal(status.key,(await creditStatus(tester.record.id,baseline)).key);
+ assert.equal((await creditStatus(control.record.id,updated)).remaining,50);
+ assert.equal((await reserveCredits(tester.record.id,.02,updated)).remaining,94);
+ assert.equal((await creditStatus(tester.record.id,updated)).remaining,94);
+ assert.equal((await creditStatus(tester.record.id,baseline)).remaining,49);
+ assert.equal(await creditStatus(tester.record.id,{...updated,now:now+WEEK}),null);
+ const {readBilling}=await import('../server/billing.mjs');
+ assert.deepEqual(await readBilling(testId,updated),initial);
+ const paid={...initial,planId:'starter',paidUntil:now+WEEK,creditAnchor:now};
+ await saveBilling(testId,paid,{env,run:f.run});
+ assert.equal((await creditStatus(tester.record.id,updated)).limit,150);
+});
+
+test('configured tester gets 100 on their normal newly started trial, never just by signing in',async()=>{
+ const {readBilling}=await import('../server/billing.mjs');
+ const f=creditFixture(),tester=seed(f,'new-tester@example.test');
+ const id=await billingIdentity(tester.record.id,{env,run:f.run});
+ const configured={...env,ASAF_INTERNAL_TESTER_BILLING_IDS:id+','+'0'.repeat(64)};
+ const options={env:configured,run:f.run,now};
+ const handler=createBillingHandler({env:configured,run:f.run,now:()=>now});
+ const before=await (await handler(request('billing',null,tester.cookie))).json();
+ assert.equal(before.status,'not_started');assert.equal(before.credits,null);
+ assert.equal(await readBilling(id,options),null);
+ assert.equal((await handler(request('billing',{action:'start-trial'},tester.cookie))).status,200);
+ const stored=await readBilling(id,options);
+ assert.equal(stored.trialEndsAt,now+WEEK);assert.equal(stored.trialTotalCredits,55);
+ const status=await (await handler(request('billing',null,tester.cookie))).json();
+ assert.equal(status.status,'trial');assert.equal(status.credits.limit,100);assert.equal(status.credits.remaining,100);
+ assert.equal(status.credits.resetsAt,stored.trialEndsAt);
+});
+test('missing, malformed or multiple configured identities preserve the normal grant; exceptional prior balances cannot be reduced',async()=>{
+ const f=creditFixture(),tester=seed(f,'tester@example.test'),id=await billingIdentity(tester.record.id,{env,run:f.run});
+ const original={trialStartedAt:now,trialEndsAt:now+WEEK,trialTotalCredits:55};
+ await saveBilling(id,original,{env,run:f.run});
+ for(const value of [undefined,'',id,id+','+id,id+', '+'0'.repeat(64),' '+id+','+'0'.repeat(64),id.toUpperCase()+','+'0'.repeat(64),id+','+'0'.repeat(64)+','+'1'.repeat(64),'0'.repeat(64)+','+'1'.repeat(64)]){
+  const status=await creditStatus(tester.record.id,{env:{...env,ASAF_INTERNAL_TESTER_BILLING_IDS:value},run:f.run,now});
+  assert.equal(status.limit,55);
+ }
+ const options={env:{...env,ASAF_INTERNAL_TESTER_BILLING_IDS:id+','+'0'.repeat(64)},run:f.run,now};
+ await saveBilling(id,{...original,trialTotalCredits:123},options);
+ assert.equal((await creditStatus(tester.record.id,options)).limit,123);
+});
+
+test('two distinct private trial IDs each receive 100 isolated credits while a third remains at 55',async()=>{
+ const f=creditFixture();
+ const users=[seed(f,'first@example.test'),seed(f,'second@example.test','22345678-1234-1234-1234-123456789abc','e'.repeat(64)),seed(f,'control@example.test','32345678-1234-1234-1234-123456789abc','f'.repeat(64))];
+ const ids=await Promise.all(users.map(u=>billingIdentity(u.record.id,{env,run:f.run})));
+ const original={trialStartedAt:now,trialEndsAt:now+WEEK,trialTotalCredits:55};
+ for(const id of ids)await saveBilling(id,original,{env,run:f.run});
+ const options={env:{...env,ASAF_INTERNAL_TESTER_BILLING_IDS:ids.slice(0,2).join(',')},run:f.run,now};
+ const remaining=async()=>Promise.all(users.map(async u=>(await creditStatus(u.record.id,options)).remaining));
+ assert.deepEqual(await remaining(),[100,100,55]);
+ await reserveCredits(users[0].record.id,.08,options);await reserveCredits(users[1].record.id,.02,options);
+ assert.deepEqual(await remaining(),[96,99,55]);
+ for(const u of users)assert.equal((await creditStatus(u.record.id,options)).resetsAt,original.trialEndsAt);
+});
