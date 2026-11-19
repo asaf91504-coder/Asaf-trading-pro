@@ -1,4 +1,4 @@
-import {creditsEnabled,planFor,planEnv} from './plans.mjs';
+import {NEW_TRIAL_CREDITS,creditsEnabled,planFor,planEnv} from './plans.mjs';
 import {randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
 import {digest,publicAuthConfigured} from './auth-core.mjs';
@@ -22,7 +22,7 @@ export async function saveBilling(identity,record,{env=process.env,run=command}=
 }
 export async function startTrial(identity,{env=process.env,run=command,now=Date.now()}={}){
  if(!billingReady(env))throw Error('Subscriptions are not open');
- await run(['SET',recordKey(identity,env),JSON.stringify({trialStartedAt:now,trialEndsAt:now+TRIAL_DAYS*DAY,paidUntil:0}),'NX'],{env});
+ await run(['SET',recordKey(identity,env),JSON.stringify({trialStartedAt:now,trialEndsAt:now+TRIAL_DAYS*DAY,trialTotalCredits:NEW_TRIAL_CREDITS,paidUntil:0}),'NX'],{env});
  const record=await readBilling(identity,{env,run});
  if(!Number.isFinite(record?.trialStartedAt)||![7,14].some(days=>record.trialEndsAt===record.trialStartedAt+days*DAY))throw Error('Invalid trial record');
  return record;
