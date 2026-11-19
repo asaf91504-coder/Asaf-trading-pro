@@ -13,8 +13,11 @@ export function createTranslator(catalog={}){
  const templates=entries.filter(([key])=>/\{[a-zA-Z]+\}/.test(key)).map(([key,value])=>{
   const names=[];let cursor=0,source='^';for(const match of key.matchAll(/\{([a-zA-Z]+)\}/g)){source+=escape(key.slice(cursor,match.index))+'(.*?)';names.push(match[1]);cursor=match.index+match[0].length}source+=escape(key.slice(cursor))+'$';return {pattern:new RegExp(source,'u'),names,value};
  });
- return text=>{if(typeof text!=='string')return text;if(Object.hasOwn(catalog,text))return catalog[text];
+ const translate=text=>{if(typeof text!=='string')return text;if(Object.hasOwn(catalog,text))return catalog[text];
   const trimmed=text.trim();if(Object.hasOwn(catalog,trimmed))return text.replace(trimmed,()=>catalog[trimmed]);
+  // Tool receipts join independent complete messages with newlines.
+  if(/[\r\n]/.test(text))return text.split(/(\r\n|\r|\n)/).map(part=>/^[\r\n]+$/.test(part)?part:translate(part)).join('');
   for(const template of templates){const match=trimmed.match(template.pattern);if(match)return text.replace(trimmed,()=>template.value.replace(/\{([a-zA-Z]+)\}/g,(token,name)=>{const value=match[template.names.indexOf(name)+1];return ['label','stage'].includes(name)&&Object.hasOwn(catalog,value)?catalog[value]:value??token}))}
   return pattern?text.replace(pattern,(key,offset,whole)=>{const letter=/[\p{L}\p{N}\p{M}_]/u;const before=whole[offset-1]||'',after=whole[offset+key.length]||'';if((letter.test(key[0])&&letter.test(before))||(letter.test(key.at(-1))&&letter.test(after)))return key;return catalog[key]}):text};
+ return translate;
 }

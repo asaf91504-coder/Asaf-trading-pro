@@ -109,7 +109,7 @@ function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL
 function datasetReady(){rememberSymbol();if(loaded?.presentation==='server-raster'){window.dispatchEvent(new Event('asaf:dataset-cleared'));window.dispatchEvent(new CustomEvent('asaf:provider-image-ready',{detail:{symbol:loaded.symbol,interval:loaded.interval,receivedAt:loaded.receivedAt,latestBarTime:loaded.context.date}}));return;}if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 // Changing the chart invalidates pending analysis, not the conversation itself.
 // Previous messages retain their own chartContext and are historical references.
-const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){const bubble=say(m.role==='user'?'user':'bot','');const storedScenario=m.tradeScenario?entryStopText(m.tradeScenario,m.responseLanguage||'he'):'';renderChatText(bubble,storedScenario?m.content.replace('\n\n'+storedScenario,''):m.content);if(m.tradeScenario)appendScenario(bubble,m.tradeScenario)}}});
+const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){const bubble=say(m.role==='user'?'user':'bot','');if(m.uiReceipt){renderChatReply(bubble,{before:m.content,answer:''});continue}const storedScenario=m.tradeScenario?entryStopText(m.tradeScenario,m.responseLanguage||'he'):'';renderChatText(bubble,storedScenario?m.content.replace('\n\n'+storedScenario,''):m.content);if(m.tradeScenario)appendScenario(bubble,m.tradeScenario)}}});
 function resetRequest({clearHistory=false}={}){
  const invalidate=requestInvalidated;requestInvalidated=null;
  lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;
@@ -233,8 +233,9 @@ async function ask(q,extra={}){
    // Conceptual explanations can proceed without candles. Actual chart
    // analysis below must have matching data before contacting the model.
    if(!wantsAnalysis){
+    renderChatReply(waiting,{before:localReceipt,answer:''});
     const chartContext={symbol:normSymbol(),source:loaded?.symbol===normSymbol()?loaded.source:'none',interval:loaded?.interval,receivedAt:loaded?.receivedAt};
-    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:waiting.textContent,chartContext});chatHistory.complete(conversation);conversation=conversation.slice(-400);
+    conversation.push({role:'user',content:question,chartContext},{role:'assistant',content:localReceipt,uiReceipt:true,chartContext});chatHistory.complete(conversation);conversation=conversation.slice(-400);
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }

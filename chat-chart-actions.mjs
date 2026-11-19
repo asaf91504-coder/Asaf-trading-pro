@@ -115,7 +115,12 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  if(symbol)actions.push({type:'symbol',symbol});
  const clear=/(?:נקה|תנקה|מחק|תמחק|הסר|תסיר|\b(?:clear|remove|delete)\b).{0,30}(?:סימונים|סימוני|סימון|שרטוטי\s*(?:ai|הבינה)|הערות\s*(?:ai|הבינה)|\b(?:ai\s*)?(?:annotations|markings)\b)/iu.test(text);
  if(clear)actions.push({type:'clear_annotations'});
- for(const [indicator,re] of indicatorMatchers)for(const match of text.matchAll(new RegExp(re.source,'giu')))actions.push({type:'indicator',indicator,enabled:!offRE.test(controlContext(text,match.index))});
+ for(const [indicator,re] of indicatorMatchers)for(const match of text.matchAll(new RegExp(re.source,'giu'))){
+  const context=controlContext(text,match.index);
+  // A preserve clause is not another target of an earlier hide/remove verb.
+  if(/(?:\bkeep\b|\bleave\b|השאר|תשאיר|השאיר)/iu.test(context))continue;
+  actions.push({type:'indicator',indicator,enabled:!offRE.test(context)});
+ }
  for(const match of text.matchAll(unsupportedAverageRE)){
   const n=Number(match[1]||match[2]),raw=match[0].toLowerCase(),supported=raw.includes('ema')||raw.includes('מעריכי')?n===50:[20,50,100,150,200].includes(n);
   if(!supported)notes.push('הממוצע '+match[0]+' אינו זמין כרגע. זמינים MA20/50/100/150/200 ו־EMA50.');
