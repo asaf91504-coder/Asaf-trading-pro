@@ -22,7 +22,7 @@ export function mountAppInstall({window:win=globalThis.window,document:doc=globa
  const actions=element('div',null,'app-install-actions');actions.append(promptButton,chat,close);dialog.append(title,description,instructions,status,actions);
  const offline=element('p','אין כרגע חיבור לאינטרנט. הצ׳אט, הכניסה לחשבון, החדשות ונתוני השוק יפעלו כשהחיבור יחזור.','app-offline-banner');offline.id='appOfflineStatus';offline.setAttribute('role','status');offline.setAttribute('aria-live','polite');
  (doc.querySelector('header')||doc.body).append(button);doc.body.append(dialog,offline);
- let deferred=null,busy=false,installed=false,workerStatus='';
+ let deferred=null,busy=false,installed=false,workerStatus='',showingPromptStatus=false;
  const display=win.matchMedia?.('(display-mode: standalone)');
  const refresh=()=>{
   button.hidden=installed||appDisplayMode(win,nav);
@@ -32,7 +32,7 @@ export function mountAppInstall({window:win=globalThis.window,document:doc=globa
   offline.hidden=nav.onLine!==false;
  };
  const dismiss=()=>{if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');if(!button.hidden)button.focus()};
- button.addEventListener('click',()=>{refresh();status.textContent=workerStatus;if(typeof dialog.showModal==='function')dialog.showModal();else{dialog.setAttribute('open','');dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true')}close.focus()});
+ button.addEventListener('click',()=>{refresh();showingPromptStatus=busy;status.textContent=workerStatus;if(typeof dialog.showModal==='function')dialog.showModal();else{dialog.setAttribute('open','');dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true')}close.focus()});
  close.addEventListener('click',dismiss);
  dialog.addEventListener('close',()=>{if(!button.hidden)button.focus()});
  // Native dialog supplies focus trapping. The fallback retains Escape and Tab
@@ -52,7 +52,7 @@ export function mountAppInstall({window:win=globalThis.window,document:doc=globa
  win.addEventListener('online',refresh);win.addEventListener('offline',refresh);
  promptButton.addEventListener('click',async()=>{
   if(!deferred||busy)return;
-  const request=deferred;deferred=null;busy=true;promptButton.disabled=true;
+  const request=deferred;deferred=null;busy=true;showingPromptStatus=true;promptButton.disabled=true;
   try{
    await request.prompt();
    const choice=await request.userChoice;
@@ -65,7 +65,7 @@ export function mountAppInstall({window:win=globalThis.window,document:doc=globa
   if(!nav.serviceWorker||win.isSecureContext===false)return;
   try{await nav.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});workerStatus='פתיחה ללא רשת תציג מסך חיבור מחדש. שירותי החשבון והנתונים נשארים מקוונים בלבד.'}
   catch{workerStatus='מסך החיבור מחדש אינו זמין כרגע. אפשר להמשיך להשתמש באתר ולהתקין דרך הדפדפן.'}
-  if(dialog.hasAttribute('open'))status.textContent=workerStatus;
+  if(dialog.hasAttribute('open')&&!showingPromptStatus)status.textContent=workerStatus;
  }
  if(doc.readyState==='complete')void register();else win.addEventListener('load',register,{once:true});
  refresh();return {button,dialog,promptButton,status,offline};

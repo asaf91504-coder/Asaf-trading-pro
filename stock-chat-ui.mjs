@@ -1,4 +1,4 @@
-import {renderChatReply} from './chat-reply-ui.mjs';
+import {localizedChatReply,renderChatReply} from './chat-reply-ui.mjs';
 import {languageCode} from './interface-language.mjs';
 import {entryStopText} from './entry-stop-scenario.mjs';
 import {createVentureChartView} from './venture-chart-view.mjs';
@@ -6,7 +6,7 @@ import {showCreditPlans} from './exhausted-credits-ui.mjs';
 import {createMarketFeedClient} from './market-feed-client.mjs';
 import {journalIntent} from './journal-chat-core.mjs';
 import {mountJournalDraft} from './journal-chat-ui.mjs';
-import {renderSearchSources} from './web-search-ui.mjs';
+import {labelChatSource,renderSearchSources} from './web-search-ui.mjs';
 import {marketSnapshotMetadata} from './market-quality.mjs';
 import {dataFreshness,quoteSummary} from './data-freshness.mjs';
 import {analysisReceipt} from './chart-analysis-context.mjs';
@@ -331,26 +331,24 @@ async function ask(q,extra={}){
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   const followAnswer=isChatNearBottom(log);
   waiting.translate=false;waiting.dir='auto';
-  waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+data.answer;
-  if(data.historyRestricted)waiting.textContent+='\n\nהשיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.';
-  if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
+  const chartChanged=preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision;
+  let suffix='';
+  if(data.historyRestricted)suffix+='\n\nהשיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.';
+  if(chartChanged)suffix+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
   if(Array.isArray(data.actions)&&data.actions.length){
-   if(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision)waiting.textContent+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
-   else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;waiting.textContent+='\n\nתוצאת הביצוע בפועל:\n'+execution.messages.join('\n');}catch(error){if(error.name==='AbortError')throw error;waiting.textContent+='\nלא בוצעו כלים מהתשובה: '+error.message;}}
+   if(chartChanged)suffix+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
+   else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;suffix+='\n\nתוצאת הביצוע בפועל:\n'+execution.messages.join('\n');}catch(error){if(error.name==='AbortError')throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
   }
-
-  waiting.translate=false;
   const scenarioText=data.tradeScenario?entryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
-  const displayAnswer=scenarioText?waiting.textContent.replace('\n\n'+scenarioText,''):waiting.textContent;
-  const completedAnswer=displayAnswer+(scenarioText?'\n\n'+scenarioText:'')+(data.webSearch?.sources?.length?'\n\nמקורות שנמצאו בחיפוש:\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
-  const modelAnswer=scenarioText?data.answer.replace('\n\n'+scenarioText,''):data.answer;
-  const rawPrefix=localReceipt?localReceipt+'\n\n':'';
-  const suffix=displayAnswer.slice(rawPrefix.length+modelAnswer.length);
-  renderChatReply(waiting,{before:localReceipt,answer:modelAnswer,after:suffix});
+  const modelAnswer=scenarioText&&data.answer.endsWith('\n\n'+scenarioText)?data.answer.slice(0,-scenarioText.length-2):data.answer;
+  const replyParts={before:localReceipt,answer:modelAnswer,after:suffix};
+  const translate=window.asafTranslate|| (text=>text);
+  const completedAnswer=localizedChatReply(replyParts,translate)+(scenarioText?'\n\n'+scenarioText:'')+(data.webSearch?.status==='available'&&data.webSearch.sources?.length?'\n\n'+translate('מקורות שנמצאו בחיפוש:')+'\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
+  renderChatReply(waiting,replyParts);
   if(data.tradeScenario)appendScenario(waiting,data.tradeScenario);
   renderSearchSources(waiting,data.webSearch);
 
-  if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent=String(article.title||'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
+  if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';if(article.title)link.textContent=String(article.title);else labelChatSource(link,'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
 
   conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   chatHistory.complete(conversation);conversation=conversation.slice(-400);

@@ -9,5 +9,5 @@ export function priceTicks(min,max,target=5){
  return ticks;
 }
 export function chartTimeLabel(date,intraday=false){
- const value=String(date||'');return intraday&&value.includes('T')?value.slice(11,16):value.slice(5,10);
+ const value=String(date||'');return intraday&&/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(value)?value.slice(11,16):value.slice(5,10);
 }
