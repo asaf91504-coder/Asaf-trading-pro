@@ -34,8 +34,13 @@ function render(){
  if(state.subscriptionStatus==='CANCELLED')$('billingDate').textContent+=' '+t('החידוש החודשי בוטל.');
  show('billingSandbox',state.sandbox===true);show('billingLogin',ready&&!auth);show('billingTrial',ready&&auth&&state.status==='not_started');show('billingContinue',ready&&auth&&state.access);
  show('billingCheckout',checkoutReady&&auth&&state.status!=='paid'&&!state.canCancel);show('billingCancel',ready&&auth&&state.canCancel);show('billingSync',ready&&auth&&!!state.subscriptionStatus);
- if(!checkoutReady&&state.status!=='paid')$('billingStatus').textContent=t('המסלולים החדשים בהכנה. רכישה תיפתח לאחר בדיקת התשלום ומכסות השימוש.');
- if(state.paymentPilot&&checkoutReady)$('billingStatus').textContent=t('בדיקת מנהל: זהו חיוב אמיתי ומתחדש. הצ׳אט בתשלום והחיפוש עדיין בהכנה. ניתן לבטל את החידוש לאחר הבדיקה.');
+ const availability=state.paymentPilot&&checkoutReady
+  ?'בדיקת מנהל: זהו חיוב אמיתי ומתחדש. הצ׳אט בתשלום והחיפוש עדיין בהכנה. ניתן לבטל את החידוש לאחר הבדיקה.'
+  :ready&&!checkoutReady&&state.status!=='paid'
+   ?'המסלולים החדשים בהכנה. רכישה תיפתח לאחר בדיקת התשלום ומכסות השימוש.'
+   :'';
+ $('billingAvailability').textContent=availability?t(availability):'';
+ show('billingAvailability',!!availability);
  $('billingSubscribe').disabled=busy||!checkoutReady||!$('billingConsent').checked;
 }
 async function perform(action){

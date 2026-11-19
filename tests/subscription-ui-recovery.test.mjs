@@ -65,3 +65,36 @@ test('expired authentication clears the previous accounts credit balance',async(
  await p.get('billingSync').onclick();
  assert.equal(p.get('billingCredits').textContent,'');
 });
+
+test('checkout pilot notice does not overwrite signed-out, trial, or paid status',async()=>{
+ const base={...expired,subscriptionStatus:null,paymentPilot:true,checkoutAllowed:false};
+ const active={...base,access:true,status:'trial',trialEndsAt:Date.now()+86400000};
+ for(const [state,label] of [
+  [{...base,authenticated:false},'התחבר לחשבון כדי לקבל 7 ימים בחינם.'],
+  [active,'תקופת הניסיון שלך פעילה.'],
+  [base,'תקופת הניסיון הסתיימה.']
+ ]){
+  const p=await page([state]);
+  assert.equal(p.get('billingStatus').textContent,label);
+  assert.equal(p.get('billingAvailability').hidden,false);
+  assert.match(p.get('billingAvailability').textContent,/רכישה תיפתח/);
+  assert.equal(p.get('billingCheckout').hidden,true);
+  if(state===active)assert.match(p.get('billingDate').textContent,/סיום הניסיון/);
+ }
+ const p=await page([{...paid,paymentPilot:true,checkoutAllowed:false}]);
+ assert.equal(p.get('billingStatus').textContent,'המנוי שלך פעיל.');
+ assert.equal(p.get('billingAvailability').hidden,true);
+ assert.equal(p.get('billingCancel').hidden,false);
+});
+
+test('open checkout and administrator pilot retain distinct controls and notices',async()=>{
+ const base={...expired,subscriptionStatus:null,checkoutAllowed:true};
+ const publicPage=await page([{...base,paymentPilot:false}]);
+ assert.equal(publicPage.get('billingCheckout').hidden,false);
+ assert.equal(publicPage.get('billingAvailability').hidden,true);
+ assert.equal(publicPage.get('billingSubscribe').disabled,true);
+ const adminPage=await page([{...base,paymentPilot:true}]);
+ assert.equal(adminPage.get('billingCheckout').hidden,false);
+ assert.equal(adminPage.get('billingStatus').textContent,'תקופת הניסיון הסתיימה.');
+ assert.match(adminPage.get('billingAvailability').textContent,/חיוב אמיתי ומתחדש/);
+});
