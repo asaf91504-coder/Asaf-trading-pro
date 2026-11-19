@@ -1,4 +1,5 @@
 // Public prices are USD/month; allowances renew every seven days, never daily.
+export const NEW_TRIAL_CREDITS=55;
 export const WEEK=7*86400000;
 export const CREDIT_USD_CEILING=0.02;
 export const PLANS=Object.freeze({
@@ -26,6 +27,9 @@ export function creditWindow(record,now=Date.now()){
  }
  const anchor=record?.trialStartedAt,end=Math.max(record?.trialEndsAt||0,record?.complimentaryUntil||0);
  if(!Number.isFinite(anchor)||![7,14].some(days=>record.trialEndsAt===anchor+days*86400000)||now<anchor||now>=end)return null;
- return {key:`trial-total:${anchor}`,limit:100,startsAt:anchor,resetsAt:end,planId:'trial'};
+ // Missing allowance identifies previously granted trials; never reduce their balance.
+ const limit=record.trialTotalCredits===undefined?100:record.trialTotalCredits;
+ if(!Number.isSafeInteger(limit)||limit<0)throw Error('Invalid trial allowance');
+ return {key:`trial-total:${anchor}`,limit,startsAt:anchor,resetsAt:end,planId:'trial'};
 }
 export function creditsForCost(usd){if(!Number.isFinite(usd)||usd<0)throw Error('Invalid cost');return Math.max(1,Math.ceil((usd-1e-10)/CREDIT_USD_CEILING));}
