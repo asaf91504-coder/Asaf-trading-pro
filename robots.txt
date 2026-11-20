@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /.netlify/functions/
+
+Sitemap: https://asafpro.com/sitemap.xml
