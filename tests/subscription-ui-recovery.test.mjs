@@ -1,16 +1,16 @@
 import {subscriptionCopy} from '../subscription-copy.mjs';
-import {PLANS,consentFor} from '../server/plans.mjs';
+import {PLANS,consentFor,CHECKOUT_PRICE_VERSION,usdPriceText} from '../server/plans.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync(new URL('../subscription-ui.mjs',import.meta.url),'utf8').replace(/^import .*\n/gm,'');
-const expired={enabled:true,ready:true,pricingVersion:2,authenticated:true,access:false,status:'expired',canCancel:false,subscriptionStatus:'APPROVAL_PENDING'};
+const expired={enabled:true,ready:true,pricingVersion:2,checkoutPriceVersion:2,checkoutAllowed:true,authenticated:true,access:false,status:'expired',canCancel:false,subscriptionStatus:'APPROVAL_PENDING'};
 const paid={...expired,access:true,status:'paid',subscriptionStatus:'ACTIVE',canCancel:true,paidUntil:Date.now()+86400000};
 async function page(responses,search=''){
  const elements=new Map(),calls=[],navigation=[];
  const get=id=>{if(!elements.has(id))elements.set(id,{hidden:true,disabled:false,checked:false,textContent:'',setAttribute(){},value:id==='billingPlan'?'starter':''});return elements.get(id);};
- const context={subscriptionCopy,PLANS,consentFor,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
+ const context={subscriptionCopy,PLANS,consentFor,CHECKOUT_PRICE_VERSION,usdPriceText,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
   calls.push(options.body?JSON.parse(options.body).action:'GET');
   const next=responses.shift();assert.ok(next,'Unexpected request');if(next instanceof Error)throw next;
   return {ok:!next.httpError,status:next.httpError||200,json:async()=>next.httpError?{error:'יש להיכנס לחשבון.'}:next};
@@ -34,7 +34,7 @@ test('retry never silently repeats a subscription creation or cancellation',asyn
  for(const action of ['subscribe','cancel']){
   const initial=action==='cancel'?paid:expired;
   const p=await page([initial,Error('lost response'),initial]);
-  p.get('billingConsent').checked=true;
+  p.get('billingConsent').checked=true;p.get('billingConsent').onchange();
   p.get(action==='cancel'?'billingCancel':'billingSubscribe').onclick();
   await new Promise(resolve=>setImmediate(resolve));
   await p.get('billingRetry').onclick();assert.deepEqual(p.calls,['GET',action,'GET']);assert.deepEqual(p.navigation,[]);
@@ -49,19 +49,19 @@ test('pending and suspended payments do not display paid access',async()=>{
 
 test('selected plan price remains correct when account lookup fails',async()=>{
  const p=await page([Error('network failure')],'?plan=premium');
- assert.equal(p.get('price').textContent,'$359');
+ assert.equal(p.get('price').textContent,'$143.60');
  assert.match(p.get('billingPlanDetails').textContent,/2,500/);
  assert.doesNotMatch(p.get('billingPlanDetails').textContent,/month|week/);
  assert.equal(p.get('billingRetry').hidden,false);
 });
 test('verified paid plan overrides a stale selection link',async()=>{
- const p=await page([{...paid,credits:{planId:'pro',remaining:500,limit:600,resetsAt:Date.now()+86400000}}],'?plan=starter');
+ const p=await page([{...paid,subscriptionMonthlyPrice:115,credits:{planId:'pro',remaining:500,limit:600,resetsAt:Date.now()+86400000}}],'?plan=starter');
  assert.equal(p.get('billingPlan').value,'pro');
  assert.equal(p.get('price').textContent,'$115');
  assert.match(p.get('billingCredits').textContent,/500 מתוך 600/);
 });
 test('expired authentication clears the previous accounts credit balance',async()=>{
- const p=await page([{...paid,credits:{planId:'pro',remaining:500,limit:600,resetsAt:Date.now()+86400000}},{httpError:401}]);
+ const p=await page([{...paid,subscriptionMonthlyPrice:115,credits:{planId:'pro',remaining:500,limit:600,resetsAt:Date.now()+86400000}},{httpError:401}]);
  await p.get('billingSync').onclick();
  assert.equal(p.get('billingCredits').textContent,'');
 });

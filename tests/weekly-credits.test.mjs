@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {PLANS,WEEK,creditWindow,creditsForCost,creditPlansReady,consentFor} from '../server/plans.mjs';
+import {PLANS,WEEK,creditWindow,creditsForCost,creditPlansReady,consentFor,planEnv} from '../server/plans.mjs';
 import {reserveCredits,creditStatus} from '../server/credits.mjs';
 import {createBillingHandler} from '../netlify/functions/billing.mjs';
 import {billingIdentity,saveBilling,nextMonth,syncSubscription} from '../server/billing.mjs';
 import {fixture,seed,env as authEnv,request} from './identity-fixture.mjs';
 const now=Date.parse('2026-11-16T10:00:00Z');
-const env={...authEnv,ASAF_PUBLIC_PAID_LAUNCH:'true',ASAF_WEEKLY_CREDITS_ENABLED:'true',ASAF_BILLING_ENABLED:'true',PAYPAL_ENVIRONMENT:'sandbox',PAYPAL_CLIENT_ID:'mock',PAYPAL_CLIENT_SECRET:'mock',PAYPAL_WEBHOOK_ID:'mock',...Object.fromEntries(Object.keys(PLANS).map(id=>['PAYPAL_PLAN_'+id.toUpperCase()+'_ID','P-'+id.toUpperCase()]))};
+const env={...authEnv,ASAF_PUBLIC_PAID_LAUNCH:'true',ASAF_WEEKLY_CREDITS_ENABLED:'true',ASAF_BILLING_ENABLED:'true',PAYPAL_ENVIRONMENT:'sandbox',PAYPAL_CLIENT_ID:'mock',PAYPAL_CLIENT_SECRET:'mock',PAYPAL_WEBHOOK_ID:'mock',ASAF_WEEKLY_PRICE_V2_CHECKOUT:'true',...Object.fromEntries(Object.keys(PLANS).flatMap(id=>[[planEnv(id),'P-'+id.toUpperCase()],[planEnv(id,2),'P-V2'+id.toUpperCase()]]))};
 const trial={trialStartedAt:now,trialEndsAt:now+2*WEEK};
 test('trial has 100 total credits through day fourteen and extensions, without weekly reset',()=>{
  assert.equal(creditWindow(trial,now).limit,100);
@@ -42,14 +42,14 @@ test('concurrent requests stop at weekly balance, refunds idempotent and reset s
 });
 test('early upgrade selects verified price and consent; pending approval never grants paid credits',async()=>{
  const f=fixture(),user=seed(f),identity=await billingIdentity(user.record.id,{env,run:f.run});await saveBilling(identity,trial,{env,run:f.run});let created;
- const api=async(path,opt)=>{if(path.includes('/plans/'))return {id:env.PAYPAL_PLAN_PRO_ID,status:'ACTIVE',payment_preferences:{auto_bill_outstanding:false,payment_failure_threshold:1},billing_cycles:[{tenure_type:'REGULAR',frequency:{interval_unit:'MONTH',interval_count:1},total_cycles:0,pricing_scheme:{fixed_price:{value:'115',currency_code:'USD'}}}]};created=opt.body;return {id:'I-TEST',status:'APPROVAL_PENDING',links:[{rel:'approve',href:'https://www.sandbox.paypal.com/checkout'}]}};
+ const api=async(path,opt)=>{if(path.includes('/plans/'))return {id:env.PAYPAL_PLAN_PRO_V2_ID,status:'ACTIVE',payment_preferences:{auto_bill_outstanding:false,payment_failure_threshold:1},billing_cycles:[{tenure_type:'REGULAR',frequency:{interval_unit:'MONTH',interval_count:1},total_cycles:0,pricing_scheme:{fixed_price:{value:'46',currency_code:'USD'}}}]};created=opt.body;return {id:'I-TEST',status:'APPROVAL_PENDING',links:[{rel:'approve',href:'https://www.sandbox.paypal.com/checkout'}]}};
  const handler=createBillingHandler({env,run:f.run,now:()=>now,api});
  assert.equal((await handler(request('billing',{action:'subscribe',planId:'pro',consent:consentFor('starter')},user.cookie))).status,400);
  assert.equal((await handler(request('billing',{action:'subscribe',planId:'pro',consent:consentFor('pro'),price:1},user.cookie))).status,200);
- assert.equal(created.plan_id,env.PAYPAL_PLAN_PRO_ID);assert.equal(created.custom_id,identity);
+ assert.equal(created.plan_id,env.PAYPAL_PLAN_PRO_V2_ID);assert.equal(created.custom_id,identity);
  const record=JSON.parse([...f.db.entries()].find(([k])=>k.includes('billing:account:'))[1]);assert.equal(creditWindow(record,now).limit,100);
- const payment={id:'SALE1',time:new Date(now).toISOString(),status:'COMPLETED',amount_with_breakdown:{gross_amount:{value:'115',currency_code:'USD'}}};
- const syncApi=async path=>path.includes('transactions?')?{transactions:[payment]}:{id:'I-TEST',custom_id:identity,plan_id:env.PAYPAL_PLAN_PRO_ID,status:'ACTIVE'};
+ const payment={id:'SALE1',time:new Date(now).toISOString(),status:'COMPLETED',amount_with_breakdown:{gross_amount:{value:'46',currency_code:'USD'}}};
+ const syncApi=async path=>path.includes('transactions?')?{transactions:[payment]}:{id:'I-TEST',custom_id:identity,plan_id:env.PAYPAL_PLAN_PRO_V2_ID,status:'ACTIVE'};
  const synced=await syncSubscription(identity,record,{env,run:f.run,now,api:syncApi});assert.equal(creditWindow(synced,now).limit,720);assert.equal(synced.creditAnchor,now);
  const again=await syncSubscription(identity,synced,{env,run:f.run,now:now+1,api:syncApi});assert.equal(again.bonusUntil,synced.bonusUntil);
 });
@@ -104,12 +104,12 @@ test('prior 30, 55 and legacy 100 grants keep their usage, duration and entitlem
   assert.equal((await creditStatus(user.record.id,{...options,now:now+2*WEEK})).remaining,(grant??100)-5);
  }
 });
-test('stored allowances survive extensions, invalid allowances fail closed and paid tiers are unchanged',()=>{
+test('stored allowances survive extensions, invalid allowances fail closed and paid quotas are unchanged and list prices match the new contract',()=>{
  const fresh={trialStartedAt:now,trialEndsAt:now+WEEK,trialTotalCredits:55,complimentaryUntil:now+3*WEEK};
  assert.equal(creditWindow(fresh,now+2*WEEK).limit,55);
  assert.equal(creditWindow({...fresh,trialTotalCredits:100},now).limit,100);
  for(const n of [null,-1,1.5,'55'])assert.throws(()=>creditWindow({...fresh,trialTotalCredits:n},now));
- assert.deepEqual(Object.values(PLANS).map(p=>[p.price,p.weeklyCredits]),[[55,150],[75,300],[115,600],[359,2500]]);
+ assert.deepEqual(Object.values(PLANS).map(p=>[p.price,p.weeklyCredits]),[[22,150],[30,300],[46,600],[143.60,2500]]);
 });
 test('public billing advertises 50 without creating an account and balance copy uses personal entitlement',async()=>{
  const {subscriptionCopy}=await import('../subscription-copy.mjs');

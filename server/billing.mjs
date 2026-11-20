@@ -1,4 +1,4 @@
-import {NEW_TRIAL_CREDITS,creditsEnabled,planFor,planEnv} from './plans.mjs';
+import {NEW_TRIAL_CREDITS,creditsEnabled,planFor,planEnv,LEGACY_PLAN_PRICES,CHECKOUT_PRICE_VERSION,creditCheckoutReady,usdCents} from './plans.mjs';
 import {randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
 import {digest,publicAuthConfigured} from './auth-core.mjs';
@@ -53,8 +53,27 @@ export function nextMonth(time){
  const d=new Date(time),day=d.getUTCDate();d.setUTCDate(1);d.setUTCMonth(d.getUTCMonth()+1);
  const last=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate();d.setUTCDate(Math.min(day,last));return d.getTime();
 }
+// Old records did not store a contract. Derive only from the original plan IDs
+// and prices (or the saved promotion), never the current public catalog.
+function recordedTerms(record,env){
+ if(record?.priceContract!==undefined){
+  const contract=record.priceContract;
+  if(!contract||contract.version!==CHECKOUT_PRICE_VERSION||!Object.hasOwn(LEGACY_PLAN_PRICES,record.planId)||!/^P-[A-Z0-9]+$/.test(contract.paypalPlanId||'')||!Number.isSafeInteger(contract.monthlyPriceCents)||contract.monthlyPriceCents<=0)throw Error('Invalid recorded payment terms');
+  return contract;
+ }
+ const paypalPlanId=record?.promotion?.paypalPlanId||(record?.planId?env[planEnv(record.planId)]:env.PAYPAL_PLAN_ID);
+ const monthlyPriceCents=usdCents(record?.promotion?.monthlyPrice??(record?.planId?LEGACY_PLAN_PRICES[record.planId]:PRICE_USD));
+ if(!/^P-[A-Z0-9]+$/.test(paypalPlanId||'')||monthlyPriceCents===null||monthlyPriceCents<=0)throw Error('Missing historical payment terms');
+ return {version:1,paypalPlanId,monthlyPriceCents};
+}
+export function subscriptionMonthlyPrice(record,env){
+ if(!record?.subscriptionId)return null;
+ try{return recordedTerms(record,env).monthlyPriceCents/100}catch{return null}
+}
+const sameContract=(saved,terms)=>saved?.version===terms?.version&&saved?.paypalPlanId===terms?.paypalPlanId&&saved?.monthlyPriceCents===terms?.monthlyPriceCents;
+const validPayment=(t,revoked,now,priceCents)=>priceCents!==null&&t.status==='COMPLETED'&&!revoked.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&usdCents(t.amount_with_breakdown.gross_amount.value)===priceCents&&Date.parse(t.time)<=now;
 export function paidThrough(transactions,subscription,revoked=[],now=Date.now(),price=PRICE_USD){
- const payments=transactions.filter(t=>t.status==='COMPLETED'&&!revoked.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&Number(t.amount_with_breakdown.gross_amount.value)===price&&Date.parse(t.time)<=now);
+ const payments=transactions.filter(t=>validPayment(t,revoked,now,usdCents(price)));
  const latest=payments.sort((a,b)=>Date.parse(b.time)-Date.parse(a.time))[0];if(!latest)return 0;
  const time=Date.parse(latest.time),next=Date.parse(subscription.billing_info?.next_billing_time);
  return Number.isFinite(next)&&next>time&&next<=time+32*DAY?next:nextMonth(time);
@@ -65,37 +84,47 @@ export async function syncSubscription(identity,record,{env=process.env,run=comm
  if(!record?.subscriptionId)return record;
  const id=record.subscriptionId;
  if(!/^I-[A-Z0-9]+$/.test(id))throw Error('Invalid subscription');
+ const terms=recordedTerms(record,env);
  const sub=await api('/v1/billing/subscriptions/'+id);
- if(sub.id!==id||sub.custom_id!==identity||sub.plan_id!==(record.promotion?.paypalPlanId||(record.planId?env[planEnv(record.planId)]:env.PAYPAL_PLAN_ID))||sub.plan_overridden===true||Number(sub.quantity||1)!==1||Number(sub.shipping_amount?.value||0)!==0)throw Error('Subscription does not match account and plan');
+ if(sub.id!==id||sub.custom_id!==identity||sub.plan_id!==terms.paypalPlanId||sub.plan_overridden===true||Number(sub.quantity||1)!==1||Number(sub.shipping_amount?.value||0)!==0)throw Error('Subscription does not match account and plan');
  const query=new URLSearchParams({start_time:new Date(now-62*DAY).toISOString(),end_time:new Date(now).toISOString()});
  const history=await api('/v1/billing/subscriptions/'+id+'/transactions?'+query);
  if(!Array.isArray(history.transactions)||Number(history.total_pages||1)>1)throw Error('Incomplete payment history');
- const price=record.promotion?.monthlyPrice??(record.planId?planFor(record.planId).price:PRICE_USD);
- const valid=history.transactions.filter(t=>t.status==='COMPLETED'&&!record.revokedTransactionIds?.includes(t.id)&&t.amount_with_breakdown?.gross_amount?.currency_code==='USD'&&Number(t.amount_with_breakdown.gross_amount.value)===price&&Date.parse(t.time)<=now);
+ const valid=history.transactions.filter(t=>validPayment(t,record.revokedTransactionIds||[],now,terms.monthlyPriceCents));
  const first=valid.length?Math.min(...valid.map(t=>Date.parse(t.time))):null;
  const anchor=record.creditAnchor??first;
- const updated={...record,...(record.planId&&anchor!==null?{creditAnchor:anchor,bonusUntil:record.bonusUntil??nextMonth(anchor)}:{}),subscriptionStatus:sub.status,paidUntil:paidThrough(history.transactions,sub,record.revokedTransactionIds,now,price),verifiedAt:now,approvalUrl:approvalLink(sub,env)};
+ const updated={...record,...(record.planId&&anchor!==null?{creditAnchor:anchor,bonusUntil:record.bonusUntil??nextMonth(anchor)}:{}),subscriptionStatus:sub.status,paidUntil:paidThrough(history.transactions,sub,record.revokedTransactionIds,now,terms.monthlyPriceCents/100),verifiedAt:now,approvalUrl:approvalLink(sub,env)};
  return saveBilling(identity,updated,{env,run});
 }
 export async function createSubscription(identity,record,{env=process.env,run=command,api=createPayPal({env}),now=Date.now(),origin,planId,promotion=null}={}){
  if(!record||(!creditsEnabled(env)&&(now<record.trialEndsAt||entitlement(record,now).access))||entitlement(record,now).status==='paid')throw Error('The free trial or paid period is still active');
+ const chosen=creditsEnabled(env)?planFor(planId):null;
+ if(chosen&&!creditCheckoutReady(env))throw Error('New checkout is not yet available');
+ const paypalPlanId=promotion?.paypalPlanId||(chosen?env[planEnv(chosen.id,CHECKOUT_PRICE_VERSION)]:env.PAYPAL_PLAN_ID);
+ const price=promotion?.monthlyPrice??chosen?.price??PRICE_USD;
+ const contract=chosen?{version:CHECKOUT_PRICE_VERSION,paypalPlanId,monthlyPriceCents:usdCents(price)}:undefined;
+ if(chosen&&(!contract.monthlyPriceCents||promotion&&[env.PAYPAL_PLAN_ID,...Object.keys(LEGACY_PLAN_PRICES).flatMap(id=>[env[planEnv(id)],env[planEnv(id,CHECKOUT_PRICE_VERSION)]])].includes(paypalPlanId)))throw Error('Invalid new payment terms');
  if((record.createRequestId&&!record.subscriptionId)||(record.subscriptionId&&!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))){
   if((record.promotion?.consent||null)!==(promotion?.consent||null))throw Error('Resolve existing checkout before changing promotion');
  }
  if(record.subscriptionId){
   if(creditsEnabled(env)&&record.planId!==planId&&!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))throw Error('Resolve the existing checkout before selecting another plan');
   record=await syncSubscription(identity,record,{env,run,api,now});
-  if(record.subscriptionStatus==='APPROVAL_PENDING'&&record.approvalUrl)return {approvalUrl:record.approvalUrl};
+  if(record.subscriptionStatus==='APPROVAL_PENDING'&&record.approvalUrl){
+   if(chosen){
+    if(!sameContract(record.priceContract,contract))throw Error('Resolve an earlier checkout before starting a new one');
+    validatePlan(await api('/v1/billing/plans/'+paypalPlanId),paypalPlanId,price);
+   }else if(record.planId||record.priceContract)throw Error('Resolve an earlier checkout before starting a new one');
+   return {approvalUrl:record.approvalUrl};
+  }
   if(!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus))throw Error('Manage your existing subscription before creating another');
   if(entitlement(record,now).access)throw Error('Your paid period is still active');
  }
- const chosen=creditsEnabled(env)?planFor(planId):null;
- const paypalPlanId=promotion?.paypalPlanId||(chosen?env[planEnv(chosen.id)]:env.PAYPAL_PLAN_ID);
- if(record.createRequestId&&!record.subscriptionId&&record.planId!==chosen?.id)throw Error('Unresolved checkout for another plan');
- validatePlan(await api('/v1/billing/plans/'+paypalPlanId),paypalPlanId,promotion?.monthlyPrice??chosen?.price??10);
+ if(record.createRequestId&&!record.subscriptionId&&(record.planId!==chosen?.id||chosen&&!sameContract(record.priceContract,contract)))throw Error('Unresolved checkout at different terms');
+ validatePlan(await api('/v1/billing/plans/'+paypalPlanId),paypalPlanId,price);
  const attempt=record.createRequestId&&!record.subscriptionId?record.createRequestId:randomUUID();
  if(record.createRequestId&&!record.subscriptionId&&now-record.createStartedAt>70*3600000)throw Error('Unresolved checkout: contact support before retrying');
- record={...record,promotion,...(chosen?{planId:chosen.id}:{}),createRequestId:attempt,createStartedAt:record.subscriptionId?now:(record.createStartedAt||now),subscriptionId:null,subscriptionStatus:null,approvalUrl:null};
+ record={...record,promotion,planId:chosen?.id,priceContract:contract,createRequestId:attempt,createStartedAt:record.subscriptionId?now:(record.createStartedAt||now),subscriptionId:null,subscriptionStatus:null,approvalUrl:null};
  await saveBilling(identity,record,{env,run});
  const sub=await api('/v1/billing/subscriptions',{method:'POST',requestId:attempt,body:{plan_id:paypalPlanId,custom_id:identity,application_context:{brand_name:'ASAF Pro',shipping_preference:'NO_SHIPPING',user_action:'SUBSCRIBE_NOW',return_url:origin+'/subscription.html?paypal=return',cancel_url:origin+'/subscription.html?paypal=cancel'}}});
  if(!/^I-[A-Z0-9]+$/.test(sub.id||''))throw Error('Invalid PayPal subscription');

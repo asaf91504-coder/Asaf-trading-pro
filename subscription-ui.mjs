@@ -1,5 +1,5 @@
 import {subscriptionCopy} from './subscription-copy.mjs';
-import {PLANS,consentFor} from './server/plans.mjs';
+import {PLANS,consentFor,CHECKOUT_PRICE_VERSION,usdPriceText} from './server/plans.mjs';
 const $=id=>document.getElementById(id),t=text=>window.asafTranslate?.(text)||text;
 let state=null,busy=false,retryAction;
 const show=(id,visible)=>{$(id).hidden=!visible;};
@@ -10,14 +10,17 @@ async function request(action){
 }
 const copy=(key,values)=>subscriptionCopy(document.documentElement.lang,key,values);
 function renderPlan(){
- const verifiedPlan=state?.status==='paid'&&state?.credits?.planId;
+ const existing=state?.status==='paid'||state?.priorCheckoutUnresolved===true;
+ const verifiedPlan=existing&&(state.subscriptionPlanId||state.credits?.planId);
  if(verifiedPlan&&Object.hasOwn(PLANS,verifiedPlan))$('billingPlan').value=verifiedPlan;
  const plan=PLANS[$('billingPlan').value]||PLANS.starter;
- const effectivePrice=window.asafBillingPromotion?.planId===plan.id?window.asafBillingPromotion.monthlyPrice:plan.price;
- const values={price:effectivePrice,credits:plan.weeklyCredits.toLocaleString(document.documentElement.lang||'he'),bonus:plan.bonusPercent};
+ const effectivePrice=existing?state.subscriptionMonthlyPrice:window.asafBillingPromotion?.planId===plan.id?window.asafBillingPromotion.monthlyPrice:plan.price;
+ const amount=effectivePrice==null?'':usdPriceText(effectivePrice);
+ const values={price:amount,credits:plan.weeklyCredits.toLocaleString(document.documentElement.lang||'he'),bonus:plan.bonusPercent};
  $('planTitle').textContent='ASAF Pro · '+plan.id[0].toUpperCase()+plan.id.slice(1);
- $('billingPlanDetails').textContent=copy('summary',values);
- document.querySelector('.subscription-price bdi').textContent='$'+effectivePrice;
+ $('billingPlanDetails').textContent=amount&&(!existing||verifiedPlan)?copy('summary',values):'';
+ document.querySelector('.subscription-price bdi').textContent=amount?'$'+amount:'';
+ document.querySelector('.subscription-price').hidden=!amount;
  $('billingConsentText').textContent=copy('consent',values);
  $('billingSubscribe').textContent=copy('checkout',values);
  $('billingCredits').textContent=state?.credits?copy(state.credits.planId==='trial'?'trialBalance':'balance',{remaining:state.credits.remaining,limit:state.credits.limit,date:date(state.credits.resetsAt)}):'';
@@ -25,7 +28,7 @@ function renderPlan(){
 function render(){
  renderPlan();
  if(!state)return;
- const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2&&state.checkoutAllowed!==false,auth=state.authenticated===true;
+ const ready=state.ready===true,checkoutReady=ready&&state.pricingVersion===2&&state.checkoutPriceVersion===CHECKOUT_PRICE_VERSION&&state.checkoutAllowed===true&&!state.priorCheckoutUnresolved,auth=state.authenticated===true;
  $('billingStatus').textContent=t(!ready?'ההרשמה למנוי תיפתח בקרוב. החיוב עדיין אינו פעיל.':!auth?'התחבר לחשבון כדי לקבל 7 ימים בחינם.':state.status==='trial'?'תקופת הניסיון שלך פעילה.':state.status==='paid'?'המנוי שלך פעיל.':state.status==='expired'?'תקופת הניסיון הסתיימה.':'7 ימי ניסיון בחינם מחכים לך.');
  if(ready&&auth&&!state.access&&state.subscriptionStatus==='APPROVAL_PENDING')$('billingStatus').textContent=t('ממתינים לאישור המנוי ב־PayPal.');
  if(ready&&auth&&!state.access&&['ACTIVE','APPROVED'].includes(state.subscriptionStatus))$('billingStatus').textContent=t('המנוי אושר, אך עדיין אין אישור לתשלום. לחץ על בדיקת תשלום.');
@@ -51,7 +54,7 @@ async function perform(action){
   if(data.approvalUrl){const u=new URL(data.approvalUrl);if(u.protocol!=='https:'||!['www.paypal.com','www.sandbox.paypal.com'].includes(u.hostname))throw Error('Invalid payment destination');location.assign(u.href);return;}
   state=data;render();$('billingMessage').textContent=action==='cancel'?t('החידוש החודשי בוטל.'):action==='sync'&&!state.access?t('טרם התקבל אישור תשלום. אפשר לבדוק שוב.'):'';
  }catch(e){
-  if(e.status===401){state={...state,authenticated:false,access:false,status:'not_started',subscriptionStatus:null,canCancel:false,trialEndsAt:null,paidUntil:null,credits:null};retryAction=undefined;}
+  if(e.status===401){state={...state,authenticated:false,access:false,status:'not_started',subscriptionStatus:null,canCancel:false,trialEndsAt:null,paidUntil:null,credits:null,subscriptionMonthlyPrice:null,subscriptionPlanId:null,priorCheckoutUnresolved:false};retryAction=undefined;}
   $('billingMessage').textContent=e.status?t(e.message):copy('error');show('billingRetry',true);
  }
  finally{busy=false;for(const id of ['billingTrial','billingSync','billingCancel'])$(id).disabled=false;render();}
@@ -62,7 +65,7 @@ if(Object.hasOwn(PLANS,params.get('plan')))$('billingPlan').value=params.get('pl
 // only the authenticated account's own saved subscription.
 if(params.has('testPayment')||params.has('paypal')||params.has('subscription_id')||params.has('ba_token')||params.has('token'))history.replaceState(null,'','/subscription.html');
 $('billingPlan').onchange=()=>{$('billingConsent').checked=false;render();};
-$('billingTrial').onclick=()=>perform('start-trial');$('billingSubscribe').onclick=()=>{if($('billingConsent').checked)perform('subscribe');};$('billingConsent').onchange=render;
+$('billingTrial').onclick=()=>perform('start-trial');$('billingSubscribe').onclick=()=>{if(!$('billingSubscribe').disabled&&$('billingConsent').checked)perform('subscribe');};$('billingConsent').onchange=render;
 $('billingSync').onclick=()=>perform('sync');$('billingRetry').onclick=()=>perform(retryAction);
 $('billingCancel').onclick=()=>{if(window.confirm(t('לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.')))perform('cancel');};
 for(const id of ['billingPlanDetails','billingConsentText','billingSubscribe','billingCredits'])$(id).setAttribute('translate','no');
