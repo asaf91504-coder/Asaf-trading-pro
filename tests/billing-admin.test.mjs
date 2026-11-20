@@ -20,7 +20,7 @@ test('grant extends initial 14 days, survives repeat request and account recreat
  const x=setup(),b=body(),id=await billingIdentity(x.friend.record.id,{env:x.env,run:x.f.run});
  const first=await (await x.handler(request('billing-admin',b,x.owner.cookie))).json();assert.equal(first.trialEndsAt,time+44*DAY);
  const again=await (await x.handler(request('billing-admin',b,x.owner.cookie))).json();assert.equal(again.trialEndsAt,first.trialEndsAt);assert.equal(again.duplicate,true);
- const record=await readBilling(id,{env:x.env,run:x.f.run});assert.equal(record.trialGrants.length,1);assert.equal(record.trialGrants[0].actorId,x.owner.record.id);
+ const record=await readBilling(id,{env:x.env,run:x.f.run});assert.equal(record.trialTotalCredits,55);assert.equal(record.trialGrants.length,1);assert.equal(record.trialGrants[0].actorId,x.owner.record.id);
  assert.equal(entitlement(record,time+43*DAY).access,true);assert.equal(entitlement(record,time+44*DAY).access,false);
  assert.deepEqual(await startTrial(id,{env:x.env,run:x.f.run,now:time+DAY}),record);
  seed(x.f,email,'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','f'.repeat(64));assert.equal(await billingIdentity('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',{env:x.env,run:x.f.run}),id);

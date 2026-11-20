@@ -67,7 +67,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Your subscription is suspended. Check your payment method in PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Payment has not been confirmed yet. You can check again.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancel monthly renewal? Paid access will remain until the end of the period.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "7-day trial with 55 credits total and no automatic renewal. You can purchase a plan if checkout is available for your account."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "7-day trial with 30 credits total and no automatic renewal. You can purchase a plan if checkout is available for your account."
   },
   "es": {
     "מחקר שמתאים לך": "Investiga a tu manera",
@@ -137,7 +137,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Tu suscripción está suspendida. Revisa tu método de pago en PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "El pago aún no está confirmado. Puedes comprobarlo de nuevo.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "¿Cancelar la renovación mensual? El acceso pagado continuará hasta el final del período.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Prueba de 7 días con 55 créditos en total y sin renovación automática. Puedes contratar un plan si el pago está disponible para tu cuenta."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Prueba de 7 días con 30 créditos en total y sin renovación automática. Puedes contratar un plan si el pago está disponible para tu cuenta."
   },
   "ar": {
     "מחקר שמתאים לך": "ابحث بطريقتك",
@@ -207,7 +207,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "تم تعليق اشتراكك. تحقق من وسيلة الدفع في PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "لم يتم تأكيد الدفع بعد. يمكنك التحقق مرة أخرى.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "هل تريد إلغاء التجديد الشهري؟ يستمر الوصول المدفوع حتى نهاية الفترة.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "تجربة لمدة 7 أيام تشمل 55 رصيدًا إجمالًا من دون تجديد تلقائي. يمكنك شراء اشتراك إذا كان الدفع متاحًا لحسابك."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "تجربة لمدة 7 أيام تشمل 30 رصيدًا إجمالًا من دون تجديد تلقائي. يمكنك شراء اشتراك إذا كان الدفع متاحًا لحسابك."
   },
   "fr": {
     "מחקר שמתאים לך": "La recherche à votre façon",
@@ -277,7 +277,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Votre abonnement est suspendu. Vérifiez votre moyen de paiement dans PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Le paiement n’est pas encore confirmé. Vous pouvez vérifier à nouveau.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Annuler le renouvellement mensuel ? L’accès payé reste disponible jusqu’à la fin de la période.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Essai de 7 jours avec 55 crédits au total, sans renouvellement automatique. Vous pouvez souscrire une offre si le paiement est disponible pour votre compte."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Essai de 7 jours avec 30 crédits au total, sans renouvellement automatique. Vous pouvez souscrire une offre si le paiement est disponible pour votre compte."
   },
   "de": {
     "מחקר שמתאים לך": "Recherche nach deinen Bedürfnissen",
@@ -347,7 +347,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Dein Abonnement ist ausgesetzt. Prüfe deine Zahlungsmethode bei PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Die Zahlung wurde noch nicht bestätigt. Du kannst erneut prüfen.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Monatliche Verlängerung kündigen? Der bezahlte Zugang bleibt bis zum Ende des Zeitraums bestehen.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "7 Tage Probezeit mit insgesamt 55 Credits, ohne automatische Verlängerung. Du kannst ein Abo abschließen, wenn die Zahlung für dein Konto verfügbar ist."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "7 Tage Probezeit mit insgesamt 30 Credits, ohne automatische Verlängerung. Du kannst ein Abo abschließen, wenn die Zahlung für dein Konto verfügbar ist."
   },
   "pt": {
     "מחקר שמתאים לך": "Pesquise do seu jeito",
@@ -417,7 +417,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Sua assinatura está suspensa. Verifique a forma de pagamento no PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "O pagamento ainda não foi confirmado. Você pode verificar novamente.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Cancelar a renovação mensal? O acesso pago continuará até o fim do período.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Teste de 7 dias com 55 créditos no total, sem renovação automática. Você pode assinar um plano se o pagamento estiver disponível para a sua conta."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Teste de 7 dias com 30 créditos no total, sem renovação automática. Você pode assinar um plano se o pagamento estiver disponível para a sua conta."
   },
   "ru": {
     "מחקר שמתאים לך": "Исследуйте по-своему",
@@ -487,7 +487,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "Ваша подписка приостановлена. Проверьте способ оплаты в PayPal.",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "Оплата ещё не подтверждена. Можно проверить снова.",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "Отменить ежемесячное продление? Оплаченный доступ сохранится до конца периода.",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Пробный период 7 дней: всего 55 кредитов без автоматического продления. Подписку можно оформить, если оплата доступна для вашего аккаунта."
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "Пробный период 7 дней: всего 30 кредитов без автоматического продления. Подписку можно оформить, если оплата доступна для вашего аккаунта."
   },
   "zh": {
     "מחקר שמתאים לך": "按您的方式研究",
@@ -557,7 +557,7 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "您的订阅已暂停。请在PayPal中检查付款方式。",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "付款尚未确认。您可以再次检查。",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "取消每月续订？已付费的访问权限将保留至当前周期结束。",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "试用期为 7 天，共 55 积分，不会自动续订。如果您的账户可以付款，即可购买订阅。"
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "试用期为 7 天，共 30 积分，不会自动续订。如果您的账户可以付款，即可购买订阅。"
   },
   "ja": {
     "מחקר שמתאים לך": "自分に合ったリサーチ",
@@ -627,6 +627,6 @@ export const polishTranslations={
     "המנוי הושהה. בדוק את אמצעי התשלום בחשבון PayPal.": "購読は一時停止中です。PayPalで支払い方法を確認してください。",
     "טרם התקבל אישור תשלום. אפשר לבדוק שוב.": "支払いはまだ確認されていません。再度確認できます。",
     "לבטל את החידוש החודשי? הגישה ששולמה תישאר עד סוף התקופה.": "毎月の更新をキャンセルしますか？支払い済みのアクセスは期間終了まで継続します。",
-    "7 ימי ניסיון עם 55 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "7日間の試用で合計55クレジットが付与され、自動更新はありません。アカウントで決済が利用できる場合は、プランを購入できます。"
+    "7 ימי ניסיון עם 30 קרדיטים בסך הכול, ללא חידוש אוטומטי. רכישת מנוי כפופה לזמינות התשלום בחשבון שלך.": "7日間の試用で合計30クレジットが付与され、自動更新はありません。アカウントで決済が利用できる場合は、プランを購入できます。"
   }
 };
