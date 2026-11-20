@@ -325,7 +325,8 @@ async function ask(q,extra={}){
   if(response.status===402&&['credits_exhausted','subscription_required'].includes(data?.code)){showCreditPlans();}
   if(!response.ok){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
-   throw Error(chatThrottleDisplay(response.status,data?.code,preparedPayload.language)||data?.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
+   const creditError=data?.code==='credits_exhausted'&&typeof data.error==='string'?window.asafTranslate?.(data.error):null;
+   throw Error(chatThrottleDisplay(response.status,data?.code,preparedPayload.language)||creditError||data?.error||"חיבור ה-AI נכשל (HTTP "+response.status+")");
   }
   if(data.credits?.remaining===0)showCreditPlans();
   if(epoch!==conversationEpoch)return;

@@ -1,7 +1,8 @@
 import {currentUser,cookieToken,digest,normalizeEmail} from '../../server/auth-core.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
-import {NEW_TRIAL_CREDITS} from '../../server/plans.mjs';
 import {DAY,entitlement,recordKey,readBilling,withBillingLock} from '../../server/billing.mjs';
+// Separate from the self-started seven-day public trial.
+const INITIAL_COMPLIMENTARY_CREDITS=55;
 const reply=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 // Commit authorization, account version, billing record and audit together.
 const GRANT=`-- billing-admin-grant
@@ -31,7 +32,7 @@ export function createBillingAdminHandler({env=process.env,run=command,now=()=>D
    if(record?.trialGrants?.some(g=>g.requestId===body.requestId))return reply({duplicate:true,...entitlement(record,time)});
    if(record?.subscriptionId&&!['CANCELLED','EXPIRED'].includes(record.subscriptionStatus)||record?.createRequestId&&!record.subscriptionId)return reply({error:'יש לבטל או להסדיר קודם את החידוש ב־PayPal ולבצע בדיקת תשלום. ההארכה אינה מבטלת חיובים.'},409);
    if((record?.trialGrants||[]).length>=100)return reply({error:'הגעת למגבלת ההארכות לחשבון.'},409);
-   const base=record||{trialStartedAt:time,trialEndsAt:time+14*DAY,trialTotalCredits:NEW_TRIAL_CREDITS,paidUntil:0};
+   const base=record||{trialStartedAt:time,trialEndsAt:time+14*DAY,trialTotalCredits:INITIAL_COMPLIMENTARY_CREDITS,paidUntil:0};
    const until=Math.max(time,base.trialEndsAt,base.complimentaryUntil||0,base.paidUntil||0)+body.days*DAY;
    const updated={...base,complimentaryUntil:until,trialGrants:[...(base.trialGrants||[]),{requestId:body.requestId,actorId:actor.id,at:time,days:body.days,until}]};
    const ok=await run(['EVAL',GRANT,'4',storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:member:'+actor.id,env),userKey,recordKey(identity,env),actor.sessionRaw,actor.memberRaw,userRaw,record?JSON.stringify(record):'',JSON.stringify(updated),String(Date.now())],{env});

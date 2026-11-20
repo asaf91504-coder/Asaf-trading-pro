@@ -31,3 +31,18 @@ export const launchTranslations=Object.fromEntries(Object.entries(rows).map(([co
 // Configuration is distinct from the authenticated chart's source and entitlement.
 const marketConfigurationLabels={en:'Data provider configured · Load a chart to verify',es:'Proveedor de datos configurado · Carga un gráfico para verificar',ar:'تم إعداد مزود البيانات · حمّل رسمًا بيانيًا للتحقق',fr:'Fournisseur de données configuré · Chargez un graphique pour vérifier',de:'Datenanbieter eingerichtet · Zur Prüfung einen Chart laden',pt:'Provedor de dados configurado · Carregue um gráfico para verificar',ru:'Поставщик данных настроен · Загрузите график для проверки',zh:'数据提供商已配置 · 请加载图表进行验证',ja:'データプロバイダー設定済み · チャートを読み込んで確認'};
 for(const [code,label] of Object.entries(marketConfigurationLabels))launchTranslations[code]['ספק נתונים מוגדר · טען גרף לאימות']=label;
+
+// A depleted trial reports its actual entitlement, including grandfathered grants.
+const trialExhaustedKey='{limit} הקרדיטים החינמיים נוצלו. הם אינם מתחדשים. אפשר לשדרג למנוי.';
+const trialExhaustedCopy={
+ en:'You have used all {limit} free credits. They do not renew. You can upgrade to a subscription.',
+ es:'Has usado los {limit} créditos gratuitos. No se renuevan. Puedes contratar una suscripción.',
+ ar:'استخدمت كامل رصيدك المجاني البالغ {limit}. لا يتجدد هذا الرصيد. يمكنك الترقية إلى اشتراك.',
+ fr:'Vous avez utilisé vos {limit} crédits gratuits. Ils ne se renouvellent pas. Vous pouvez passer à un abonnement.',
+ de:'Du hast alle {limit} kostenlosen Credits verbraucht. Sie werden nicht erneuert. Du kannst ein Abo abschließen.',
+ pt:'Você usou todos os {limit} créditos gratuitos. Eles não são renovados. Você pode assinar um plano.',
+ ru:'Вы использовали все {limit} бесплатных кредитов. Они не обновляются. Можно оформить подписку.',
+ zh:'{limit} 个免费积分已全部用完，不会补充。你可以升级为付费订阅。',
+ ja:'無料クレジット{limit}分を使い切りました。補充はされません。有料プランに変更できます。'
+};
+for(const [code,label] of Object.entries(trialExhaustedCopy))launchTranslations[code][trialExhaustedKey]=label;
