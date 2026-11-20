@@ -1,5 +1,5 @@
 // Public prices are USD/month; allowances renew every seven days, never daily.
-export const NEW_TRIAL_CREDITS=30;
+export const NEW_TRIAL_CREDITS=50;
 export const WEEK=7*86400000;
 export const CREDIT_USD_CEILING=0.02;
 export const PLANS=Object.freeze({
