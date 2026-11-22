@@ -22,4 +22,17 @@ const rows={
  zh:['退出目标','编辑方案草稿','标题（可选）','分析（可选）','保存草稿','取消编辑','编辑草稿','扫描器的原始价位','草稿已保存，尚未发布。','草稿已保存。只有您批准后才会发布。','发布前已修改价位或措辞。','请输入有效的正数价位。','草稿已更改。保存或批准前请刷新页面。','标题或分析无效。','只能编辑当前扫描中待批准的候选方案。','草稿字段无效。','做多时，止损低于入场价，目标高于入场价；做空时顺序相反。请输入互不相同的正数价位。','保存草稿与批准发布是两个不同的操作。','保存期间数据已更改。请刷新并重试。'],
  ja:['決済目標','セットアップの下書きを編集','タイトル（任意）','分析（任意）','下書きを保存','編集をキャンセル','下書きを編集','スキャナーの元の水準','下書きは保存済みで、まだ公開されていません。','下書きを保存しました。承認するまで公開されません。','公開前に水準または文言が編集されました。','有効な正の水準を入力してください。','下書きが変更されました。保存または承認の前にページを更新してください。','タイトルまたは分析が無効です。','現在のスキャンで承認待ちの候補のみ編集できます。','下書きの項目が無効です。','ロングではストップがエントリーより下、目標が上です。ショートでは逆です。異なる正の水準を入力してください。','下書きの保存と公開の承認は別の操作です。','保存中にデータが変更されました。更新して再試行してください。']
 };
-export const setupReviewTranslations=Object.fromEntries(Object.entries(rows).map(([language,values])=>[language,Object.fromEntries(keys.map((key,i)=>[key,values[i]]))]));
+const atrDistance={
+ en:'The stop must be between 1 and 2 daily ATR from the entry price.',
+ es:'El stop debe estar a entre 1 y 2 ATR diarios del precio de entrada.',
+ ar:'يجب أن يبعد وقف الخسارة عن سعر الدخول بمقدار يتراوح بين 1 و2 من مؤشر ATR اليومي.',
+ fr:'Le stop doit se situer à une distance comprise entre 1 et 2 ATR journaliers du prix d’entrée.',
+ de:'Der Stop muss 1 bis 2 Tages-ATR vom Einstiegskurs entfernt liegen.',
+ pt:'O stop deve ficar entre 1 e 2 ATR diários do preço de entrada.',
+ ru:'Стоп должен находиться на расстоянии от 1 до 2 дневных ATR от цены входа.',
+ zh:'止损价与入场价的距离必须为日线 ATR 的 1 至 2 倍。',
+ ja:'ストップとエントリー価格の差は日足ATRの1〜2倍にしてください。',
+};
+export const setupReviewTranslations=Object.fromEntries(Object.entries(rows).map(([language,values])=>[
+ language,{...Object.fromEntries(keys.map((key,i)=>[key,values[i]])),'מרחק הסטופ ממחיר הכניסה חייב להיות בין 1 ל־2 ATR יומי.':atrDistance[language]}
+]));
