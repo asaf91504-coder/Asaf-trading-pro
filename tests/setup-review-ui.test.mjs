@@ -66,7 +66,7 @@ test('regular viewers cannot see the owner editor; labels and narrow mobile styl
  assert.match(css,/\.setup-editor input,\.setup-editor textarea\{[^}]*min-height:44px[^}]*font-size:max\(16px,1em\)/);
 });
 
-test('setup stop cards use up to two locale decimals without rounding the editor or other prices',async()=>{
+test('all setup card levels use up to two locale decimals without rounding the editor',async()=>{
  for(const [lang,decimal] of [['en','.'],['de',',']]){
   const h=harness(lang);
   const levels={side:'long',entry:110.12547,stop:100.23567,target:130.76543};
@@ -76,11 +76,11 @@ test('setup stop cards use up to two locale decimals without rounding the editor
   h.queue.push(state([item],[item,whole,tiny]));
   await h.events.pageshow();
   const values=h.all(h.get('published')).filter(n=>n.tag==='dd').map(n=>n.textContent);
-  assert.deepEqual(values.slice(0,3),['110'+decimal+'12547','100'+decimal+'24','130'+decimal+'76543']);
+  assert.deepEqual(values.slice(0,3),['110'+decimal+'13','100'+decimal+'24','130'+decimal+'77']);
   assert.equal(values[4],'100');
   assert.equal(values[7],'<0'+decimal+'01');
   h.all(h.get('queue')).find(n=>n.textContent==='ערוך טיוטה').onclick();
-  assert.equal(h.all(h.get('queue')).find(n=>n.name==='stop').value,'100.23567');
+  for(const [key,price] of Object.entries(levels).filter(([key])=>key!=='side'))assert.equal(h.all(h.get('queue')).find(n=>n.name===key).value,String(price));
   assert.equal(item.scenario.stop,100.23567);
  }
 });

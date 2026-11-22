@@ -13,9 +13,9 @@ function levelsFor(scenario){
   const cell=document.createElement('div');
   const price=Number(scenario[key]);
   // Price formatting is display-only; the editor and submitted scenario retain precision.
-  const display=key==='stop'&&price>0&&price<0.005
+  const display=price>0&&price<0.005
    ?'<'+(0.01).toLocaleString(locale(),{maximumFractionDigits:2})
-   :price.toLocaleString(locale(),{maximumFractionDigits:key==='stop'?2:8});
+   :price.toLocaleString(locale(),{maximumFractionDigits:2});
   cell.append(el('dt',label),el('dd',display));list.append(cell);
  }
  return list;
