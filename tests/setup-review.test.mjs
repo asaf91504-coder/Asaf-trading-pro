@@ -4,9 +4,10 @@ import {createSetupsHandler} from '../netlify/functions/setups.mjs';
 import {sharedScannerKey,SCAN_PERIOD_MS} from '../server/shared-scanner.mjs';
 import {REVIEW_COMMIT} from '../server/setup-review.mjs';
 import {fixture,seed,env as authEnv,request} from './identity-fixture.mjs';
+const dailyBars=Array.from({length:15},(_,i)=>({date:new Date(Date.UTC(2026,10,i+2)).toISOString().slice(0,10),high:112,low:105,close:108}));
 function setup(){const f=fixture(),owner=seed(f),other=seed(f,'other@test.test','87654321-4321-4321-4321-cba987654321','e'.repeat(64));const now=Date.now();
  const env={...authEnv,ASAF_HOURLY_SCANNER_ENABLED:'true',ASAF_MARKET_ENABLED:'true',ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED:'true',ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED:'true',ASAF_MARKET_DELAY_MINUTES:'0',ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL',TWELVE_DATA_API_KEY:'mock',ASAF_SETUPS_REVIEWER_MEMBER_ID:owner.record.id};
- const snapshot={startedAt:new Date(now-60000).toISOString(),completedAt:new Date(now).toISOString(),nextUpdateAt:now+SCAN_PERIOD_MS,errors:[],records:[{symbol:'AAPL',source:'Twelve Data',receivedAt:new Date(now).toISOString(),summary:{date:'2026-11-16'},research:{candidates:[{kind:'breakout',label:'פריצה',stage:'confirmed',scenario:{side:'long',entry:110,stop:100,target:130}}]}}]};
+ const snapshot={startedAt:new Date(now-60000).toISOString(),completedAt:new Date(now).toISOString(),nextUpdateAt:now+SCAN_PERIOD_MS,errors:[],records:[{symbol:'AAPL',source:'Twelve Data',receivedAt:new Date(now).toISOString(),summary:{date:'2026-11-16'},bars:dailyBars,interval:'1day',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,research:{candidates:[{kind:'breakout',label:'פריצה',stage:'confirmed',scenario:{side:'long',entry:110,stop:100,target:130}}]}}]};
  const key=sharedScannerKey(env);f.db.set(key+':snapshot',JSON.stringify(snapshot));
  const run=async a=>{if(a[1]!==REVIEW_COMMIT)return f.run(a);const [snapshotKey,bookKey,oldSnapshot,oldBook,next]=a.slice(3);if(f.db.get(snapshotKey)!==oldSnapshot||(f.db.get(bookKey)||'')!==oldBook)return 0;f.db.set(bookKey,next);return 1};
  const handler=createSetupsHandler({env,run,now:()=>now});return {f,owner,other,env,key,run,handler,now,snapshot};}
@@ -56,7 +57,7 @@ test('a curated draft is visible only to the owner and approval publishes the se
  const guest=await get(x,x.other);assert.equal(guest.queue,undefined);assert.deepEqual(guest.published,[]);
  const publish=await x.handler(request('setups',{id,decision:'approved',revision},x.owner.cookie));assert.equal(publish.status,200);
  const result=await get(x,x.other),published=result.published[0];
- assert.deepEqual(published,{...Object.fromEntries(Object.entries(original).filter(([key])=>key!=='status')),scenario:{side:'long',entry:112,stop:101,target:141},
+ assert.deepEqual(published,{...Object.fromEntries(Object.entries(original).filter(([key])=>!['status','atr14'].includes(key))),scenario:{side:'long',entry:112,stop:101,target:141},
   approvedAt:new Date(x.now).toISOString(),title:edits.title,analysis:edits.analysis,edited:true});
  assert.equal(published.draft,undefined);assert.equal(published.original,undefined);assert.equal(published.reviewer,undefined);
  const internal=JSON.parse(x.f.db.get(x.key+':reviews'))[id];
@@ -89,7 +90,7 @@ test('long and short draft levels are strictly ordered and provenance fields can
   assert.equal((await save(x,long.id,{...edits,...change})).status,400,JSON.stringify(change));
  }
  assert.equal((await save(x,short.id,edits)).status,400);
- const shortEdits={title:'Short sample',analysis:'Research only',entry:98.05001,stop:101,target:89};
+ const shortEdits={title:'Short sample',analysis:'Research only',entry:98.05001,stop:108,target:89};
  assert.equal((await save(x,short.id,shortEdits)).status,200);
  const state=await get(x);assert.equal(state.queue[1].scenario.side,'short');assert.equal(state.queue[1].draft.entry,98.05001);
 });
@@ -110,4 +111,21 @@ test('public projection strips internal draft and reviewer fields even if presen
  const published=(await get(x,x.other)).published[0];
  assert.equal(published.draft,undefined);assert.equal(published.reviewer,undefined);assert.equal(published.originalScenario,undefined);
  assert.equal(published.scenario.secret,undefined);
+});
+
+test('review checks the 1–2 ATR band against edited entry and never changes an already approved price',async()=>{
+ const x=setup(),{id}=(await get(x)).queue[0];
+ for(const stop of [105.01,97.99]){
+  const response=await save(x,id,{...edits,stop});
+  assert.equal(response.status,400);
+  assert.match((await response.json()).error,/ATR/);
+ }
+ const atTwo=await save(x,id,{...edits,stop:98});
+ assert.equal(atTwo.status,200);
+ const {revision}=await atTwo.json();
+ assert.equal((await x.handler(request('setups',{id,decision:'approved',revision},x.owner.cookie))).status,200);
+ x.snapshot.startedAt=new Date(x.now+1).toISOString();
+ x.snapshot.records[0].bars=dailyBars.map(b=>({...b,high:120}));
+ x.f.db.set(x.key+':snapshot',JSON.stringify(x.snapshot));
+ assert.equal((await get(x,x.other)).published[0].scenario.stop,98);
 });

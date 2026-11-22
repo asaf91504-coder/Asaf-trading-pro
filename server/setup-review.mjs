@@ -1,6 +1,8 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {sharedScannerKey,readSharedScan} from './shared-scanner.mjs';
 import {MarketError} from './market-feed.mjs';
+import {closedSetupAtr14,stopWithinSetupAtr,structureAwareStop} from './setup-atr.mjs';
+const atrError='מרחק הסטופ ממחיר הכניסה חייב להיות בין 1 ל־2 ATR יומי.';
 export function canReviewSetups(user,env){const owner=env.ASAF_SETUPS_REVIEWER_MEMBER_ID;return !!user&&/^[a-f0-9-]{36}$/.test(owner||'')&&user.id===owner}
 const PRICE_FIELDS=['entry','stop','target'];
 function ordered(s){
@@ -23,11 +25,20 @@ function publishedItem(item,approvedAt){
  return {id,symbol,pattern,stage,candleDate,source,receivedAt,scanAt,scenario:{side,entry,stop,target},approvedAt,
   ...(item.edited===true?{edited:true,...(item.title?{title:item.title}:{}),...(item.analysis?{analysis:item.analysis}:{})}:{})};
 }
-export function setupCandidates(scan){return scan.records.flatMap(r=>(r.research?.candidates||[]).filter(c=>ordered(c.scenario)).map(c=>{
- const scenario={side:c.scenario.side,entry:c.scenario.entry,stop:c.scenario.stop,target:c.scenario.target};
- const id=createHash('sha256').update(JSON.stringify([scan.startedAt,r.symbol,c.kind,scenario])).digest('hex');
- return {id,symbol:r.symbol,pattern:c.label||c.kind,stage:c.stage,scenario,candleDate:r.summary.date,source:r.source,receivedAt:r.receivedAt,scanAt:scan.completedAt};
-})).slice(0,200)}
+export function setupCandidates(scan){return scan.records.flatMap(r=>{
+ const atr14=closedSetupAtr14(r);
+ if(atr14===null)return [];
+ return (r.research?.candidates||[]).flatMap(c=>{
+  if(!ordered(c.scenario))return [];
+  const {side,entry,stop,target}=c.scenario;
+  const scenario=structureAwareStop({side,entry,stop,target},atr14);
+  if(!scenario)return [];
+  // Version the candidate identity so an old visible card cannot approve
+  // a scenario after a release changes its underlying stop.
+  const id=createHash('sha256').update(JSON.stringify(['atr14-1-2:v1',scan.startedAt,r.symbol,c.kind,scenario,atr14])).digest('hex');
+  return [{id,symbol:r.symbol,pattern:c.label||c.kind,stage:c.stage,scenario,atr14,candleDate:r.summary.date,source:r.source,receivedAt:r.receivedAt,scanAt:scan.completedAt}];
+ });
+}).slice(0,200)}
 export const REVIEW_COMMIT=`-- setup-review-cas
 if (redis.call('GET',KEYS[1]) or '')~=ARGV[1] then return 0 end
 if (redis.call('GET',KEYS[2]) or '')~=ARGV[2] then return 0 end
@@ -72,6 +83,7 @@ export async function saveSetupDraft(context,{id,edits,revision,user,env,run,now
  if(!edits||typeof edits!=='object'||Array.isArray(edits)||Object.keys(edits).length!==5||!['title','analysis',...PRICE_FIELDS].every(k=>Object.hasOwn(edits,k)))throw new MarketError('שדות הטיוטה אינם תקינים.',400);
  const scenario={side:original.scenario.side,...Object.fromEntries(PRICE_FIELDS.map(k=>[k,edits[k]]))};
  if(!ordered(scenario)||PRICE_FIELDS.some(k=>scenario[k]>1e12))throw new MarketError('בלונג הסטופ נמוך מהכניסה והיעד גבוה ממנה. בשורט הסדר הפוך. הזן רמות חיוביות שונות.',400);
+ if(!stopWithinSetupAtr(scenario,original.atr14))throw new MarketError(atrError,400);
  const draft={revision:randomUUID(),title:draftText(edits.title,80,false),analysis:draftText(edits.analysis,400,true),...Object.fromEntries(PRICE_FIELDS.map(k=>[k,scenario[k]]))};
  await writeReview(context,id,{status:'pending',at:new Date(now).toISOString(),reviewer:user.id,item:original,draft},{env,run,now});
  return {status:'pending',id,revision:draft.revision};
@@ -90,6 +102,7 @@ export async function decideSetup(context,{id,decision,revision,user,env,run,now
  // draft cannot accidentally be reapproved from a stale screen.
  const original=existing?.original||item;
  const effective=decision==='approved'&&draft?applyDraft(original,draft):item;
+ if(decision==='approved'&&!stopWithinSetupAtr(effective.scenario,item.atr14))throw new MarketError(atrError,400);
  await writeReview(context,id,{status:decision,at:new Date(now).toISOString(),reviewer:user.id,item:effective,...(draft?{draft,original}:{})},{env,run,now});
  return {status:decision,id};
 }

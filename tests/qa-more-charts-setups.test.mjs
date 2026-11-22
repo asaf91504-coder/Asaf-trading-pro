@@ -83,7 +83,8 @@ same('ordinary viewer does not see moderation counts',()=>{const x=publicSetup({
 // Approved setups pipeline with trusted synthetic scan, never a live write.
 const now=Date.parse('2026-09-15T12:00:00Z'),time=(delta=0)=>new Date(now+delta).toISOString();
 const item=(kind,scenario={side:'long',entry:10,stop:9,target:15})=>({kind,stage:'confirmed',scenario});
-const scan=(candidates,extra={})=>({startedAt:time(-1000),completedAt:time(),nextUpdateAt:now+60_000,records:[{symbol:'AAPL',summary:{date:'2026-09-14'},receivedAt:time(),source:'synthetic',research:{candidates}}],...extra});
+const mockDaily=Array.from({length:15},(_,i)=>({date:new Date(Date.UTC(2026,7,i+31)).toISOString().slice(0,10),high:10.5,low:9.5,close:10}));
+const scan=(candidates,extra={})=>({startedAt:time(-1000),completedAt:time(),nextUpdateAt:now+60_000,records:[{symbol:'AAPL',summary:{date:'2026-09-14'},bars:mockDaily,interval:'1day',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,receivedAt:time(),source:'synthetic',research:{candidates}}],...extra});
 const base=scan([item('reference')]), accepted=setupCandidates(base)[0];
 const context=(book={},extra={})=>({scan:base,key:'fixture',snapshot:'{}',raw:'',book,candidates:[accepted],...extra});
 same('approval age at exactly 24h expires',()=>visibleSetups(context({id:{status:'approved',at:time(-86390000),item:{...accepted,scanAt:time(-86400000)}}}),false,now).published,[]);
