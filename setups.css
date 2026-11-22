@@ -2,3 +2,14 @@
 
 /* Allow long translated controls to wrap without squeezing the mobile header. */
 header{flex-wrap:wrap;gap:12px} .card{min-width:0;overflow-wrap:anywhere}
+
+.setup-editor{display:grid;gap:12px;margin-block:14px}
+.setup-editor label{display:grid;gap:6px;min-width:0}
+.setup-editor input,.setup-editor textarea{width:100%;min-width:0;min-height:44px;padding:9px 10px;background:#0b1728;border:1px solid #426078;border-radius:8px;color:#eef5ff;font:inherit;font-size:max(16px,1em)}
+.setup-editor textarea{min-height:90px;resize:vertical}
+.setup-editor input:focus-visible,.setup-editor textarea:focus-visible,.setup-original summary:focus-visible{outline:3px solid #5eead4;outline-offset:2px}
+.setup-editor-levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.setup-annotation{overflow-wrap:anywhere;white-space:pre-wrap}
+.setup-original{margin-block:12px;color:#a9b9d1}
+.setup-original summary{cursor:pointer;padding-block:10px}
+@media(max-width:540px){.setup-editor-levels{grid-template-columns:1fr}.setup-editor .actions button{min-height:44px}}
