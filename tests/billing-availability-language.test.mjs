@@ -40,7 +40,8 @@ test('trial offer and exhausted-credit UI respect localized policy and prior gra
    for(const source of [terms,CREDIT_PLANS_NOTICE,copy]) assert.ok(Object.hasOwn(catalog,source),lang+': missing key');
   }
   assert.match(t(terms),/50/,lang);
-  assert.equal(t(terms).match(/55/g)?.length,1,lang+': $55 Starter must be the only remaining 55 in terms');
+  for(const amount of [22,30,46,145])assert.ok(t(terms).includes(String(amount)),lang);
+  assert.doesNotMatch(t(terms),/\b(?:55|75|115|359)\b/,lang+': terms still advertise old prices');
   assert.doesNotMatch(t(CREDIT_PLANS_NOTICE),/\b(?:30|50|55|100)\b/,lang+': generic dialog must not imply a personal balance');
   for(const limit of [30,50,55,100]){
    const localized=t(limit+' הקרדיטים החינמיים נוצלו. הם אינם מתחדשים. אפשר לשדרג למנוי.');
