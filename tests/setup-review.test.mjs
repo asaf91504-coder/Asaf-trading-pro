@@ -42,3 +42,72 @@ test('personal trial never exposes setups to other customers even if approved',a
  assert.equal((await h(request('setups',{id:body.queue[0].id,decision:'approved'},x.owner.cookie))).status,200);
  assert.equal((await h(request('setups',null,x.other.cookie))).status,403);
 });
+
+const edits={title:'כותרת אישית',analysis:'<img src=x onerror=alert(1)>\nהתרחיש עדיין להמחשה.',entry:112,stop:101,target:141};
+const get=async(x,user=x.owner)=>await(await x.handler(request('setups',null,user.cookie))).json();
+const save=async(x,id,changes=edits,revision=null,user=x.owner)=>x.handler(request('setups',{id,action:'save-draft',edits:changes,revision},user.cookie));
+test('a curated draft is visible only to the owner and approval publishes the selected values with original provenance',async()=>{
+ const x=setup(),[original]=(await get(x)).queue,{id}=original;
+ assert.equal((await save(x,id,edits,null,x.other)).status,403);
+ const response=await save(x,id);assert.equal(response.status,200);
+ const {revision}=await response.json();assert.match(revision,/^[a-f0-9-]{36}$/);
+ const pending=await get(x);assert.equal(pending.queue[0].status,'pending');assert.equal(pending.queue[0].draft.analysis,edits.analysis);
+ assert.deepEqual(pending.queue[0].scenario,original.scenario);
+ const guest=await get(x,x.other);assert.equal(guest.queue,undefined);assert.deepEqual(guest.published,[]);
+ const publish=await x.handler(request('setups',{id,decision:'approved',revision},x.owner.cookie));assert.equal(publish.status,200);
+ const result=await get(x,x.other),published=result.published[0];
+ assert.deepEqual(published,{...Object.fromEntries(Object.entries(original).filter(([key])=>key!=='status')),scenario:{side:'long',entry:112,stop:101,target:141},
+  approvedAt:new Date(x.now).toISOString(),title:edits.title,analysis:edits.analysis,edited:true});
+ assert.equal(published.draft,undefined);assert.equal(published.original,undefined);assert.equal(published.reviewer,undefined);
+ const internal=JSON.parse(x.f.db.get(x.key+':reviews'))[id];
+ assert.deepEqual(internal.original.scenario,original.scenario);
+ assert.deepEqual((await get(x)).queue[0].originalScenario,original.scenario);
+ assert.equal((await save(x,id,{...edits,entry:113},revision)).status,409);
+ assert.deepEqual((await get(x,x.other)).published,result.published);
+});
+test('drafts and stale owner tabs cannot accidentally publish or overwrite a different revision',async()=>{
+ const x=setup(),{id}=(await get(x)).queue[0];
+ const revision=(await(await save(x,id)).json()).revision;
+ assert.equal((await save(x,id,{...edits,entry:113})).status,409);
+ const next=(await(await save(x,id,{...edits,entry:113},revision)).json()).revision;
+ assert.notEqual(next,revision);
+ assert.equal((await x.handler(request('setups',{id,decision:'approved',revision},x.owner.cookie))).status,409);
+ assert.equal((await x.handler(request('setups',{id,decision:'approved'},x.owner.cookie))).status,409);
+ assert.equal((await x.handler(request('setups',{id,decision:'approved',revision:next,edits},x.owner.cookie))).status,400);
+ assert.equal((await x.handler(request('setups',{id,action:'save-draft',decision:'approved',revision:next,edits},x.owner.cookie))).status,400);
+ assert.deepEqual((await get(x,x.other)).published,[]);
+ const conflicted=createSetupsHandler({env:x.env,run:async a=>a[1]===REVIEW_COMMIT?0:x.run(a),now:()=>x.now});
+ assert.equal((await conflicted(request('setups',{id,action:'save-draft',revision:next,edits},x.owner.cookie))).status,409);
+ assert.equal((await get(x)).queue[0].draft.entry,113);
+});
+test('long and short draft levels are strictly ordered and provenance fields cannot be changed',async()=>{
+ const x=setup();
+ x.snapshot.records[0].research.candidates.push({kind:'below',label:'שבירה',stage:'crossed',scenario:{side:'short',entry:100,stop:110,target:89}});
+ x.f.db.set(x.key+':snapshot',JSON.stringify(x.snapshot));
+ const [long,short]=(await get(x)).queue;
+ for(const change of [{entry:100,stop:101},{entry:141},{stop:0},{target:Infinity},{entry:'112'}, {side:'short'}, {source:'other'}, {symbol:'MSFT'}, {title:'a\nb'}, {title:'א'.repeat(81)}, {analysis:'測'.repeat(401)}, {analysis:'note\u202E'}]){
+  assert.equal((await save(x,long.id,{...edits,...change})).status,400,JSON.stringify(change));
+ }
+ assert.equal((await save(x,short.id,edits)).status,400);
+ const shortEdits={title:'Short sample',analysis:'Research only',entry:98.05001,stop:101,target:89};
+ assert.equal((await save(x,short.id,shortEdits)).status,200);
+ const state=await get(x);assert.equal(state.queue[1].scenario.side,'short');assert.equal(state.queue[1].draft.entry,98.05001);
+});
+test('even a valid draft cannot outlive its scan or appear to a regular viewer after a scan roll',async()=>{
+ const x=setup(),old=(await get(x)).queue[0],revision=(await(await save(x,old.id)).json()).revision;
+ const stale=createSetupsHandler({env:x.env,run:x.run,now:()=>x.now+SCAN_PERIOD_MS});
+ assert.equal((await stale(request('setups',{id:old.id,action:'save-draft',edits,revision},x.owner.cookie))).status,409);
+ x.snapshot.startedAt=new Date(x.now+100).toISOString();x.snapshot.completedAt=new Date(x.now+200).toISOString();
+ x.f.db.set(x.key+':snapshot',JSON.stringify(x.snapshot));
+ x.handler=createSetupsHandler({env:x.env,run:x.run,now:()=>x.now+300});
+ const next=(await get(x)).queue[0];assert.notEqual(next.id,old.id);assert.equal(next.draft,undefined);
+ assert.equal((await x.handler(request('setups',{id:old.id,decision:'approved',revision},x.owner.cookie))).status,409);
+ assert.deepEqual((await get(x,x.other)).published,[]);
+});
+test('public projection strips internal draft and reviewer fields even if present in the stored item',async()=>{
+ const x=setup(),[item]=(await get(x)).queue;
+ x.f.db.set(x.key+':reviews',JSON.stringify({[item.id]:{status:'approved',at:x.snapshot.completedAt,item:{...item,draft:edits,reviewer:'private',originalScenario:{private:true},scenario:{...item.scenario,secret:'private'}}}}));
+ const published=(await get(x,x.other)).published[0];
+ assert.equal(published.draft,undefined);assert.equal(published.reviewer,undefined);assert.equal(published.originalScenario,undefined);
+ assert.equal(published.scenario.secret,undefined);
+});

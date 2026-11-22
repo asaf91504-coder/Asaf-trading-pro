@@ -2,7 +2,7 @@ import {currentUser} from '../../server/auth-core.mjs';
 import {subscriptionGuard} from '../../server/billing.mjs';
 import {command} from '../../server/storage.mjs';
 import {MarketError} from '../../server/market-feed.mjs';
-import {canReviewSetups,setupReviewContext,visibleSetups,decideSetup} from '../../server/setup-review.mjs';
+import {canReviewSetups,setupReviewContext,visibleSetups,decideSetup,saveSetupDraft} from '../../server/setup-review.mjs';
 const reply=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 export function createSetupsHandler({env=process.env,run=command,now=()=>Date.now()}={}){return async request=>{
  try{
@@ -13,10 +13,17 @@ export function createSetupsHandler({env=process.env,run=command,now=()=>Date.no
    if(!canReviewSetups(user,env))return reply({error:'נדרשת הרשאת אישור של אסף.'},403);
    if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
    if(!(request.headers.get('content-type')||'').includes('application/json'))return reply({error:'JSON only'},415);
-   const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large'},413);
+   const raw=await request.text();if(Buffer.byteLength(raw,'utf8')>4096)return reply({error:'Request too large'},413);
    let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
    const context=await setupReviewContext({env,run,now:now(),memberId:user.id});
-   return reply(await decideSetup(context,{id:body?.id,decision:body?.decision,user,env,run,now:now()}));
+   if(typeof body?.id!=='string'||!/^[a-f0-9]{64}$/.test(body.id))return reply({error:'בחירה לא תקינה.'},400);
+   const options={id:body.id,revision:body.revision,user,env,run,now:now()};
+   if(body.action==='save-draft'){
+    if(Object.hasOwn(body,'decision'))return reply({error:'שמירת טיוטה ואישור לפרסום הן פעולות נפרדות.'},400);
+    return reply(await saveSetupDraft(context,{...options,edits:body.edits}));
+   }
+   if(body.action!==undefined||Object.hasOwn(body,'edits'))return reply({error:'בחירה לא תקינה.'},400);
+   return reply(await decideSetup(context,{...options,decision:body.decision}));
   }
   const context=await setupReviewContext({env,run,now:now(),memberId:user.id});
   return reply(visibleSetups(context,canReviewSetups(user,env),now()));
