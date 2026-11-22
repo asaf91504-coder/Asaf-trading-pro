@@ -43,3 +43,9 @@ An existing scheduled task checks for a verified trial end date and warns three 
 ## Provider beta preparation — 2026-11-08
 
 See `PROVIDER-BETA.md` for current scope and activation requirements. It supersedes the earlier provider/scanner implementation notes: prior-session daily data, a gated Twelve Data statistics connector, a $1B market-cap filter and weighted shared credit limits are implemented. Real subscription acceptance, real AI/provider results and iPhone/two-account tests are still pending. No subscription was activated or credentials/configuration changed.
+
+### Google sign-in on iOS/iPadOS
+
+- Keep `ASAF_GOOGLE_IOS_REDIRECT_ENABLED` unset until the existing Google web client lists the exact authorized redirect URI `https://asafpro.com/.netlify/functions/google-redirect` (Google Cloud / Google Auth Platform / Clients). Keep every existing authorized origin and URI. No client secret is needed for this GIS flow. This capability is not advertised on alternate domains or previews.
+- When the callback is deployed, enable the flag only on the canonical site and verify the capability response. Use fresh Safari and iOS Chrome tabs on physical hardware; cover main and billing in both logged-out and returning account flows, canceled chooser and retry, account selection, expired flow, and reopen/session persistence. Do not place a payment. Confirm desktop still uses the popup. If the callback fails, remove the flag and confirm the existing popup path remains available.
+- The callback validates Google's double-submit CSRF token, emits a non-cacheable restricted same-site bridge, and uses the existing same-origin authentication endpoint and Strict cookies for nonce, token and account verification. Do not relax cookie settings or turn the existing JSON endpoint into a cross-origin form target to enable redirect.

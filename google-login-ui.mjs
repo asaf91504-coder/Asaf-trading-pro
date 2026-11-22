@@ -1,7 +1,22 @@
 import {authState,refreshAuth} from './auth-ui.mjs';
+import {forgetGoogleAttempt,googleLoginAttemptMs,oauthGoogleOptions,usesIosGoogleRedirect} from './google-login-flow.mjs';
 import {welcomeMessage} from './welcome-message.mjs';
 const $=id=>document.getElementById(id),button=$('googlePrepare'),status=$('googleLoginStatus'),slot=$('googleLoginButton');
-let scriptPromise=null;
+let scriptPromise=null,redirectEnabled=false,active=null;
+const authKey=()=>authState.authenticated?'member:'+(authState.memberId||''):'signed-out';
+const expired=attempt=>Date.now()-attempt.startedAt>=googleLoginAttemptMs;
+function clearAttempt(attempt=active){
+ if(!attempt||active!==attempt)return;
+ active=null;
+ if(attempt.timer!=null)window.clearTimeout(attempt.timer);
+ forgetGoogleAttempt(window,attempt.nonce);
+ slot.replaceChildren();
+ button.disabled=false;
+}
+const retryMessage='הכניסה פגה. לחץ שוב על כניסה עם Google.';
+function expireAttempt(attempt){
+ if(active===attempt){clearAttempt(attempt);status.textContent=retryMessage}
+}
 function loadGoogle(){
  if(window.google?.accounts?.id)return Promise.resolve();
  if(!scriptPromise)scriptPromise=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://accounts.google.com/gsi/client';script.async=true;script.onload=()=>{if(window.google?.accounts?.id)resolve();else{scriptPromise=null;reject(Error('Google לא נטען'))}};script.onerror=()=>{scriptPromise=null;reject(Error('לא ניתן לטעון את Google כרגע. נסה שוב.'))};document.head.append(script)});
@@ -9,20 +24,47 @@ function loadGoogle(){
 }
 async function post(body){const r=await fetch('/.netlify/functions/google-auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});const data=await r.json();if(!r.ok)throw Error(data.error||'הכניסה נכשלה');return data}
 // A failed capability check must not trap the user; begin still enforces server configuration.
-async function setup(){try{const r=await fetch('/.netlify/functions/google-auth',{cache:'no-store',signal:AbortSignal.timeout(6000)});if(!r.ok)throw Error();const c=await r.json();button.disabled=!c.enabled;status.textContent=c.enabled?(c.signupEnabled?'אפשר להיכנס או לפתוח חשבון עם Google.':'אפשר להיכנס עם Google לחשבון מקושר. הרשמה חדשה טרם נפתחה.'):'כניסה עם Google בהכנה — מחכים להשלמת הגדרת החיבור.'}catch{button.disabled=false;status.textContent='לא ניתן לבדוק את חיבור Google כרגע.'}}
-button.onclick=async()=>{button.disabled=true;slot.replaceChildren();status.classList.remove('welcome-message');status.removeAttribute('dir');try{
- const linking=authState.authenticated;const begin=await post({action:'begin'});await loadGoogle();
- window.google.accounts.id.initialize({client_id:begin.clientId,nonce:begin.nonce,auto_select:false,callback:async result=>{
-  slot.replaceChildren();status.textContent='מאמת כניסה…';try{const signed=await post({action:'signin',nonce:begin.nonce,credential:result.credential});await refreshAuth({fresh:true});if(!authState.authenticated)throw Error('לא ניתן לאמת כניסה כרגע. נסה שוב.');status.textContent=welcomeMessage(signed.displayName,signed.created===true);status.classList.add('welcome-message');status.dir='auto';await refreshAccount()}catch(e){status.textContent=e.message}finally{button.disabled=false}
- }});
- window.google.accounts.id.renderButton(slot,{theme:'outline',size:'large',text:linking?'continue_with':'signin_with',locale:document.documentElement?.lang||'he',width:260});status.textContent=linking?'בחר את חשבון Google עם אותו אימייל כדי לקשר אותו לחשבון הקיים.':'לחץ על הכפתור של Google כדי לבחור חשבון. הבקשה תקפה ל־5 דקות.';
- button.disabled=false;
- }catch(e){status.textContent=e.message;button.disabled=false}};
+async function setup(){try{const r=await fetch('/.netlify/functions/google-auth',{cache:'no-store',signal:AbortSignal.timeout(6000)});if(!r.ok)throw Error();const c=await r.json();redirectEnabled=c.redirectEnabled===true;button.disabled=!c.enabled;status.textContent=c.enabled?(c.signupEnabled?'אפשר להיכנס או לפתוח חשבון עם Google.':'אפשר להיכנס עם Google לחשבון מקושר. הרשמה חדשה טרם נפתחה.'):'כניסה עם Google בהכנה — מחכים להשלמת הגדרת החיבור.'}catch{button.disabled=false;status.textContent='לא ניתן לבדוק את חיבור Google כרגע.'}}
+button.onclick=async()=>{
+ clearAttempt();
+ const attempt={auth:authKey(),startedAt:Date.now(),nonce:null,timer:null};
+ active=attempt;
+ button.disabled=true;slot.replaceChildren();status.classList.remove('welcome-message');status.removeAttribute('dir');
+ try{
+  const linking=authState.authenticated,begin=await post({action:'begin'});
+  if(active!==attempt)return;
+  attempt.nonce=begin.nonce;await loadGoogle();
+  if(active!==attempt)return;
+  if(expired(attempt)){expireAttempt(attempt);return}
+  const redirect=redirectEnabled&&usesIosGoogleRedirect(window.navigator);
+  const options=oauthGoogleOptions(window,{redirect,nonce:begin.nonce,returnTo:'/',startedAt:attempt.startedAt});
+  if(!redirect)options.callback=async result=>{
+   if(active!==attempt)return;
+   if(expired(attempt)){expireAttempt(attempt);return}
+   clearAttempt(attempt);button.disabled=true;status.textContent='מאמת כניסה…';
+   try{const signed=await post({action:'signin',nonce:begin.nonce,credential:result.credential});await refreshAuth({fresh:true});if(!authState.authenticated)throw Error('לא ניתן לאמת כניסה כרגע. נסה שוב.');status.textContent=welcomeMessage(signed.displayName,signed.created===true);status.classList.add('welcome-message');status.dir='auto';await refreshAccount()}catch(e){status.textContent=e.message}finally{button.disabled=false}
+  };
+  window.google.accounts.id.initialize({client_id:begin.clientId,nonce:begin.nonce,auto_select:false,...options});
+  window.google.accounts.id.renderButton(slot,{theme:'outline',size:'large',text:linking?'continue_with':'signin_with',locale:document.documentElement?.lang||'he',width:260});
+  status.textContent=linking?'בחר את חשבון Google עם אותו אימייל כדי לקשר אותו לחשבון הקיים.':'לחץ על הכפתור של Google כדי לבחור חשבון. הבקשה תקפה ל־5 דקות.';
+  attempt.timer=window.setTimeout?.(()=>expireAttempt(attempt),Math.max(0,googleLoginAttemptMs-(Date.now()-attempt.startedAt)));
+  button.disabled=false;
+ }catch(e){if(active===attempt){clearAttempt(attempt);status.textContent=e.message}}
+};
 
 async function accountRequest(body){const r=await fetch('/.netlify/functions/account',{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{}),cache:'no-store',signal:AbortSignal.timeout(10000)});const data=await r.json();if(!r.ok)throw Error(data.error||'הפעולה נכשלה');return data}
 async function refreshAccount(){const host=$('accountActions');host.hidden=!authState.authenticated;if(!authState.authenticated){$('adminActions').hidden=true;button.hidden=false;return}try{const info=await accountRequest();$('adminActions').hidden=!info.admin;button.hidden=info.googleLinked===true;$('accountDetails').textContent=info.googleLinked?'Google מקושר לחשבון. אפשר להיכנס שוב באמצעות Google ללא סיסמה מקומית.':'אפשר לקשר Google לאחר כניסה עם הסיסמה הקיימת.'}catch(e){$('accountDetails').textContent=e.message}}
 $('accountLogoutAll').onclick=async()=>{if(!window.confirm('לנתק את כל הכניסות הפעילות לחשבון?'))return;try{await accountRequest({action:'logout-all'});await refreshAuth({fresh:true});$('accountActionStatus').textContent='כל הכניסות לחשבון נותקו.'}catch(e){$('accountActionStatus').textContent=e.message}};
 $('accountDelete').onclick=async()=>{if(!window.confirm('למחוק את כל העותקים שבחשבון — מעקב, יומן, מחקר, העדפות, קווים, שיחות שמורות והתראות — ולסגור את החשבון? לא ניתן לבטל פעולה זו. הנתונים המקומיים במכשיר יישארו.'))return;try{await accountRequest({action:'delete',confirmation:'DELETE'});await refreshAuth({fresh:true});$('accountActionStatus').textContent='החשבון נסגר והעותקים האישיים שבשרת נמחקו. העותק המקומי לא שונה.'}catch(e){$('accountActionStatus').textContent=e.message}};
 $('adminForm').onsubmit=async e=>{e.preventDefault();const action=$('adminAction').value;if(action!=='status'&&!window.confirm('לעדכן את הגישה למשתמש שבחרת? הכניסות הקיימות שלו יבוטלו.'))return;try{const d=await accountRequest({action:'admin-'+action,email:$('adminEmail').value});$('adminStatus').textContent=d.exists?'חשבון '+d.memberId+' · '+(d.enabled?'פעיל':'חסום'):'לא נמצא חשבון.'}catch(err){$('adminStatus').textContent=err.message}};
-window.addEventListener('asaf:auth',()=>{slot.replaceChildren();if(!authState.authenticated&&status.classList.contains('welcome-message')){status.textContent='';status.classList.remove('welcome-message');status.removeAttribute('dir')}button.textContent=authState.authenticated?'קשר Google לחשבון':'כניסה / הרשמה עם Google';refreshAccount()});
+window.addEventListener('asaf:auth',()=>{
+ if(active&&(active.auth!==authKey()||(authState.checkAvailable===true&&!authState.enabled))){
+  clearAttempt();status.textContent='מצב הכניסה השתנה. אפשר להתחיל שוב.';
+ }else if(active&&expired(active))expireAttempt(active);
+ if(!authState.authenticated&&status.classList.contains('welcome-message')){
+  status.textContent='';status.classList.remove('welcome-message');status.removeAttribute('dir');
+ }
+ button.textContent=authState.authenticated?'קשר Google לחשבון':'כניסה / הרשמה עם Google';
+ void refreshAccount();
+});
 setup();refreshAccount();
