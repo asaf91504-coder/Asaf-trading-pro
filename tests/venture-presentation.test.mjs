@@ -13,7 +13,7 @@ import {fixture,seed,env as authEnv,request} from './identity-fixture.mjs';
 const now=Date.parse('2026-11-17T14:00:00Z');
 const bars=Array.from({length:200},(_,i)=>({date:new Date(now-(201-i)*86400000).toISOString().slice(0,10),open:100+i,high:103+i,low:99+i,close:102+i,volume:10000+i}));
 const env={...authEnv,ASAF_MARKET_ENABLED:'true',ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED:'true',ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED:'true',ASAF_MARKET_AI_LICENSE_CONFIRMED:'true',TWELVE_DATA_API_KEY:'mock-private-key',ASAF_MARKET_DELAY_MINUTES:'0',ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL'};
-const snapshot={symbol:'AAPL',source:'Twelve Data',interval:'1day',receivedAt:new Date(now).toISOString(),latestBarTime:bars.at(-1).date,barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,bars};
+const snapshot={symbol:'AAPL',source:'Twelve Data',interval:'1day',receivedAt:new Date(now).toISOString(),latestBarTime:bars.at(-1).date,barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,volumeBasis:{feed:'twelve-data:us-equities',session:'regular',coverage:'partial',basis:'qa-venues',adjustment:'unadjusted',verifiedFrom:'2025-01-01'},bars};
 function seeded(){const state=fixture(),user=seed(state);state.db.set(marketSnapshotKey('AAPL','1day',env),JSON.stringify(snapshot));return {state,user}}
 const rawFields=new Set(['bars','open','high','low','close','volume','summary','fundamentals','support20','resistance20','trigger','firstHigh','secondHigh','firstLow','secondLow','headPrice']);
 function noRawFields(value){if(!value||typeof value!=='object')return;for(const [key,item] of Object.entries(value)){assert.equal(rawFields.has(key),false,'Forbidden raw field: '+key);noRawFields(item)}}
@@ -31,7 +31,11 @@ test('authenticated image and AI use the same server snapshot and repeated annot
 test('scanner applies price, MA, EOD volume and cap filters on server and sends derived-only records',async()=>{
  const {state,user}=seeded(),handler=createScanMarketHandler({env,run:state.run,now:()=>now,fetcher:async()=>{throw Error('No provider call')}});
  const scan=async filters=>{const response=await handler(request('scan-market',{symbols:['AAPL'],filters,cachedOnly:true},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);return body.records[0]};
- const match=await scan({minPrice:5,minMarketCap:0,minVolume:0,above20:true,risingVolume:true});assert.equal(match.screen.matches,true);assert.equal(match.presentation,'derived-only');assert.ok(match.metrics.relativeVolume>1);
+ const filters={minPrice:5,minMarketCap:0,minVolume:0,above20:true,risingVolume:true};
+ const partial=await scan(filters);assert.equal(partial.screen.matches,false);assert.equal(partial.presentation,'derived-only');assert.ok(partial.metrics.relativeVolume>1);assert.equal(partial.metrics.volumeCoverage,'partial');assert.match(partial.screen.reasons.join(' '),/מחזור חלקי/);
+ const pricesOnly=await scan({...filters,risingVolume:false});assert.equal(pricesOnly.screen.matches,true);
+ state.db.set(marketSnapshotKey('AAPL','1day',env),JSON.stringify({...snapshot,volumeBasis:{...snapshot.volumeBasis,coverage:'consolidated',basis:'qa-consolidated'}}));
+ const match=await scan(filters);assert.equal(match.screen.matches,true);assert.equal(match.metrics.relativeVolume,partial.metrics.relativeVolume);
  const reject=await scan({minPrice:1000,minMarketCap:1e9,minVolume:0});assert.equal(reject.screen.matches,false);assert.match(reject.screen.reasons.join(' '),/מחיר|שווי שוק/);assert.equal(reject.marketCapStatus,'unavailable');
 });
 test('projection strips raw pivot prices and even unexpected future fields',()=>{

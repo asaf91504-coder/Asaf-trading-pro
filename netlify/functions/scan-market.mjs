@@ -33,7 +33,7 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
    let fundamentals;
    try{fundamentals=await readMarketFundamentals({selected:symbol,env,run,fetcher,now:scanTime,cachedOnly:body.cachedOnly===true})}
    catch(e){fundamentals={status:'unavailable',reason:e instanceof MarketError?e.message:'לא ניתן לאמת שווי שוק כרגע.'}}
-   const record={...scanBars(symbol,snapshot.bars),source:snapshot.source,interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,exchangeTimezone:snapshot.exchangeTimezone,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,fundamentals};
+   const record={...scanBars(symbol,snapshot.bars,snapshot),source:snapshot.source,interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,exchangeTimezone:snapshot.exchangeTimezone,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,fundamentals};
    return {record:ventureScanRecord(record,screenResult(record,filters))};
   }catch(e){return {symbol,error:e instanceof MarketError?e.message:'הנתונים אינם זמינים כרגע'}}}));
   return reply({records:results.filter(x=>x.record).map(x=>x.record),errors:results.filter(x=>x.error),scope:'מניות שנבחרו בלבד; נרות יומיים קודמים. שווי שוק חסר אינו עובר את מסנן שווי השוק. אין סריקה של כלל השוק.'});

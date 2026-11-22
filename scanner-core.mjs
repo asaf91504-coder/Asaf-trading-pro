@@ -1,3 +1,4 @@
+import {comparableDailyVolume,partialVolumeReason,volumeUnavailableReason} from './comparable-volume.mjs';
 import {marketCapAvailable} from './market-quality.mjs';
 import {patternResearch,patternLabels} from './pattern-research.mjs';
 import {parseCSV,analyze} from './analyzer.mjs';
@@ -12,9 +13,11 @@ export function scanFile(name,text){
  if(!symbol)throw Error('אין סימול בקובץ. הוסף עמודת Symbol או שם קובץ כמו AAPL.csv');
  return {...scanBars(symbol,bars),symbolFrom:tickers.length?'column':'filename'};
 }
-export function scanBars(symbol,bars){
- const indicators=indicatorSnapshot(bars);
- return {symbol,bars,research:patternResearch(bars),summary:{...analyze(bars),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram,stochasticK:indicators.stochastic1433.k,stochasticD:indicators.stochastic1433.d,obv:indicators.obv,obvPrevious:indicators.obvPrevious,adx14:indicators.dmi14.adx,plusDI14:indicators.dmi14.plusDI,minusDI14:indicators.dmi14.minusDI,supertrend:indicators.supertrend103.value,supertrendDirection:indicators.supertrend103.direction},symbolFrom:'provider'};
+export function scanBars(symbol,bars,providerMeta){
+ const volumeComparison=providerMeta===undefined?null:comparableDailyVolume(bars,providerMeta);
+ const volumesSafe=volumeComparison===null||comparableDailyVolume(bars,providerMeta,{verifyWholeSeries:true}).status==='verified';
+ const indicators=indicatorSnapshot(volumesSafe?bars:bars.map(b=>({...b,volume:null})));
+ return {symbol,bars,volumeComparison,research:patternResearch(bars),summary:{...analyze(bars),...(volumeComparison?{volumeRatio:volumeComparison.ratio}:{}),rsi14:indicators.rsi14,macd:indicators.macd12269.line,macdSignal:indicators.macd12269.signal,macdHistogram:indicators.macd12269.histogram,stochasticK:indicators.stochastic1433.k,stochasticD:indicators.stochastic1433.d,obv:indicators.obv,obvPrevious:indicators.obvPrevious,adx14:indicators.dmi14.adx,plusDI14:indicators.dmi14.plusDI,minusDI14:indicators.dmi14.minusDI,supertrend:indicators.supertrend103.value,supertrendDirection:indicators.supertrend103.direction},symbolFrom:'provider'};
 }
 export function screenResult(record,{minPrice=5,minMarketCap=0,minVolume=1,above20=true,minATR=0,breakout20=false,risingVolume=false,rsiEnabled=false,minRSI=0,maxRSI=100,macdAboveSignal=false,macdPositive=false,stochasticAboveSignal=false,obvRising=false,adxEnabled=false,minADX=25,diDirection='any',supertrendDirection='any',pattern='any',scenarioSide='any',crossedOnly=false,minMeasuredMove=0,minScenarioRR=0}={}){
  const a=record.summary,reasons=[];
@@ -22,7 +25,14 @@ export function screenResult(record,{minPrice=5,minMarketCap=0,minVolume=1,above
  else if(minMarketCap>0){if(!marketCapAvailable(record))reasons.push('שווי שוק לא מאומת או פג תוקף');else if(record.fundamentals.marketCap<minMarketCap)reasons.push('שווי שוק מתחת ל־$'+minMarketCap.toLocaleString('en-US'))}
  if(a.close<=minPrice)reasons.push('מחיר אינו מעל '+minPrice);
  if(above20&&!a.aboveMA20)reasons.push('מתחת ל-MA20 או שווה לו');
- if(a.volumeRatio===null)reasons.push('מחזור חסר');
+ const volumeUnverifiable=record.volumeComparison?.status==='unverifiable';
+ const volumePartial=record.volumeComparison?.coverage==='partial';
+ const volumeRequired=minVolume>0||risingVolume||obvRising;
+ const marketVolumeUnconfirmed=volumeUnverifiable||volumePartial;
+ // A scoped ratio can be displayed for a consistent partial feed, but
+ // selecting any volume rule still requires confirmed market-wide evidence.
+ if(marketVolumeUnconfirmed){if(volumeRequired)reasons.push(volumePartial?partialVolumeReason:volumeUnavailableReason);}
+ else if(a.volumeRatio===null)reasons.push('מחזור חסר');
  else if(a.volumeRatio<minVolume)reasons.push('מחזור יחסי נמוך');
  if(minATR>0&&(a.atrPercent==null||a.atrPercent<minATR))reasons.push('ATR% מתחת לסף או חסר');
  if(breakout20&&!a.breakout20)reasons.push('אין סגירה מעל שיא 20 הימים הקודמים');
@@ -30,7 +40,7 @@ export function screenResult(record,{minPrice=5,minMarketCap=0,minVolume=1,above
  if(macdAboveSignal){if(!Number.isFinite(a.macd)||!Number.isFinite(a.macdSignal))reasons.push('אין מספיק נרות לקו איתות MACD');else if(a.macd<=a.macdSignal)reasons.push('MACD אינו מעל קו האיתות')}
  if(macdPositive){if(!Number.isFinite(a.macd))reasons.push('אין מספיק נרות ל-MACD');else if(a.macd<=0)reasons.push('MACD אינו חיובי')}
  if(stochasticAboveSignal){if(!Number.isFinite(a.stochasticK)||!Number.isFinite(a.stochasticD))reasons.push('אין Stochastic מוגדר: היסטוריה או טווח מחיר חסרים');else if(a.stochasticK<=a.stochasticD)reasons.push('Stochastic %K אינו מעל %D')}
- if(obvRising){if(!Number.isFinite(a.obv)||!Number.isFinite(a.obvPrevious))reasons.push('אין רצף מחזורים מלא לחישוב OBV');else if(a.obv<=a.obvPrevious)reasons.push('OBV אינו עולה בנר האחרון')}
+ if(obvRising&&!marketVolumeUnconfirmed){if(!Number.isFinite(a.obv)||!Number.isFinite(a.obvPrevious))reasons.push('אין רצף מחזורים מלא לחישוב OBV');else if(a.obv<=a.obvPrevious)reasons.push('OBV אינו עולה בנר האחרון')}
  if(adxEnabled){if(!Number.isFinite(minADX)||minADX<0||minADX>100)reasons.push('סף ADX אינו תקין');else if(!Number.isFinite(a.adx14))reasons.push('אין מספיק נרות תקינים ל-ADX14 (נדרשים 28)');else if(a.adx14<minADX)reasons.push('ADX14 מתחת לסף שנבחר')}
  if(!['any','up','down'].includes(diDirection))reasons.push('כיוון DMI אינו תקין');
  else if(diDirection!=='any'){if(!Number.isFinite(a.plusDI14)||!Number.isFinite(a.minusDI14))reasons.push('אין מספיק נרות ל-DMI14');else if(diDirection==='up'?a.plusDI14<=a.minusDI14:a.minusDI14<=a.plusDI14)reasons.push('כיוון DMI אינו מתאים או שהקווים שווים')}
@@ -39,7 +49,7 @@ export function screenResult(record,{minPrice=5,minMarketCap=0,minVolume=1,above
  if(risingVolume){
   const last=record.bars.at(-1),prior=record.bars.at(-2);
   if(!prior||last.close<=prior.close)reasons.push('הסגירה אינה מעל הסגירה הקודמת');
-  if(a.volumeRatio===null||a.volumeRatio<=1)reasons.push('אין מחזור מעל ממוצע 20 הימים הקודמים');
+  if(!marketVolumeUnconfirmed&&(record.volumeComparison?record.volumeComparison.aboveAverage!==true:a.volumeRatio===null||a.volumeRatio<=1))reasons.push('אין מחזור מעל ממוצע 20 הימים הקודמים');
  }
  if(!['any','long','short'].includes(scenarioSide))reasons.push('כיוון תרחיש אינו תקין');
  if(pattern!=='any'&&!Object.hasOwn(patternLabels,pattern))reasons.push('סוג תבנית אינו תקין');
