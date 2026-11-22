@@ -6,7 +6,7 @@ export const PLANS=Object.freeze({
  starter:Object.freeze({id:'starter',price:22,weeklyCredits:150,bonusPercent:10}),
  plus:Object.freeze({id:'plus',price:30,weeklyCredits:300,bonusPercent:12}),
  pro:Object.freeze({id:'pro',price:46,weeklyCredits:600,bonusPercent:20}),
- premium:Object.freeze({id:'premium',price:143.60,weeklyCredits:2500,bonusPercent:20})
+ premium:Object.freeze({id:'premium',price:145,weeklyCredits:2500,bonusPercent:20})
 });
 export const creditsEnabled=(env=process.env)=>env.ASAF_WEEKLY_CREDITS_ENABLED==='true';
 export const CHECKOUT_PRICE_VERSION=2;

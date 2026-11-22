@@ -109,7 +109,7 @@ test('stored allowances survive extensions, invalid allowances fail closed and p
  assert.equal(creditWindow(fresh,now+2*WEEK).limit,55);
  assert.equal(creditWindow({...fresh,trialTotalCredits:100},now).limit,100);
  for(const n of [null,-1,1.5,'55'])assert.throws(()=>creditWindow({...fresh,trialTotalCredits:n},now));
- assert.deepEqual(Object.values(PLANS).map(p=>[p.price,p.weeklyCredits]),[[22,150],[30,300],[46,600],[143.60,2500]]);
+ assert.deepEqual(Object.values(PLANS).map(p=>[p.price,p.weeklyCredits]),[[22,150],[30,300],[46,600],[145,2500]]);
 });
 test('public billing advertises 50 without creating an account and balance copy uses personal entitlement',async()=>{
  const {subscriptionCopy}=await import('../subscription-copy.mjs');

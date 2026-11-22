@@ -19,12 +19,12 @@ async function setup(){
 }
 test('Premium checkout uses exact cents and rejects replayed consent and malformed PayPal values',()=>{
  const planId=allowed.PAYPAL_PLAN_PREMIUM_V2_ID;
- assert.equal(usdPriceText(PLANS.premium.price),'143.60');
- assert.equal(usdCents('143.60'),14360);
- assert.equal(usdCents('143.6'),14360);
- assert.equal(consentFor('premium'),'USD143.60_MONTHLY_WEEKLY_V2');
- validatePlan(pp(planId,'143.60'),planId,PLANS.premium.price);
- for(const amount of ['143.59','143.61','143.600','1.436e2',' 143.60','0143.60',null,true]) assert.throws(()=>validatePlan(pp(planId,amount),planId,PLANS.premium.price));
+ assert.equal(usdPriceText(PLANS.premium.price),'145');
+ assert.equal(usdCents('145.00'),14500);
+ assert.equal(usdCents('145.0'),14500);
+ assert.equal(consentFor('premium'),'USD145_MONTHLY_WEEKLY_V2');
+ validatePlan(pp(planId,'145.00'),planId,PLANS.premium.price);
+ for(const amount of ['143.60','144.99','145.01','145.000','1.45e2',' 145.00','0145.00',null,true]) assert.throws(()=>validatePlan(pp(planId,amount),planId,PLANS.premium.price));
 });
 test('pricing can go live while checkout stays blocked even for an admin and trial still starts',async()=>{
  const f=await setup();
@@ -47,20 +47,21 @@ test('new checkout pins V2 ID and cents before POST, then syncs even if checkout
  let calls=0;
  const api=async(path,opts)=>{
   calls++;
-  if(path==='/v1/billing/plans/'+ppid)return pp(ppid,'143.60');
+  if(path==='/v1/billing/plans/'+ppid)return pp(ppid,'145.00');
   assert.equal(path,'/v1/billing/subscriptions');assert.equal(opts.method,'POST');assert.equal(opts.body.plan_id,ppid);
-  assert.deepEqual((await readBilling(f.identity,{env,run:f.run})).priceContract,{version:2,paypalPlanId:ppid,monthlyPriceCents:14360});
+  assert.deepEqual((await readBilling(f.identity,{env,run:f.run})).priceContract,{version:2,paypalPlanId:ppid,monthlyPriceCents:14500});
   return {id:'I-PREMIUMV2',status:'APPROVAL_PENDING',links:[{rel:'approve',href:pendingLink}]};
  };
  const handler=createBillingHandler({env,run:f.run,now:()=>now,api});
  assert.equal((await handler(request('billing',action('premium','USD359_MONTHLY_WEEKLY_V1'),f.user.cookie))).status,400);
+ assert.equal((await handler(request('billing',action('premium','USD143.60_MONTHLY_WEEKLY_V2'),f.user.cookie))).status,400);
  assert.equal(calls,0);
  const res=await handler(request('billing',{...action(),price:1,priceContract:{monthlyPriceCents:100}},f.user.cookie));
  assert.equal(res.status,200);assert.equal((await res.json()).approvalUrl,pendingLink);
  const record=await readBilling(f.identity,{env,run:f.run});
  const updated=await syncSubscription(f.identity,record,{
   env:{...base,PAYPAL_PLAN_PREMIUM_V2_ID:'P-UNRELATED'},run:f.run,now,
-  api:async path=>path.includes('/transactions?')?{transactions:[pay('143.59','WRONG'),pay('143.60')]}:{id:'I-PREMIUMV2',plan_id:ppid,custom_id:f.identity,status:'ACTIVE'}
+  api:async path=>path.includes('/transactions?')?{transactions:[pay('143.60','WRONG'),pay('145.00')]}:{id:'I-PREMIUMV2',plan_id:ppid,custom_id:f.identity,status:'ACTIVE'}
  });
  assert.equal(updated.paidUntil,nextMonth(now));assert.equal(updated.creditAnchor,now);
 });

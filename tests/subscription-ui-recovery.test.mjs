@@ -49,7 +49,7 @@ test('pending and suspended payments do not display paid access',async()=>{
 
 test('selected plan price remains correct when account lookup fails',async()=>{
  const p=await page([Error('network failure')],'?plan=premium');
- assert.equal(p.get('price').textContent,'$143.60');
+ assert.equal(p.get('price').textContent,'$145');
  assert.match(p.get('billingPlanDetails').textContent,/2,500/);
  assert.doesNotMatch(p.get('billingPlanDetails').textContent,/month|week/);
  assert.equal(p.get('billingRetry').hidden,false);

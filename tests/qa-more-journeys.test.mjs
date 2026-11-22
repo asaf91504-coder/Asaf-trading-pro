@@ -67,7 +67,7 @@ const creditCases=[
  ['future paid anchor invalid even when billing record says active',()=>assert.throws(()=>creditWindow({...paid,creditAnchor:start+1},start),/anchor/)],
  ['reserved deployment plans reject a malformed provider ID',()=>assert.equal(creditPlansReady(Object.fromEntries(Object.keys(PLANS).map((k,i)=>['PAYPAL_PLAN_'+k.toUpperCase()+'_ID',i===0?'p-LOW':'P-ID'+i]))),false)],
  ['unexpected plan field is not converted into a configured plan',()=>assert.throws(()=>planFor('enterprise'),/Unknown plan/)],
- ['tier consent carries exact decimal monthly USD contract',()=>assert.equal(consentFor('premium'),'USD143.60_MONTHLY_WEEKLY_V2')],
+ ['tier consent carries exact decimal monthly USD contract',()=>assert.equal(consentFor('premium'),'USD145_MONTHLY_WEEKLY_V2')],
  ['zero estimated cost still uses minimum one credit',()=>assert.equal(creditsForCost(0),1)],
 ];
 for(const [label,run] of creditCases)test('journey credits: '+label,run);
