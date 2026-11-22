@@ -9,7 +9,7 @@ const source=read('setups-ui.mjs').replace(/^import .*\n/,'');
 const candidate={id:'a'.repeat(64),symbol:'AAPL',status:'pending',pattern:'Generated',scenario:{side:'long',entry:110,stop:100,target:130}};
 const rev='12345678-1234-1234-1234-123456789abc';
 const next={...candidate,draft:{revision:rev,title:'Review <script>',analysis:'Author',entry:111,stop:100,target:130}};
-function harness(){
+function harness(lang='he'){
  const elements=new Map(),events={},post=[],queue=[];
  function node(tag){
   const attrs={},listeners={},children=[];
@@ -17,7 +17,7 @@ function harness(){
    setAttribute(k,v){attrs[k]=v},append(...n){children.push(...n)},replaceChildren(...n){children.splice(0,children.length,...n)},
    addEventListener(k,v){listeners[k]=v},focus(){this.focused=true}};
  }
- const document={documentElement:{lang:'he'},createElement:node,getElementById:id=>{
+ const document={documentElement:{lang},createElement:node,getElementById:id=>{
   if(!elements.has(id)){const n=node('element');if(id==='filter')n.value='pending';elements.set(id,n);}
   return elements.get(id);
  },querySelector:()=>null};
@@ -64,4 +64,23 @@ test('regular viewers cannot see the owner editor; labels and narrow mobile styl
  const css=read('setups.css');
  assert.match(css,/@media\(max-width:540px\)\{\.setup-editor-levels\{grid-template-columns:1fr\}/);
  assert.match(css,/\.setup-editor input,\.setup-editor textarea\{[^}]*min-height:44px[^}]*font-size:max\(16px,1em\)/);
+});
+
+test('setup stop cards use up to two locale decimals without rounding the editor or other prices',async()=>{
+ for(const [lang,decimal] of [['en','.'],['de',',']]){
+  const h=harness(lang);
+  const levels={side:'long',entry:110.12547,stop:100.23567,target:130.76543};
+  const item={...candidate,scenario:levels};
+  const whole={...item,scenario:{...levels,stop:100}};
+  const tiny={...item,scenario:{...levels,stop:0.001}};
+  h.queue.push(state([item],[item,whole,tiny]));
+  await h.events.pageshow();
+  const values=h.all(h.get('published')).filter(n=>n.tag==='dd').map(n=>n.textContent);
+  assert.deepEqual(values.slice(0,3),['110'+decimal+'12547','100'+decimal+'24','130'+decimal+'76543']);
+  assert.equal(values[4],'100');
+  assert.equal(values[7],'<0'+decimal+'01');
+  h.all(h.get('queue')).find(n=>n.textContent==='ערוך טיוטה').onclick();
+  assert.equal(h.all(h.get('queue')).find(n=>n.name==='stop').value,'100.23567');
+  assert.equal(item.scenario.stop,100.23567);
+ }
 });
