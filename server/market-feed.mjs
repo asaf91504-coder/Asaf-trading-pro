@@ -4,6 +4,7 @@ import {createHash} from 'node:crypto';
 import {randomUUID} from 'node:crypto';
 import {publicAuthConfigured} from './auth-core.mjs';
 import {command,storageKey} from './storage.mjs';
+import {comparableDailyVolume,sameVolumeBasis} from '../comparable-volume.mjs';
 import {previousDailyBars,marketCoverage} from '../market-quality.mjs';
 import {validateBar} from '../netlify/functions/market.mjs';
 export const marketIntervals=twelveIntervals;
@@ -44,7 +45,16 @@ export function marketSelection(selected,interval='1day',env=process.env){
  if(!configuredMarketIntervals(env).includes(interval))throw new MarketError('טווח הזמן אינו כלול בחיבור הנתונים הנוכחי.',403);
  if(!approvedChartSymbols(env).includes(symbol))throw new MarketError('המניה '+symbol+' אינה מופעלת בחיבור הנתונים. בחר מניה זמינה בחיפוש.',403);return {symbol,interval};
 }
-export const marketSnapshotKey=(symbol,interval,env=process.env)=>storageKey('market:snapshot:v3:'+symbol+':'+interval+':'+env.ASAF_MARKET_DELAY_MINUTES+':'+createHash('sha256').update(JSON.stringify({...twelveSettings(env),privateOwner:privateMarketTrial(env)?env.ASAF_TWELVE_TRIAL_MEMBER_ID:null,trialEnd:privateMarketTrial(env)?env.ASAF_TWELVE_TRIAL_ENDS_AT:null})).digest('hex').slice(0,16),env);
+function snapshotKey(symbol,interval,env,version,settings){
+ return storageKey('market:snapshot:'+version+':'+symbol+':'+interval+':'+env.ASAF_MARKET_DELAY_MINUTES+':'+createHash('sha256').update(JSON.stringify({...settings,privateOwner:privateMarketTrial(env)?env.ASAF_TWELVE_TRIAL_MEMBER_ID:null,trialEnd:privateMarketTrial(env)?env.ASAF_TWELVE_TRIAL_ENDS_AT:null})).digest('hex').slice(0,16),env);
+}
+export const marketSnapshotKey=(symbol,interval,env=process.env)=>snapshotKey(symbol,interval,env,'v4',twelveSettings(env));
+// The shared scanner namespace also stores setup review decisions. Preserve its
+// previous identity independently of the ephemeral provider snapshot format.
+export const legacyMarketSnapshotKey=(symbol,interval,env=process.env)=>{
+ const {dailyVolumeBasis,...settings}=twelveSettings(env);
+ return snapshotKey(symbol,interval,env,'v3',settings);
+};
 export function applyMarketDelay(bars,interval,delay,now){
  if(!delay)return bars;if(interval==='1day')return previousDailyBars(bars,now-delay*60000);const cutoff=now-delay*60000;
  return bars.filter(b=>{const t=Date.parse(b.date.length===10?b.date+'T00:00:00Z':b.date.replace(' ','T')+'Z');const duration=interval==='1week'?7*86400000:interval==='1day'?86400000:interval.endsWith('min')?parseInt(interval)*60000:3600000;return Number.isFinite(t)&&t+duration<=cutoff});
@@ -71,11 +81,24 @@ export async function readMarketSnapshot({selected,interval='1day',env=process.e
   if(data.meta?.interval&&data.meta.interval!==interval)throw new MarketError('הספק החזיר טווח זמן שאינו תואם לבקשה.',502);
   const parsed=data.values.map(validateBar);
   if(parsed.some(b=>!b))throw new MarketError('הספק החזיר נרות לא תקינים. הגרף הקיים לא שונה.',502);
-  const unique=new Map(parsed.map(b=>[b.date,b])),ordered=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date));
-  const daily=interval==='1day',eligible=daily?previousDailyBars(ordered,now):ordered,bars=applyMarketDelay(eligible,interval,Number(env.ASAF_MARKET_DELAY_MINUTES),now).slice(-twelveSettings(env).historyBars);
+  const settings=twelveSettings(env),daily=interval==='1day',volumeBasis=daily?settings.dailyVolumeBasis:null;
+ const unique=new Map(),conflicts=new Set();
+ for(const [i,bar] of parsed.entries()){
+  const rawBar=data.values[i],prior=unique.get(bar.date);
+  if((prior&&['open','high','low','close','volume'].some(key=>prior[key]!==bar[key]))||
+    rawBar.complete===false||rawBar.is_final===false||rawBar.is_partial===true||
+    (rawBar.volumeBasis!==undefined&&!sameVolumeBasis(rawBar.volumeBasis,volumeBasis)))conflicts.add(bar.date);
+  unique.set(bar.date,bar);
+ }
+ const ordered=[...unique.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  const eligible=daily?previousDailyBars(ordered,now):ordered,bars=applyMarketDelay(eligible,interval,Number(env.ASAF_MARKET_DELAY_MINUTES),now).slice(-twelveSettings(env).historyBars);
   if(bars.length<21)throw new MarketError('הספק החזיר פחות מ־21 נרות תקינים לאחר החלת העיכוב.',422);
-  const volumeCoverage=daily?'consolidated':twelveSettings(env).volumeCoverage,coverage=marketCoverage(interval,volumeCoverage);
-  const result={source:'Twelve Data',symbol,interval,bars,currency:typeof data.meta?.currency==='string'?data.meta.currency:null,exchange:typeof data.meta?.exchange==='string'?data.meta.exchange:null,exchangeTimezone:['1day','1week'].includes(interval)?(data.meta?.exchange_timezone||'America/New_York'):'UTC',barPolicy:daily?'previous-daily-sessions':'may-include-open-candle',latestBarMayBePartial:!daily,excludedCurrentBars:ordered.length-eligible.length,receivedAt:new Date(now).toISOString(),latestBarTime:bars.at(-1).date,delayMinutes:Number(env.ASAF_MARKET_DELAY_MINUTES),expires:now+60000,coverage,volumeCoverage,priceAdjustment:['1day','1week'].includes(interval)?'splits':'unadjusted',extendedHours:false,disclaimer:'רענון עד דקה; זמן הנר אינו זמן הקבלה. בנרות יומיים יום המסחר הנוכחי מוחרג; נתוני הספק עשויים להתעדכן בדיעבד. השימוש הוא להצגה באתר, ללא הפצת נתונים גולמיים.'};
+  const volumeConflictDates=bars.filter(b=>conflicts.has(b.date)).map(b=>b.date);
+  const receivedAt=new Date(now).toISOString();
+  const volumeCoverage=daily?(comparableDailyVolume(bars,{interval,barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,
+    volumeBasis,volumeConflictDates,receivedAt}).coverage||'unconfirmed'):settings.volumeCoverage;
+  const coverage=marketCoverage(interval,volumeCoverage);
+  const result={source:'Twelve Data',symbol,interval,bars,currency:typeof data.meta?.currency==='string'?data.meta.currency:null,exchange:typeof data.meta?.exchange==='string'?data.meta.exchange:null,exchangeTimezone:['1day','1week'].includes(interval)?(data.meta?.exchange_timezone||'America/New_York'):'UTC',barPolicy:daily?'previous-daily-sessions':'may-include-open-candle',latestBarMayBePartial:!daily,excludedCurrentBars:ordered.length-eligible.length,receivedAt,latestBarTime:bars.at(-1).date,delayMinutes:Number(env.ASAF_MARKET_DELAY_MINUTES),expires:now+60000,coverage,volumeCoverage,volumeBasis,volumeConflictDates,priceAdjustment:['1day','1week'].includes(interval)?'splits':'unadjusted',extendedHours:false,disclaimer:'רענון עד דקה; זמן הנר אינו זמן הקבלה. בנרות יומיים יום המסחר הנוכחי מוחרג; נתוני הספק עשויים להתעדכן בדיעבד. השימוש הוא להצגה באתר, ללא הפצת נתונים גולמיים.'};
   await run(['SET',cacheKey,JSON.stringify(result),'EX',String(privateMarketTrial(env)?Math.max(1,Math.min(172800,Math.floor((Date.parse(env.ASAF_TWELVE_TRIAL_ENDS_AT)-now)/1000))):172800)],{env});return {...result,cached:false};
  }finally{try{await run(['EVAL',"if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",'1',lock,token],{env})}catch{}}
 }

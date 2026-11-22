@@ -1,6 +1,11 @@
 // Complete scanner messages; do not translate user or provider data.
 export const scannerTranslations = {
   "en": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Partial-market volume alone cannot verify the volume rule",
+    "מחזור לא מאומת": "Unverified volume",
+    "מחזור חלקי": "Partial-market volume",
+    "לא ניתן לאמת": "Unverifiable",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "Comparable volume for the prior 20 sessions could not be verified",
     "מצא מניות למחקר": "Find stocks to research",
     "סורק מניות": "Stock screener",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "Select “Find stocks” to scan the stocks available through your Twelve Data connection. Results follow your filters, and each can be opened as a chart.",
@@ -100,6 +105,11 @@ export const scannerTranslations = {
     "down": "Down"
   },
   "es": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "El volumen parcial del mercado no basta para verificar la regla de volumen",
+    "מחזור לא מאומת": "Volumen no verificado",
+    "מחזור חלקי": "Volumen de mercado parcial",
+    "לא ניתן לאמת": "No verificable",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "No pudo verificarse el volumen comparable de las 20 sesiones anteriores",
     "מצא מניות למחקר": "Busca acciones para analizar",
     "סורק מניות": "Buscador de acciones",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "Pulsa «Buscar acciones» para analizar las acciones disponibles mediante tu conexión a Twelve Data. Los resultados siguen tus filtros y puedes abrir cada uno en un gráfico.",
@@ -199,6 +209,11 @@ export const scannerTranslations = {
     "down": "Bajista"
   },
   "fr": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Le volume partiel du marché ne suffit pas à vérifier le critère de volume",
+    "מחזור לא מאומת": "Volume non vérifié",
+    "מחזור חלקי": "Volume de marché partiel",
+    "לא ניתן לאמת": "Non vérifiable",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "Le volume comparable des 20 séances précédentes n’a pas pu être vérifié",
     "מצא מניות למחקר": "Trouver des actions à analyser",
     "סורק מניות": "Sélecteur d’actions",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "Cliquez sur «Trouver des actions» pour analyser les actions accessibles via votre connexion Twelve Data. Les résultats respectent vos filtres et peuvent être ouverts sur un graphique.",
@@ -298,6 +313,11 @@ export const scannerTranslations = {
     "down": "Baissier"
   },
   "de": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Teilmarktvolumen reicht nicht aus, um die Volumenregel zu bestätigen",
+    "מחזור לא מאומת": "Nicht verifiziertes Volumen",
+    "מחזור חלקי": "Teilmarktvolumen",
+    "לא ניתן לאמת": "Nicht verifizierbar",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "Das Vergleichsvolumen der letzten 20 Sitzungen konnte nicht verifiziert werden",
     "מצא מניות למחקר": "Aktien zur Analyse finden",
     "סורק מניות": "Aktien-Screener",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "Wähle „Aktien finden“, um die über deine Twelve-Data-Verbindung verfügbaren Aktien zu prüfen. Die Ergebnisse berücksichtigen deine Filter und lassen sich als Chart öffnen.",
@@ -397,6 +417,11 @@ export const scannerTranslations = {
     "down": "Abwärts"
   },
   "pt": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "O volume parcial do mercado não basta para confirmar a regra de volume",
+    "מחזור לא מאומת": "Volume não verificado",
+    "מחזור חלקי": "Volume parcial de mercado",
+    "לא ניתן לאמת": "Não verificável",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "Não foi possível verificar o volume comparável das últimas 20 sessões",
     "מצא מניות למחקר": "Encontre ações para analisar",
     "סורק מניות": "Filtro de ações",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "Selecione “Encontrar ações” para analisar as ações disponíveis pela conexão com a Twelve Data. Os resultados seguem seus filtros e podem ser abertos em um gráfico.",
@@ -496,6 +521,11 @@ export const scannerTranslations = {
     "down": "Baixa"
   },
   "ru": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Объёма части рынка недостаточно для подтверждения правила по объёму",
+    "מחזור לא מאומת": "Непроверенный объём",
+    "מחזור חלקי": "Объём части рынка",
+    "לא ניתן לאמת": "Невозможно проверить",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "Не удалось подтвердить сопоставимый объём за 20 предыдущих сессий",
     "מצא מניות למחקר": "Найти акции для анализа",
     "סורק מניות": "Скринер акций",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "Нажмите «Найти акции», чтобы проверить акции, доступные через подключение Twelve Data. Результаты учитывают ваши фильтры; каждый можно открыть на графике.",
@@ -595,6 +625,11 @@ export const scannerTranslations = {
     "down": "Вниз"
   },
   "ar": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "حجم التداول الجزئي للسوق لا يكفي للتحقق من شرط الحجم",
+    "מחזור לא מאומת": "حجم تداول غير متحقق منه",
+    "מחזור חלקי": "حجم تداول جزئي للسوق",
+    "לא ניתן לאמת": "غير قابل للتحقق",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "تعذر التحقق من حجم التداول القابل للمقارنة للجلسات العشرين السابقة",
     "מצא מניות למחקר": "ابحث عن أسهم للتحليل",
     "סורק מניות": "ماسح الأسهم",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "اختر «ابحث عن أسهم» لفحص الأسهم المتاحة عبر اتصال Twelve Data. تعتمد النتائج على مرشحاتك ويمكن فتح كل نتيجة على الرسم البياني.",
@@ -694,6 +729,11 @@ export const scannerTranslations = {
     "down": "هابط"
   },
   "zh": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "仅凭部分市场成交量无法验证成交量条件",
+    "מחזור לא מאומת": "未核实的成交量",
+    "מחזור חלקי": "部分市场成交量",
+    "לא ניתן לאמת": "无法核实",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "无法核实过去 20 个交易日的可比成交量",
     "מצא מניות למחקר": "查找待研究股票",
     "סורק מניות": "股票筛选器",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "选择“查找股票”以筛选 Twelve Data 连接中可用的股票。结果遵循您设置的条件，每项结果均可打开图表。",
@@ -793,6 +833,11 @@ export const scannerTranslations = {
     "down": "下跌"
   },
   "ja": {
+    "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "一部市場の出来高だけでは出来高条件を確認できません",
+    "מחזור לא מאומת": "未確認の出来高",
+    "מחזור חלקי": "一部市場の出来高",
+    "לא ניתן לאמת": "確認不可",
+    "לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים": "過去20取引日の比較可能な出来高を確認できませんでした",
     "מצא מניות למחקר": "分析する銘柄を探す",
     "סורק מניות": "株式スクリーナー",
     "לחץ על ״מצא לי מניות״ כדי לבדוק את מאגר המניות הזמין בחיבור Twelve Data. הסריקה מציגה מועמדות לפי המסננים שלך, ואפשר לפתוח כל תוצאה בגרף.": "「銘柄を探す」を選ぶと、Twelve Data 接続で利用できる銘柄を検索します。条件に合う候補を表示し、各銘柄のチャートを開けます。",

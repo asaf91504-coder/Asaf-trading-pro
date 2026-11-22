@@ -1,21 +1,32 @@
+import {marketCoverage} from '../market-quality.mjs';
+import {comparableDailyVolume} from '../comparable-volume.mjs';
 import {createHash,randomUUID} from 'node:crypto';
 import runtimeContext from './runtime-context.mjs';
 import {command,storageKey} from './storage.mjs';
-import {approvedMarketSymbols,marketSnapshotKey,marketAccessAllowed,privateMarketTrial,readMarketSnapshot,MarketError} from './market-feed.mjs';
+import {approvedMarketSymbols,legacyMarketSnapshotKey,marketAccessAllowed,privateMarketTrial,readMarketSnapshot,MarketError} from './market-feed.mjs';
 import {fundamentalsConfigured,readMarketFundamentals} from './market-fundamentals.mjs';
 import {scannerBatchPlan} from './scanner-budget.mjs';
 import {scanBars} from '../scanner-core.mjs';
+import {twelveSettings} from './twelve-config.mjs';
 export const SCAN_PERIOD_MS=3*60*60*1000;
 export const sharedScannerEnabled=env=>env.ASAF_HOURLY_SCANNER_ENABLED==='true';
-export function sharedScannerKey(env){return storageKey('scanner:three-hour:v2:'+createHash('sha256').update(JSON.stringify({symbols:approvedMarketSymbols(env),feed:marketSnapshotKey('_','1day',env),fundamentals:fundamentalsConfigured(env)})).digest('hex').slice(0,24),env)}
+export function sharedScannerKey(env){return storageKey('scanner:three-hour:v2:'+createHash('sha256').update(JSON.stringify({symbols:approvedMarketSymbols(env),feed:legacyMarketSnapshotKey('_','1day',env),fundamentals:fundamentalsConfigured(env)})).digest('hex').slice(0,24),env)}
 const parse=raw=>{try{return JSON.parse(raw)}catch{return null}};
 export async function readSharedScan({env=process.env,run=command,now=Date.now(),memberId,symbols}={}){
  if(!sharedScannerEnabled(env)||!marketAccessAllowed(memberId,env,now))throw new MarketError('הסריקה המשותפת אינה זמינה לחשבון זה.',403);
  const snapshot=parse(await run(['GET',sharedScannerKey(env)+':snapshot'],{env}));
  const age=now-Date.parse(snapshot?.completedAt);
  if(!snapshot||!Array.isArray(snapshot.records)||!Number.isFinite(age)||age<0||age>86400000)throw new MarketError('הסריקה התלת־שעתית עדיין אינה זמינה. נסה שוב לאחר העדכון הבא.',503);
- const selected=new Set(symbols||approvedMarketSymbols(env));
- return {...snapshot,records:snapshot.records.filter(r=>selected.has(r.symbol)),errors:snapshot.errors.filter(e=>selected.has(e.symbol)),shared:true,stale:now>=snapshot.nextUpdateAt,scope:'סריקה משותפת של המניות המורשות בלבד, לפי נרות יומיים קודמים. הבקשה לא פנתה לספק הנתונים.'};
+ const selected=new Set(symbols||approvedMarketSymbols(env)),basis=twelveSettings(env).dailyVolumeBasis;
+ const records=snapshot.records.filter(r=>selected.has(r.symbol)).map(r=>{
+  // A cycle assembled before deployment or a basis change may still be readable
+  // for price and existing setup reviews, but it cannot testify about volume.
+  const meta={...r,volumeBasis:JSON.stringify(r.volumeBasis??null)===JSON.stringify(basis)?basis:null};
+  const comparison=comparableDailyVolume(r.bars,meta);
+  const obvSafe=r.volumeComparison?.status==='verified'&&comparableDailyVolume(r.bars,meta,{verifyWholeSeries:true}).status==='verified';
+  return {...r,coverage:marketCoverage(r.interval||'1day',comparison.coverage),volumeComparison:comparison,summary:{...r.summary,volumeRatio:comparison.ratio,...(!obvSafe?{obv:null,obvPrevious:null}:{})}};
+ });
+ return {...snapshot,records,errors:snapshot.errors.filter(e=>selected.has(e.symbol)),shared:true,stale:now>=snapshot.nextUpdateAt,scope:'סריקה משותפת של המניות המורשות בלבד, לפי נרות יומיים קודמים. הבקשה לא פנתה לספק הנתונים.'};
 }
 // A fencing token prevents an expired worker from overwriting a newer cycle.
 export const SCANNER_COMMIT=`-- scanner-hourly-commit
@@ -44,7 +55,7 @@ export async function refreshSharedScan({env=process.env,run=command,fetcher=fet
      readBars({selected:symbol,interval:'1day',memberId,env,run,fetcher,now}),
      fundamentalsConfigured(env)?readFundamentals({selected:symbol,env,run,fetcher,now}).catch(()=>({status:'unavailable',reason:'שווי שוק לא אומת בסריקה זו.'})):Promise.resolve({status:'unavailable',reason:'נתוני שווי שוק אינם מופעלים.'})
     ]);
-    return {record:{...scanBars(symbol,snapshot.bars),source:snapshot.source,interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,exchangeTimezone:snapshot.exchangeTimezone,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,fundamentals}};
+    return {record:{...scanBars(symbol,snapshot.bars,snapshot),source:snapshot.source,interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,exchangeTimezone:snapshot.exchangeTimezone,barPolicy:snapshot.barPolicy,volumeBasis:snapshot.volumeBasis,volumeConflictDates:snapshot.volumeConflictDates,latestBarMayBePartial:snapshot.latestBarMayBePartial,fundamentals}};
    }catch{return {symbol,error:'נתוני המניה לא היו זמינים בעדכון האחרון.'}}
   }));
   state.cursor+=batch.length;state.records.push(...results.filter(x=>x.record).map(x=>x.record));state.errors.push(...results.filter(x=>x.error));state.done=state.cursor>=symbols.length;

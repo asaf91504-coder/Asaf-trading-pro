@@ -355,7 +355,14 @@ async function ask(q,extra={}){
 
   conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   chatHistory.complete(conversation);conversation=conversation.slice(-400);
-  if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);waiting.append(receipt)}
+  if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);waiting.append(receipt);
+   const volume=data.analysisContext.volumeComparison;
+   if(volume?.status==='unverifiable'||volume?.coverage==='partial'){
+    const disclosure=document.createElement('p');disclosure.className='chat-analysis-receipt';
+    const label=volume.status==='unverifiable'?'לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים':'מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור';
+    disclosure.textContent=window.asafTranslate?.(label)||label;waiting.append(disclosure);
+   }
+  }
   if(followAnswer)log.scrollTop=log.scrollHeight;
   pendingImage=null;
   if(imageInput)imageInput.value="";

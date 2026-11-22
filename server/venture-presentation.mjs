@@ -1,3 +1,5 @@
+import {marketCoverage} from '../market-quality.mjs';
+import {comparableDailyVolume} from '../comparable-volume.mjs';
 import {Resvg} from '@resvg/resvg-js';
 import {resolve} from 'node:path';
 import {chartIndicators} from '../chart-indicators.mjs';
@@ -37,18 +39,20 @@ export async function ventureChart(snapshot,input=[]){
  svg+='</g>';
  const maxVolume=Math.max(0,...visible.map(b=>b.volume||0));
  if(maxVolume>0)visible.forEach((b,i)=>{if(!Number.isFinite(b.volume))return;const height=b.volume/maxVolume*48;svg+=`<rect x="${x(i)-step*.3}" y="${580-height}" width="${Math.max(2,step*.6)}" height="${height}" fill="${b.close>=b.open?'#42dbc0':'#fb7185'}" opacity=".6"/>`});
- svg+='<text x="25" y="540" font-size="10">VOL</text>';
+ const chartVolumeCoverage=snapshot.interval==='1day'?comparableDailyVolume(visible,snapshot,{verifyWholeSeries:true}).coverage:snapshot.volumeCoverage;
+ const volumeLabel=chartVolumeCoverage==='consolidated'?'VOL (consolidated)':chartVolumeCoverage==='partial'?'VOL (selected venues)':'VOL (coverage unverified)';
+ svg+=`<text x="25" y="540" font-size="10">${volumeLabel}</text>`;
  for(const i of [0,Math.floor(visible.length/2),visible.length-1])svg+=`<text x="${x(i)}" y="595" text-anchor="middle" font-size="12">${escape(visible[i].date.slice(0,16))}</text>`;
- svg+=legend.join('')+`<text x="25" y="650" font-size="14">Data provided by Twelve Data | Static research image | No raw data export</text><text x="25" y="674" font-size="12">${snapshot.interval==='1day'?'Previous daily sessions only. EOD volume; not live intraday volume.':'Intraday volume is not consolidated. Latest candle may be incomplete.'} Conditional research, not a trade order.</text></g></svg>`;
+ svg+=legend.join('')+`<text x="25" y="650" font-size="14">Data provided by Twelve Data | Static research image | No raw data export</text><text x="25" y="674" font-size="12">${snapshot.interval==='1day'?'Previous daily sessions only. EOD volume; not live intraday volume.':'Latest candle may be incomplete.'} Conditional research, not a trade order.</text></g></svg>`;
  const png=new Resvg(svg,{font:rasterFontOptions()}).render().asPng();
- return {presentation:'server-raster',source:'Twelve Data',symbol:snapshot.symbol,interval:snapshot.interval,receivedAt:snapshot.receivedAt,latestBarTime:snapshot.latestBarTime,candleCount:bars.length,chartSettings:{style,indicators:[...indicators],visibleRange:{start:visible[0].date,end:snapshot.latestBarTime}},firstVisibleBarTime:visible[0].date,exchangeTimezone:snapshot.exchangeTimezone,coverage:snapshot.coverage,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,delayMinutes:snapshot.delayMinutes,cached:snapshot.cached===true,image:'data:image/png;base64,'+Buffer.from(png).toString('base64'),messages:receipt.messages};
+ return {presentation:'server-raster',source:'Twelve Data',symbol:snapshot.symbol,interval:snapshot.interval,receivedAt:snapshot.receivedAt,latestBarTime:snapshot.latestBarTime,candleCount:bars.length,chartSettings:{style,indicators:[...indicators],visibleRange:{start:visible[0].date,end:snapshot.latestBarTime}},firstVisibleBarTime:visible[0].date,exchangeTimezone:snapshot.exchangeTimezone,coverage:marketCoverage(snapshot.interval,chartVolumeCoverage),barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,delayMinutes:snapshot.delayMinutes,cached:snapshot.cached===true,image:'data:image/png;base64,'+Buffer.from(png).toString('base64'),messages:receipt.messages};
 }
 
 // Explicit allowlist: never spread a scan record, summary or pattern candidate.
 export function ventureScanRecord(record,screen){
  const s=record.summary;
  return {presentation:'derived-only',source:'Twelve Data',symbol:record.symbol,receivedAt:record.receivedAt,asOf:s.date,coverage:record.coverage,barPolicy:record.barPolicy,
-  metrics:{aboveMA20:s.aboveMA20,aboveMA150:s.aboveMA150,atrPercent:s.atrPercent,relativeVolume:s.volumeRatio,rsi14:s.rsi14,adx14:s.adx14,supertrendDirection:s.supertrendDirection},
+  metrics:{aboveMA20:s.aboveMA20,aboveMA150:s.aboveMA150,atrPercent:s.atrPercent,relativeVolume:record.volumeComparison?.status==='verified'?s.volumeRatio:null,volumeComparison:record.volumeComparison?.status||'unverifiable',volumeCoverage:record.volumeComparison?.coverage||null,rsi14:s.rsi14,adx14:s.adx14,supertrendDirection:s.supertrendDirection},
   marketCapStatus:record.fundamentals?.status==='available'?'available':'unavailable',
   patterns:(record.research?.candidates||[]).map(c=>({kind:c.kind,label:c.label,stage:c.stage,movePercent:c.scenario?.movePercent??null,riskReward:c.scenario?.riskReward??null,side:c.scenario?.side??null})),
   screen:{matches:screen.matches,reasons:screen.reasons}};

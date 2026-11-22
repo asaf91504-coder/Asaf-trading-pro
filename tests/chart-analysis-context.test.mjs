@@ -48,7 +48,8 @@ test('endpoint returns the server evidence receipt and sends resolved viewport t
 
 test('technical conditions retain strict comparisons even when display values round to equality',()=>{
  const near=bars.map(bar=>({...bar,close:100,open:100,high:101,low:99,volume:100}));near.at(-1).close=100.001;near.at(-1).volume=100.001;
- const evidence=marketDataContext('AAPL',near,{interval:'1day'}).technicalEvidence;
+ const evidence=marketDataContext('AAPL',near,{interval:'1day',barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,
+  provenance:'server-provider-cache',volumeBasis:{feed:'qa',session:'regular',coverage:'consolidated',basis:'qa-consolidated',adjustment:'unadjusted'}}).technicalEvidence;
  assert.equal(evidence.aboveMA20,true);assert.equal(evidence.volumeAbovePrior20Average,true);
 });
 
