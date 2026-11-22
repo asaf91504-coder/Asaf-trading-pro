@@ -1,8 +1,8 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {sharedScannerKey,readSharedScan} from './shared-scanner.mjs';
 import {MarketError} from './market-feed.mjs';
-import {closedSetupAtr14,stopWithinSetupAtr,structureAwareStop} from './setup-atr.mjs';
-const atrError='מרחק הסטופ ממחיר הכניסה חייב להיות בין 1 ל־2 ATR יומי.';
+import {closedSetupAtr14,stopWithinSetupAtr,exactTwoAtrStop} from './setup-atr.mjs';
+const atrError='מרחק הסטופ ממחיר הכניסה חייב להיות בדיוק 2 ATR יומי.';
 export function canReviewSetups(user,env){const owner=env.ASAF_SETUPS_REVIEWER_MEMBER_ID;return !!user&&/^[a-f0-9-]{36}$/.test(owner||'')&&user.id===owner}
 const PRICE_FIELDS=['entry','stop','target'];
 function ordered(s){
@@ -29,13 +29,13 @@ export function setupCandidates(scan){return scan.records.flatMap(r=>{
  const atr14=closedSetupAtr14(r);
  if(atr14===null)return [];
  return (r.research?.candidates||[]).flatMap(c=>{
-  if(!ordered(c.scenario))return [];
-  const {side,entry,stop,target}=c.scenario;
-  const scenario=structureAwareStop({side,entry,stop,target},atr14);
-  if(!scenario)return [];
+  if(!c.scenario)return [];
+  const {side,entry,target}=c.scenario;
+  const scenario=exactTwoAtrStop({side,entry,target},atr14);
+  if(!ordered(scenario))return [];
   // Version the candidate identity so an old visible card cannot approve
   // a scenario after a release changes its underlying stop.
-  const id=createHash('sha256').update(JSON.stringify(['atr14-1-2:v1',scan.startedAt,r.symbol,c.kind,scenario,atr14])).digest('hex');
+  const id=createHash('sha256').update(JSON.stringify(['atr14-exact-2:v2',scan.startedAt,r.symbol,c.kind,scenario,atr14])).digest('hex');
   return [{id,symbol:r.symbol,pattern:c.label||c.kind,stage:c.stage,scenario,atr14,candleDate:r.summary.date,source:r.source,receivedAt:r.receivedAt,scanAt:scan.completedAt}];
  });
 }).slice(0,200)}

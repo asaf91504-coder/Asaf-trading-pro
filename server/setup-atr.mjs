@@ -20,19 +20,12 @@ export function closedSetupAtr14(record){
  return Number.isFinite(atr)&&atr>0?atr:null;
 }
 
-export const stopAtrMultiple=(s,atr)=>s?.side==='long'?(s.entry-s.stop)/atr:s?.side==='short'?(s.stop-s.entry)/atr:NaN;
-const epsilon=1e-9;
-export function stopWithinSetupAtr(s,atr){
- if(!Number.isFinite(atr)||atr<=0)return false;
- const ratio=stopAtrMultiple(s,atr);
- return Number.isFinite(ratio)&&ratio>=1-epsilon&&ratio<=2+epsilon;
+export function exactTwoAtrStop(s,atr){
+ if(!Number.isFinite(atr)||atr<=0||!Number.isFinite(s?.entry)||s.entry<=0||!['long','short'].includes(s.side))return null;
+ const stop=s.entry+(s.side==='long'?-2:2)*atr;
+ return Number.isFinite(stop)&&stop>0&&stop<=1e12&&stop!==s.entry?{...s,stop}:null;
 }
-export function structureAwareStop(s,atr){
- if(!Number.isFinite(atr)||atr<=0)return null;
- const ratio=stopAtrMultiple(s,atr);
- // Never tighten a stop which would cut through the generated pattern level.
- if(!Number.isFinite(ratio)||ratio<=0||ratio>2+epsilon)return null;
- const stop=ratio>=1-epsilon?s.stop:s.entry+(s.side==='long'?-atr:atr);
- const adjusted={...s,stop};
- return Number.isFinite(stop)&&stop>0&&stop<=1e12&&stopWithinSetupAtr(adjusted,atr)?adjusted:null;
+export function stopWithinSetupAtr(s,atr){
+ const exact=exactTwoAtrStop(s,atr);
+ return exact!==null&&s.stop===exact.stop;
 }

@@ -34,21 +34,37 @@ function closeEditor(id){
  editing=null;render();
  document.getElementById('edit-'+id)?.focus();
 }
+function parseLevel(text){
+ const value=text.trim().replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)&15)).replace(/[,٫]/g,'.');
+ const n=Number(value);
+ return /^(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value)&&Number.isFinite(n)&&n>0?n:null;
+}
 function formField(form,key,label,options={}){
  const wrapper=el('label',label);
  const input=el(options.multiline?'textarea':'input');input.name=key;input.value=editing[key];input.disabled=busy;
  authored(input);
  if(options.limit)input.maxLength=options.limit;
  if(options.price){input.dir='ltr';input.inputMode='decimal';input.required=true;}
- input.addEventListener('input',()=>{if(editing)editing[key]=input.value});
- wrapper.append(input);form.append(wrapper);
+ input.addEventListener('input',()=>{if(editing)editing[key]=input.value;options.changed?.()});
+ wrapper.append(input);form.append(wrapper);return input;
 }
 function editor(item){
  const form=el('form','','setup-editor');form.setAttribute('aria-label','עריכת טיוטת סטאפ');
  const fields=el('div','','setup-editor-levels');
  formField(form,'title','כותרת (לא חובה)',{limit:80});
  formField(form,'analysis','ניתוח (לא חובה)',{multiline:true,limit:400});
- for(const [key,label] of Object.entries(names))formField(fields,key,label,{price:true,limit:32});
+ let stopInput;
+ const auto=Number.isFinite(item.atr14)&&item.atr14>0;
+ const recalc=()=>{
+  const entry=parseLevel(editing.entry);
+  const stop=entry===null?null:entry+(item.scenario.side==='long'?-2:2)*item.atr14;
+  editing.stop=stop!==null&&Number.isFinite(stop)&&stop>0?String(stop):'';
+  stopInput.value=editing.stop;
+ };
+ for(const [key,label] of Object.entries(names)){
+  const field=formField(fields,key,label,{price:true,limit:32,changed:key==='entry'&&auto?recalc:undefined});
+  if(key==='stop'&&auto){stopInput=field;field.readOnly=true;}
+ }
  form.append(fields);
  const actions=el('div','','actions');
  const save=el('button','שמור טיוטה');save.type='submit';save.disabled=busy;
@@ -58,9 +74,9 @@ function editor(item){
   const {id,revision,title,analysis}=editing;
   const edits={title,analysis};
   for(const key of Object.keys(names)){
-   const value=editing[key].trim().replace(/[٠-٩۰-۹]/g,c=>String((c.charCodeAt(0)&15))).replace(/[,٫]/g,'.');
-   if(!/^(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value)||!Number.isFinite(Number(value))||Number(value)<=0){reportError('הזן רמות חיוביות תקינות.');return}
-   edits[key]=Number(value);
+   const value=parseLevel(editing[key]);
+   if(value===null){reportError('הזן רמות חיוביות תקינות.');return}
+   edits[key]=value;
   }
   void perform(async()=>{await post({action:'save-draft',id,revision,edits});editing=null;await load();$('reviewFeedback').textContent='הטיוטה נשמרה. היא לא תפורסם עד שתאשר.';document.getElementById('edit-'+id)?.focus()});
  };

@@ -93,7 +93,7 @@ same('reviewer sees existing rejected candidate separately from public listing',
 same('published candidate exposes approval timestamp not reviewer account id',()=>{const r=visibleSetups(context({id:{status:'approved',at:time(),reviewer:'alice',item:accepted}}),false,now);return [r.published[0].approvedAt,r.published[0].reviewer]},[time(),undefined]);
 same('approver identity configuration rejects a missing account',()=>canReviewSetups(null,{ASAF_SETUPS_REVIEWER_MEMBER_ID:'12345678-1234-1234-1234-123456789abc'}),false);
 same('approved setup derives SHA identifier from scenario change',()=>setupCandidates(scan([item('reference',{side:'long',entry:11,stop:9,target:15})]))[0].id===accepted.id,false);
-same('approved setup omits watch and absent or invalid price candidates',()=>setupCandidates(scan([item('watch',{side:'watch',entry:10,stop:9,target:15}),item('missing',null),item('negative',{side:'long',entry:10,stop:-9,target:15})])),[]);
+same('approved setup omits watch and absent or invalid price candidates',()=>setupCandidates(scan([item('watch',{side:'watch',entry:10,stop:9,target:15}),item('missing',null),item('negative',{side:'long',entry:-10,stop:-9,target:15})])),[]);
 same('candidate cap bounds review queue',()=>setupCandidates(scan(Array.from({length:212},(_,i)=>item('pattern'+i)))).length,200);
 same('approved setup uses machine kind when display label is absent',()=>accepted.pattern,'reference');
 add('stale scan allows retracting already published previous item',async()=>{
