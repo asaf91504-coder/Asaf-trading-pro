@@ -1,13 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
+import * as flow from '../google-login-flow.mjs';
 import {readFileSync} from 'node:fs';
-const source=readFileSync(new URL('../subscription-login.mjs',import.meta.url),'utf8').replace(/^import .*;\n/,'');
+const source=readFileSync(new URL('../subscription-login.mjs',import.meta.url),'utf8').replace(/^import .*;\n/gm,'');
 for(const outcome of ['success','rejected','unverified'])test('billing Google sign-in: '+outcome,async()=>{
  const nodes=new Map(),calls=[],redirects=[];let callback,rendered=false;
  const node=id=>{if(!nodes.has(id))nodes.set(id,{disabled:false,textContent:'',replaceChildren(){}});return nodes.get(id);};
  const authState={authenticated:false};
- const context={AbortSignal,Response,authState,refreshAuth:async()=>{authState.authenticated=outcome==='success';},document:{getElementById:node,documentElement:{lang:'he'}},window:{location:{replace:path=>redirects.push(path)},google:{accounts:{id:{initialize:options=>{callback=options.callback;assert.equal(options.nonce,'nonce');},renderButton:()=>{rendered=true;}}}}},fetch:async(url,options)=>{const body=JSON.parse(options.body);calls.push({url,body});return body.action==='begin'?Response.json({nonce:'nonce',clientId:'client'}):outcome==='rejected'?Response.json({error:'Denied'},{status:401}):Response.json({authenticated:true});}};
+ const context={...flow,AbortSignal,Response,authState,refreshAuth:async()=>{authState.authenticated=outcome==='success';},document:{getElementById:node,documentElement:{lang:'he'}},window:{location:{replace:path=>redirects.push(path)},google:{accounts:{id:{initialize:options=>{callback=options.callback;assert.equal(options.nonce,'nonce');},renderButton:()=>{rendered=true;}}}}},fetch:async(url,options)=>{const body=JSON.parse(options.body);calls.push({url,body});return body.action==='begin'?Response.json({nonce:'nonce',clientId:'client'}):outcome==='rejected'?Response.json({error:'Denied'},{status:401}):Response.json({authenticated:true});}};
  vm.runInNewContext(source,context);
  await node('billingLogin').onclick();
  assert.equal(rendered,true);assert.equal(redirects.length,0);assert.equal(authState.authenticated,false);

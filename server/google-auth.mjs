@@ -7,6 +7,8 @@ import {publicAuthConfigured,digest,normalizeEmail,currentUser,sessionCookie,SES
 const google=new OAuth2Client();
 const uuid=/^[a-f0-9-]{36}$/;
 export const googleConfigured=(env=process.env)=>publicAuthConfigured(env)&&env.ASAF_GOOGLE_AUTH_ENABLED==='true'&&/^[a-zA-Z0-9_-]+\.apps\.googleusercontent\.com$/.test(env.GOOGLE_CLIENT_ID||'');
+export const GOOGLE_REDIRECT_ORIGIN='https://asafpro.com';
+export const googleRedirectEnabled=(env,origin)=>origin===GOOGLE_REDIRECT_ORIGIN&&env.ASAF_GOOGLE_IOS_REDIRECT_ENABLED==='true'&&googleConfigured(env);
 const reply=(body,status=200,headers={})=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 const parse=raw=>{try{return JSON.parse(raw||'null')}catch{return null}};
 const COMMIT=`-- google-identity-commit
@@ -22,7 +24,7 @@ redis.call('SET',KEYS[2],ARGV[5]);redis.call('SET',KEYS[3],ARGV[6]);redis.call('
 // issuer, expiry and audience. A one-use nonce is bound to an HttpOnly site cookie.
 export function createGoogleHandler({env=process.env,run=command,verify=async token=>(await google.verifyIdToken({idToken:token,audience:env.GOOGLE_CLIENT_ID})).getPayload(),now=()=>Date.now()}={}){
  return async function handler(request){
-  if(request.method==='GET')return reply({enabled:googleConfigured(env),signupEnabled:googleConfigured(env)&&env.ASAF_GOOGLE_SIGNUP_ENABLED==='true',...(googleConfigured(env)?{clientId:env.GOOGLE_CLIENT_ID}:{})});
+  if(request.method==='GET')return reply({enabled:googleConfigured(env),signupEnabled:googleConfigured(env)&&env.ASAF_GOOGLE_SIGNUP_ENABLED==='true',...(googleConfigured(env)?{clientId:env.GOOGLE_CLIENT_ID}:{}),...(googleRedirectEnabled(env,new URL(request.url).origin)?{redirectEnabled:true}:{})});
   if(request.method!=='POST')return reply({error:'POST only'},405);
   if(!googleConfigured(env))return reply({error:'כניסה עם Google עדיין אינה מוגדרת.'},503);
   if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
