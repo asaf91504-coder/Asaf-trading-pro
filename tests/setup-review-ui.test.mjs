@@ -84,3 +84,20 @@ test('all setup card levels use up to two locale decimals without rounding the e
   assert.equal(item.scenario.stop,100.23567);
  }
 });
+
+test('exact 2 ATR stop updates automatically on an edit to the entry',async()=>{
+ for(const [side,stop,target] of [['long',102,130],['short',118,90]]){
+  const h=harness(),item={...candidate,atr14:4,scenario:{side,entry:110,stop,target}};
+  h.queue.push(state([item])); await h.events.pageshow();
+  h.all(h.get('queue')).find(n=>n.textContent==='ערוך טיוטה').onclick();
+  const form=h.all(h.get('queue')).find(n=>n.tag==='form');
+  const fields=h.all(form),entry=fields.find(n=>n.name==='entry'),stopField=fields.find(n=>n.name==='stop');
+  assert.equal(stopField.readOnly,true);
+  entry.value='111';entry.listeners.input();
+  assert.equal(stopField.value,String(stop+1));
+  h.queue.push({status:'pending',revision:rev},state([item]));
+  form.onsubmit({preventDefault(){}});await tick();
+  assert.equal(h.post[0].edits.stop,stop+1);
+  assert.equal(h.post[0].edits.entry,111);
+ }
+});

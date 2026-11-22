@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {closedSetupAtr14,structureAwareStop,stopWithinSetupAtr} from '../server/setup-atr.mjs';
+import {closedSetupAtr14,exactTwoAtrStop,stopWithinSetupAtr} from '../server/setup-atr.mjs';
 import {setupCandidates} from '../server/setup-review.mjs';
 import {indicatorSnapshot} from '../chart-indicators.mjs';
 import {setupReviewTranslations} from '../setup-review-locales.mjs';
@@ -18,24 +18,23 @@ test('uses full-precision Wilder ATR from closed daily bars, never the display a
   assert.equal(closedSetupAtr14({...record,...diff}),null);
  }
 });
-test('automatic stops respect both directions; never tighten an out-of-range structural stop',()=>{
- assert.deepEqual(structureAwareStop(long(99),4),long(96));
- assert.deepEqual(structureAwareStop(short(101),4),short(104));
- for(const s of [long(96),long(94),long(92),short(104),short(106),short(108)])assert.deepEqual(structureAwareStop(s,4),s);
- for(const s of [long(91.99),short(108.01),long(101),short(99)])assert.equal(structureAwareStop(s,4),null);
- assert.equal(structureAwareStop({side:'long',entry:2,stop:1,target:5},3),null);
- assert.equal(stopWithinSetupAtr({side:'long',entry:100,stop:99.8,target:110},.2),true);
+test('all long and short setups get exactly 2 ATR from entry independent of the previous stop',()=>{
+ for(const old of [99,96,94,92,91.99,101,undefined])assert.deepEqual(exactTwoAtrStop(long(old),4),long(92));
+ for(const old of [101,104,106,108,108.01,99,undefined])assert.deepEqual(exactTwoAtrStop(short(old),4),short(108));
+ assert.equal(exactTwoAtrStop({side:'long',entry:2,target:5},3),null);
+ assert.equal(stopWithinSetupAtr(long(92),4),true);
+ assert.equal(stopWithinSetupAtr(long(94),4),false);
 });
-test('only eligible setups appear for owner review, no change to entry or target',()=>{
- const candidates=[long(99),long(91.99),short(103),short(107)].map((scenario,i)=>({kind:'case'+i,scenario}));
+test('setups wider than 2 ATR in the previous algorithm stay in the queue with computed stops',()=>{
+ const candidates=[long(99),long(91.99),short(103),short(110)].map((scenario,i)=>({kind:'case'+i,scenario}));
  const scan={records:[{...record,research:{candidates}}]};
  const queue=setupCandidates(scan);
- assert.deepEqual(queue.map(x=>x.scenario),[long(96),short(104),short(107)]);
+ assert.deepEqual(queue.map(x=>x.scenario),[long(92),long(92),short(108),short(108)]);
  assert.equal(queue.every(x=>x.atr14===4),true);
  assert.deepEqual(setupCandidates({records:[{...scan.records[0],latestBarMayBePartial:true}]}),[]);
 });
 test('the manual stop validation message is localized in every non-Hebrew interface language',()=>{
  for(const locale of ['en','es','ar','fr','de','pt','ru','zh','ja']){
-  assert.ok(setupReviewTranslations[locale]['מרחק הסטופ ממחיר הכניסה חייב להיות בין 1 ל־2 ATR יומי.']);
+  assert.ok(setupReviewTranslations[locale]['מרחק הסטופ ממחיר הכניסה חייב להיות בדיוק 2 ATR יומי.']);
  }
 });

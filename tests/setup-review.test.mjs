@@ -44,7 +44,7 @@ test('personal trial never exposes setups to other customers even if approved',a
  assert.equal((await h(request('setups',null,x.other.cookie))).status,403);
 });
 
-const edits={title:'כותרת אישית',analysis:'<img src=x onerror=alert(1)>\nהתרחיש עדיין להמחשה.',entry:112,stop:101,target:141};
+const edits={title:'כותרת אישית',analysis:'<img src=x onerror=alert(1)>\nהתרחיש עדיין להמחשה.',entry:112,stop:98,target:141};
 const get=async(x,user=x.owner)=>await(await x.handler(request('setups',null,user.cookie))).json();
 const save=async(x,id,changes=edits,revision=null,user=x.owner)=>x.handler(request('setups',{id,action:'save-draft',edits:changes,revision},user.cookie));
 test('a curated draft is visible only to the owner and approval publishes the selected values with original provenance',async()=>{
@@ -57,20 +57,20 @@ test('a curated draft is visible only to the owner and approval publishes the se
  const guest=await get(x,x.other);assert.equal(guest.queue,undefined);assert.deepEqual(guest.published,[]);
  const publish=await x.handler(request('setups',{id,decision:'approved',revision},x.owner.cookie));assert.equal(publish.status,200);
  const result=await get(x,x.other),published=result.published[0];
- assert.deepEqual(published,{...Object.fromEntries(Object.entries(original).filter(([key])=>!['status','atr14'].includes(key))),scenario:{side:'long',entry:112,stop:101,target:141},
+ assert.deepEqual(published,{...Object.fromEntries(Object.entries(original).filter(([key])=>!['status','atr14'].includes(key))),scenario:{side:'long',entry:112,stop:98,target:141},
   approvedAt:new Date(x.now).toISOString(),title:edits.title,analysis:edits.analysis,edited:true});
  assert.equal(published.draft,undefined);assert.equal(published.original,undefined);assert.equal(published.reviewer,undefined);
  const internal=JSON.parse(x.f.db.get(x.key+':reviews'))[id];
  assert.deepEqual(internal.original.scenario,original.scenario);
  assert.deepEqual((await get(x)).queue[0].originalScenario,original.scenario);
- assert.equal((await save(x,id,{...edits,entry:113},revision)).status,409);
+ assert.equal((await save(x,id,{...edits,entry:113,stop:99},revision)).status,409);
  assert.deepEqual((await get(x,x.other)).published,result.published);
 });
 test('drafts and stale owner tabs cannot accidentally publish or overwrite a different revision',async()=>{
  const x=setup(),{id}=(await get(x)).queue[0];
  const revision=(await(await save(x,id)).json()).revision;
  assert.equal((await save(x,id,{...edits,entry:113})).status,409);
- const next=(await(await save(x,id,{...edits,entry:113},revision)).json()).revision;
+ const next=(await(await save(x,id,{...edits,entry:113,stop:99},revision)).json()).revision;
  assert.notEqual(next,revision);
  assert.equal((await x.handler(request('setups',{id,decision:'approved',revision},x.owner.cookie))).status,409);
  assert.equal((await x.handler(request('setups',{id,decision:'approved'},x.owner.cookie))).status,409);
@@ -90,7 +90,7 @@ test('long and short draft levels are strictly ordered and provenance fields can
   assert.equal((await save(x,long.id,{...edits,...change})).status,400,JSON.stringify(change));
  }
  assert.equal((await save(x,short.id,edits)).status,400);
- const shortEdits={title:'Short sample',analysis:'Research only',entry:98.05001,stop:108,target:89};
+ const shortEdits={title:'Short sample',analysis:'Research only',entry:98.05001,stop:98.05001+14,target:89};
  assert.equal((await save(x,short.id,shortEdits)).status,200);
  const state=await get(x);assert.equal(state.queue[1].scenario.side,'short');assert.equal(state.queue[1].draft.entry,98.05001);
 });
@@ -113,9 +113,9 @@ test('public projection strips internal draft and reviewer fields even if presen
  assert.equal(published.scenario.secret,undefined);
 });
 
-test('review checks the 1–2 ATR band against edited entry and never changes an already approved price',async()=>{
+test('review enforces exactly 2 ATR against edited entry and never changes an already approved price',async()=>{
  const x=setup(),{id}=(await get(x)).queue[0];
- for(const stop of [105.01,97.99]){
+ for(const stop of [105,98.01,97.99]){
   const response=await save(x,id,{...edits,stop});
   assert.equal(response.status,400);
   assert.match((await response.json()).error,/ATR/);

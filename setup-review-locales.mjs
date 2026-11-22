@@ -23,16 +23,16 @@ const rows={
  ja:['決済目標','セットアップの下書きを編集','タイトル（任意）','分析（任意）','下書きを保存','編集をキャンセル','下書きを編集','スキャナーの元の水準','下書きは保存済みで、まだ公開されていません。','下書きを保存しました。承認するまで公開されません。','公開前に水準または文言が編集されました。','有効な正の水準を入力してください。','下書きが変更されました。保存または承認の前にページを更新してください。','タイトルまたは分析が無効です。','現在のスキャンで承認待ちの候補のみ編集できます。','下書きの項目が無効です。','ロングではストップがエントリーより下、目標が上です。ショートでは逆です。異なる正の水準を入力してください。','下書きの保存と公開の承認は別の操作です。','保存中にデータが変更されました。更新して再試行してください。']
 };
 const atrDistance={
- en:'The stop must be between 1 and 2 daily ATR from the entry price.',
- es:'El stop debe estar a entre 1 y 2 ATR diarios del precio de entrada.',
- ar:'يجب أن يبعد وقف الخسارة عن سعر الدخول بمقدار يتراوح بين 1 و2 من مؤشر ATR اليومي.',
- fr:'Le stop doit se situer à une distance comprise entre 1 et 2 ATR journaliers du prix d’entrée.',
- de:'Der Stop muss 1 bis 2 Tages-ATR vom Einstiegskurs entfernt liegen.',
- pt:'O stop deve ficar entre 1 e 2 ATR diários do preço de entrada.',
- ru:'Стоп должен находиться на расстоянии от 1 до 2 дневных ATR от цены входа.',
- zh:'止损价与入场价的距离必须为日线 ATR 的 1 至 2 倍。',
- ja:'ストップとエントリー価格の差は日足ATRの1〜2倍にしてください。',
+ en:'The stop must be exactly 2 daily ATR from the entry price.',
+ es:'El stop debe estar exactamente a 2 ATR diarios del precio de entrada.',
+ ar:'يجب أن يبعد وقف الخسارة عن سعر الدخول بمقدار ضعفي مؤشر ATR اليومي.',
+ fr:'Le stop doit se situer à exactement 2 ATR journaliers du prix d’entrée.',
+ de:'Der Stop muss genau 2 Tages-ATR vom Einstiegskurs entfernt liegen.',
+ pt:'O stop deve ficar exatamente a 2 ATR diários do preço de entrada.',
+ ru:'Стоп должен находиться на расстоянии ровно в 2 дневных ATR от цены входа.',
+ zh:'止损价与入场价的距离必须为日线 ATR 的 2 倍。',
+ ja:'ストップとエントリー価格の差は日足ATRのちょうど2倍にしてください。',
 };
 export const setupReviewTranslations=Object.fromEntries(Object.entries(rows).map(([language,values])=>[
- language,{...Object.fromEntries(keys.map((key,i)=>[key,values[i]])),'מרחק הסטופ ממחיר הכניסה חייב להיות בין 1 ל־2 ATR יומי.':atrDistance[language]}
+ language,{...Object.fromEntries(keys.map((key,i)=>[key,values[i]])),'מרחק הסטופ ממחיר הכניסה חייב להיות בדיוק 2 ATR יומי.':atrDistance[language]}
 ]));
