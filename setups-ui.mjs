@@ -1,6 +1,8 @@
 import {languageCode} from './interface-language.mjs';
+import {parseSetupPrice} from './setup-price-input.mjs';
 const $=id=>document.getElementById(id);
 const locale=()=>languageCode(document.documentElement.lang);
+const PRICE_FORMAT='הזן מחיר חיובי בלי מפריד אלפים, למשל 1234.50. אם התכוונת ל־1.234 כמספר עשרוני, הזן 1.2340.';
 const names={entry:'כניסה',stop:'סטופ',target:'יעד יציאה'};
 let data=null,busy=false,editing=null;
 const el=(tag,text='',className)=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node};
@@ -20,8 +22,9 @@ function action(label,onClick,options={}){
  button.type='button';button.disabled=busy||!!options.disabled;button.onclick=onClick;return button;
 }
 function openEditor(item){
- editing={id:item.id,revision:item.draft?.revision??null,title:item.draft?.title||'',analysis:item.draft?.analysis||'',
-  ...Object.fromEntries(Object.keys(names).map(key=>[key,String(item.draft?.[key]??item.scenario[key])]))};
+ const prefilled=Object.fromEntries(Object.keys(names).map(key=>[key,item.draft?.[key]??item.scenario[key]]));
+ editing={id:item.id,revision:item.draft?.revision??null,title:item.draft?.title||'',analysis:item.draft?.analysis||'',prefilled,changed:new Set(),
+  ...Object.fromEntries(Object.entries(prefilled).map(([key,price])=>[key,String(price)]))};
  render();
  document.querySelector('.setup-editor input')?.focus();
 }
@@ -34,8 +37,8 @@ function formField(form,key,label,options={}){
  const input=el(options.multiline?'textarea':'input');input.name=key;input.value=editing[key];input.disabled=busy;
  authored(input);
  if(options.limit)input.maxLength=options.limit;
- if(options.price){input.dir='ltr';input.inputMode='decimal';input.required=true;}
- input.addEventListener('input',()=>{if(editing)editing[key]=input.value});
+ if(options.price){input.dir='ltr';input.inputMode='decimal';input.required=true;input.setAttribute('aria-describedby','setup-price-format');}
+ input.addEventListener('input',()=>{if(editing){editing[key]=input.value;if(options.price)editing.changed.add(key)}});
  wrapper.append(input);form.append(wrapper);
 }
 function editor(item){
@@ -43,8 +46,8 @@ function editor(item){
  const fields=el('div','','setup-editor-levels');
  formField(form,'title','כותרת (לא חובה)',{limit:80});
  formField(form,'analysis','ניתוח (לא חובה)',{multiline:true,limit:400});
- for(const [key,label] of Object.entries(names))formField(fields,key,label,{price:true,limit:32});
- form.append(fields);
+ for(const [key,label] of Object.entries(names))formField(fields,key,label,{price:true});
+ const priceFormat=el('p',PRICE_FORMAT,'meta');priceFormat.id='setup-price-format';form.append(fields,priceFormat);
  const actions=el('div','','actions');
  const save=el('button','שמור טיוטה');save.type='submit';save.disabled=busy;
  actions.append(save,action('בטל עריכה',()=>closeEditor(item.id)));form.append(actions);
@@ -53,9 +56,11 @@ function editor(item){
   const {id,revision,title,analysis}=editing;
   const edits={title,analysis};
   for(const key of Object.keys(names)){
-   const value=editing[key].trim().replace(/[٠-٩۰-۹]/g,c=>String((c.charCodeAt(0)&15))).replace(/[,٫]/g,'.');
-   if(!/^(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value)||!Number.isFinite(Number(value))||Number(value)<=0){reportError('הזן רמות חיוביות תקינות.');return}
-   edits[key]=Number(value);
+   // Unchanged numbers came from the trusted candidate response. Preserve them
+   // exactly even when their display is ambiguous or uses scientific notation.
+   const price=editing.changed.has(key)?parseSetupPrice(editing[key]):editing.prefilled[key];
+   if(price==null){reportError(PRICE_FORMAT);return}
+   edits[key]=price;
   }
   void perform(async()=>{await post({action:'save-draft',id,revision,edits});editing=null;await load();$('reviewFeedback').textContent='הטיוטה נשמרה. היא לא תפורסם עד שתאשר.';document.getElementById('edit-'+id)?.focus()});
  };
