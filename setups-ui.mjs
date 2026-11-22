@@ -11,7 +11,12 @@ function levelsFor(scenario){
  const list=el('dl','','levels');
  for(const [key,label] of Object.entries(names)){
   const cell=document.createElement('div');
-  cell.append(el('dt',label),el('dd',Number(scenario[key]).toLocaleString(locale(),{maximumFractionDigits:8})));list.append(cell);
+  const price=Number(scenario[key]);
+  // Price formatting is display-only; the editor and submitted scenario retain precision.
+  const display=price>0&&price<0.005
+   ?'<'+(0.01).toLocaleString(locale(),{maximumFractionDigits:2})
+   :price.toLocaleString(locale(),{maximumFractionDigits:2});
+  cell.append(el('dt',label),el('dd',display));list.append(cell);
  }
  return list;
 }
