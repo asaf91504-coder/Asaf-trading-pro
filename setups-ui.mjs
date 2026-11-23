@@ -76,26 +76,32 @@ function editor(item){
   for(const key of Object.keys(names)){
    const value=parseLevel(editing[key]);
    if(value===null){reportError('הזן רמות חיוביות תקינות.');return}
-   edits[key]=value;
+   if(!item.manual||key!=='stop')edits[key]=value;
   }
-  void perform(async()=>{await post({action:'save-draft',id,revision,edits});editing=null;await load();$('reviewFeedback').textContent='הטיוטה נשמרה. היא לא תפורסם עד שתאשר.';document.getElementById('edit-'+id)?.focus()});
+  void perform(async()=>{await post({action:item.manual?'edit-manual-draft':'save-draft',id,revision,edits});editing=null;await load();$('reviewFeedback').textContent='הטיוטה נשמרה. היא לא תפורסם עד שתאשר.';document.getElementById('edit-'+id)?.focus()});
  };
  return form;
+}
+function infoLine(item){
+ const line=el('p');
+ if(item.manual)line.append(el('span',item.pattern),el('span',' · '),el('span',item.scenario.side==='long'?'לונג':'שורט'));
+ else line.textContent=item.pattern+' · '+(item.scenario.side==='long'?'לונג':'שורט');
+ return line;
 }
 function card(item,review){
  const node=el('article','','card');
  const draft=review?item.draft:null;
  const title=draft?.title||item.title,analysis=draft?.analysis||item.analysis;
- node.append(authored(el('h3',item.symbol,'symbol')),el('p',item.pattern+' · '+(item.scenario.side==='long'?'לונג':'שורט')));
+ node.append(authored(el('h3',item.symbol,'symbol')),infoLine(item));
  if(title)node.append(authored(el('h4',title,'setup-annotation')));
  if(analysis)node.append(authored(el('p',analysis,'setup-annotation')));
  if(item.edited)node.append(el('p','רמות או ניסוח נערכו לפני הפרסום.','meta'));
- node.append(levelsFor(draft?{...item.scenario,...draft}:item.scenario),el('p','נר אחרון: '+candleDate(item.candleDate)+' · סריקה: '+date(item.scanAt),'meta'));
+ node.append(levelsFor(draft?{...item.scenario,...draft}:item.scenario),el('p',item.manual?'נוצר: '+date(item.createdAt):'נר אחרון: '+candleDate(item.candleDate)+' · סריקה: '+date(item.scanAt),'meta'));
  if(item.approvedAt)node.append(el('p','אושר לפרסום: '+date(item.approvedAt),'meta'));
  if(!review)return node;
  const isEditing=editing?.id===item.id;
  node.append(el('p',({pending:'ממתין לאישור',approved:'אושר לפרסום',rejected:'לא לפרסום'})[item.status]));
- if(draft||isEditing||item.originalScenario){
+ if(!item.manual&&(draft||isEditing||item.originalScenario)){
   const original=el('details','','setup-original');
   original.append(el('summary','הרמות המקוריות מהסורק'),levelsFor(item.originalScenario||item.scenario));node.append(original);
  }
@@ -103,21 +109,22 @@ function card(item,review){
  if(isEditing)node.append(editor(item));
  const actions=el('div','','actions');
  if(item.status==='pending'&&!isEditing){
-  const edit=action('ערוך טיוטה',()=>openEditor(item),{disabled:data.stale||!!editing});edit.id='edit-'+item.id;actions.append(edit);
+  const edit=action('ערוך טיוטה',()=>openEditor(item),{disabled:(!item.manual&&data.stale)||!!editing});edit.id='edit-'+item.id;actions.append(edit);
  }
  for(const [decision,label] of [['approved','אשר לפרסום'],['rejected','לא לפרסם']]){
-  const button=action(label,()=>decide(item,decision),{className:decision==='approved'?'approve':'',disabled:isEditing||item.status===decision||(decision==='approved'&&data.stale)});actions.append(button);
+  const button=action(label,()=>decide(item,decision),{className:decision==='approved'?'approve':'',disabled:isEditing||item.status===decision||(decision==='approved'&&(!item.manual&&data.stale||item.manual&&item.status!=='pending'))});actions.append(button);
  }
  node.append(actions);return node;
 }
+const allQueue=()=>[...(data.manualQueue||[]),...(data.queue||[])];
 function render(){
- const queue=(data.queue||[]).filter(x=>$('filter').value==='all'||x.status===$('filter').value);
- for(const [id,items,review] of [['published',data.published.map(x=>({...x,status:'approved'})),data.reviewer],['queue',queue,true]]){
+ const queue=allQueue().filter(x=>$('filter').value==='all'||x.status===$('filter').value);
+ for(const [id,items,review] of [['published',data.published.map(x=>x.manual&&data.canAuthor?(data.manualQueue||[]).find(y=>y.id===x.id)||{...x,status:'approved'}:{...x,status:'approved'}),data.reviewer],['queue',queue,true]]){
   const host=$(id);host.replaceChildren();
-  for(const item of items)host.append(card(item,review));
+  for(const item of items)host.append(card(item,review&&(!item.manual||data.canAuthor===true)));
   if(!items.length)host.append(el('p',id==='queue'?'אין מועמדים במצב שנבחר.':'עדיין אין סטאפים מאושרים להצגה.','empty'));
  }
- $('review').hidden=!data.reviewer;$('count').textContent=data.published.length.toLocaleString(locale())+' סטאפים';
+ $('review').hidden=!data.reviewer;$('manualSetup').hidden=data.canAuthor!==true;$('count').textContent=data.published.length.toLocaleString(locale())+' סטאפים';
 }
 function renderStatus(){$('status').textContent='סריקה אחרונה: '+date(data.completedAt)+' · הבאה: '+date(data.nextUpdateAt)+(data.stale?' · העדכון מתעכב':'')+(data.partial?' · חלק מהנתונים אינם זמינים':'')}
 async function jsonRequest(body){
@@ -131,7 +138,7 @@ const post=body=>jsonRequest(body);
 async function load(){
  const result=await jsonRequest();data=result;
  if(editing){
-  const item=data.reviewer&&!data.stale&&data.queue?.find(item=>item.id===editing.id&&item.status==='pending');
+  const item=data.reviewer&&allQueue().find(item=>item.id===editing.id&&item.status==='pending'&&(item.manual?data.canAuthor===true:!data.stale));
   if(!item||(item.draft?.revision??null)!==editing.revision)editing=null;
  }
  render();renderStatus();
@@ -140,20 +147,40 @@ function reportError(message){
  $('reviewFeedback').textContent=message;$('reviewFeedback').classList.add('error');
 }
 async function perform(work,{reload=false}={}){
- if(busy)return;busy=true;$('refresh').disabled=true;$('filter').disabled=true;
+ if(busy)return;busy=true;$('refresh').disabled=true;$('filter').disabled=true;for(const c of $('manualForm').elements)c.disabled=true;
  $('reviewFeedback').textContent='';$('reviewFeedback').classList.remove('error');
  if(data)render();
  try{await work();$('status').classList.remove('error')}
  catch(e){
   if(reload||!data||[401,403].includes(e.status)){
    data=null;editing=null;$('status').textContent=e.message;$('status').classList.add('error');
-   $('published').replaceChildren();$('queue').replaceChildren();$('review').hidden=true;$('count').textContent='';
+   $('published').replaceChildren();$('queue').replaceChildren();$('review').hidden=true;$('manualSetup').hidden=true;$('count').textContent='';
   }else reportError(e.message);
- }finally{busy=false;$('refresh').disabled=false;$('filter').disabled=false;if(data)render()}
+ }finally{busy=false;$('refresh').disabled=false;$('filter').disabled=false;for(const c of $('manualForm').elements)c.disabled=false;if(data)render()}
 }
 async function decide(item,decision){
- await perform(async()=>{await post({id:item.id,decision,revision:item.draft?.revision??null});await load()});
+ await perform(async()=>{await post({...(item.manual?{action:'decide-manual'}:{}),id:item.id,decision,revision:item.draft?.revision??null});await load()});
 }
+const manualForm=$('manualForm');
+const manualField=name=>manualForm.elements.namedItem(name);
+function refreshManualStop(){
+ const entry=parseLevel(manualField('entry').value),atr=parseLevel(manualField('atr14').value);
+ const stop=entry===null||atr===null?null:entry+(manualField('side').value==='long'?-2:2)*atr;
+ manualField('stop').value=stop!==null&&Number.isFinite(stop)&&stop>0&&stop!==entry?String(stop):'';
+}
+manualForm.addEventListener('input',refreshManualStop);
+manualForm.addEventListener('change',refreshManualStop);
+manualForm.onsubmit=event=>{
+ event.preventDefault();if(busy||data?.canAuthor!==true)return;
+ const idea={symbol:manualField('symbol').value,side:manualField('side').value,atr14:parseLevel(manualField('atr14').value),
+  entry:parseLevel(manualField('entry').value),target:parseLevel(manualField('target').value),title:manualField('title').value,
+  analysis:manualField('analysis').value,ownAnalysis:manualField('ownAnalysis').checked};
+ if(!idea.atr14||!idea.entry||!idea.target||!manualField('stop').value){reportError('הזן רמות חיוביות תקינות.');return;}
+ void perform(async()=>{
+  await post({action:'create-manual-draft',idea});manualForm.reset();refreshManualStop();$('filter').value='pending';
+  await load();$('reviewFeedback').textContent='הטיוטה נשמרה. היא לא תפורסם עד שתאשר.';
+ });
+};
 $('filter').onchange=()=>{if(data){editing=null;render()}};
 $('refresh').onclick=()=>perform(load,{reload:true});
 window.addEventListener('pageshow',()=>perform(load,{reload:true}));

@@ -13,3 +13,8 @@ header{flex-wrap:wrap;gap:12px} .card{min-width:0;overflow-wrap:anywhere}
 .setup-original{margin-block:12px;color:#a9b9d1}
 .setup-original summary{cursor:pointer;padding-block:10px}
 @media(max-width:540px){.setup-editor-levels{grid-template-columns:1fr}.setup-editor .actions button{min-height:44px}}
+#manualSetup{margin-top:24px}
+#manualSetup h2{margin:0}
+.setup-editor input[readonly]{opacity:.8}
+.setup-editor .setup-attestation{display:flex;align-items:flex-start;gap:10px;color:#a9b9d1;line-height:1.55}
+.setup-editor .setup-attestation input{accent-color:#5eead4;width:20px;height:20px;min-height:0;flex:none;margin-top:2px}

@@ -9,7 +9,7 @@ function ordered(s){
  return PRICE_FIELDS.every(k=>Number.isFinite(s?.[k])&&s[k]>0)
   &&(s.side==='long'?s.stop<s.entry&&s.entry<s.target:s.side==='short'&&s.target<s.entry&&s.entry<s.stop);
 }
-function draftText(value,max,allowLines){
+export function draftText(value,max,allowLines){
  if(typeof value!=='string')throw new MarketError('הכותרת או הניתוח אינם תקינים.',400);
  const normalized=value.replace(/\r\n/g,'\n').trim();
  const single=allowLines?normalized.replace(/\n/g,''):normalized;
