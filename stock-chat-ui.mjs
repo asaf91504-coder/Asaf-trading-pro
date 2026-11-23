@@ -220,7 +220,8 @@ async function ask(q,extra={}){
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
   const intentQuestion=window.asafCanonicalPrompt?.(question)||question;
-  const broadMarket=!extra.newsArticleId&&currentUSMarketIntent(question);
+  const ownerWeb=authState.ownerHostedSearch===true&&(preparedPayload?preparedPayload.webSearch===true:$("chatWebSearch")?.checked===true);
+  const broadMarket=ownerWeb||!extra.newsArticleId&&currentUSMarketIntent(question);
   if(!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
    waiting.textContent='טיוטה ליומן המסחר';
    const answer='נפתחה טיוטת עסקה לבדיקה. השמירה מתבצעת רק בכפתור השמירה בטיוטה.';
@@ -355,7 +356,7 @@ async function ask(q,extra={}){
   }
   const scenarioText=data.tradeScenario?entryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
   const modelAnswer=scenarioText&&data.answer.endsWith('\n\n'+scenarioText)?data.answer.slice(0,-scenarioText.length-2):data.answer;
-  const replyParts={before:localReceipt,answer:modelAnswer,after:suffix};
+  const replyParts={before:localReceipt,answer:modelAnswer,after:suffix,...(data.webSearch?.kind==='owner-hosted-search'?{citationSources:data.webSearch.sources}:{})};
   const translate=window.asafTranslate|| (text=>text);
   const completedAnswer=localizedChatReply(replyParts,translate)+(scenarioText?'\n\n'+scenarioText:'')+(data.webSearch?.status==='available'&&data.webSearch.sources?.length?'\n\n'+translate('מקורות שנמצאו בחיפוש:')+'\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
   renderChatReply(waiting,replyParts);

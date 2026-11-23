@@ -137,7 +137,7 @@ window.addEventListener('asaf:chart-actions',()=>{
 });
 const closeSidebar=document.createElement('button');closeSidebar.type='button';closeSidebar.className='chart-chat-close';closeSidebar.textContent='חזרה לגרף';closeSidebar.onclick=()=>toggleWorkspaceChat(false);conversationNav.append(closeSidebar);
 const quickActions=document.createElement('div');quickActions.className='chart-ai-prompts';quickActions.setAttribute('aria-label','בקשות ניתוח מהירות');
-for(const label of ['נתח את הגרף עם נקודת כניסה וסטופ־לוס','מתח קווי מגמה','סמן תמיכות והתנגדויות','הוסף ממוצע 20 וממוצע 150']){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=()=>{$('chatInput').value=label;$('chatInput').focus()};quickActions.append(button)}
+for(const label of ['מה אתה חושב על השוק היום','איך לקרוא דוח רבעוני?','מה ההבדל בין ביטקוין לאתריום?','נתח את הגרף עם נקודת כניסה וסטופ־לוס','מתח קווי מגמה','סמן תמיכות והתנגדויות','הוסף ממוצע 20 וממוצע 150']){const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=()=>{$('chatInput').value=label;$('chatInput').focus()};quickActions.append(button)}
 form.before(quickActions);
 const visibleMarketStatus=document.createElement('p');visibleMarketStatus.className='chart-load-status';visibleMarketStatus.setAttribute('role','status');$('charts').prepend(visibleMarketStatus);
 const syncMarketStatus=()=>visibleMarketStatus.textContent=$('marketFetchStatus').textContent;new MutationObserver(syncMarketStatus).observe($('marketFetchStatus'),{childList:true,subtree:true,characterData:true});syncMarketStatus();
@@ -145,7 +145,7 @@ $('loadChart').addEventListener('click',()=>{selectTab('charts');$('marketFetch'
 
 // Clear starting points; suggestions fill a draft and never send it automatically.
 const intro=document.createElement('p');intro.className='conversation-intro';
-intro.textContent='מה תרצה לבדוק היום? בחר מניה, בקש ניתוח או הוסף כלי לגרף.';
+intro.textContent='אפשר לשאול על השוק, דוחות וקריפטו, או לבקש ניתוח גרף.';
 chat.querySelector('h2').after(intro);
 quickActions.classList.add('conversation-prompts');
 for(const button of quickActions.querySelectorAll('button')){

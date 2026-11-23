@@ -126,3 +126,32 @@ test('earnings research remains available with a bounded market-only system inst
 test('semantic scope refusal is an unsuccessful response, never chart actions or a charged success',async()=>{await simulate(enabled,async calls=>{
  const r=await handler(req({message:'Help with an unrelated topic',language:'en',chartControl:true}));const data=await r.json();assert.equal(r.status,422);assert.equal(data.code,'market_qa_only');assert.equal(data.credits.charged,0);assert.equal(data.actions,undefined);assert.equal(calls.length,1);
 },{message:{content:'ASAF_OUT_OF_SCOPE'}})});
+
+test('a concrete chart review adds evidence, confirmation, invalidation and wait guidance without changing response language or levels',async()=>{
+ await simulate(enabled,async calls=>{
+  const result=await handler(req({message:'Analyze this stock chart',symbol:'NASDAQ:NVDA',interval:'1day',bars:source(),language:'fr'}));
+  assert.equal(result.status,200);
+  assert.equal(calls.length,1);
+  const instruction=calls[0].body.messages[0].content;
+  assert.match(instruction,/TECHNICAL REVIEW/);
+  assert.match(instruction,/what is missing or uncertain/);
+  assert.match(instruction,/would confirm or invalidate/);
+  assert.match(instruction,/watch-and-wait idea/);
+  assert.match(instruction,/MA20, verified relative volume/);
+  assert.match(instruction,/Preserve all existing scanner filters/);
+  assert.match(instruction,/Response language: French/);
+  const plan=(await result.json()).tradeScenario;
+  assert.equal(plan.available,false); // Browser CSV is not server-verified for levels.
+  assert.equal(plan.entry,undefined);
+  assert.equal(plan.stop,undefined);
+ });
+});
+test('a conceptual definition does not receive the concrete setup prompt or imply available evidence',async()=>{
+ await simulate(enabled,async calls=>{
+  const result=await handler(req({message:'What is chart analysis?',language:'en'}));
+  assert.equal(result.status,200);
+  assert.equal(calls.length,1);
+  assert.doesNotMatch(calls[0].body.messages[0].content,/TECHNICAL REVIEW/);
+  assert.equal((await result.json()).tradeScenario,null);
+ });
+});
