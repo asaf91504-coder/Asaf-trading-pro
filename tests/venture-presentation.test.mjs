@@ -5,6 +5,7 @@ import {ventureChart,ventureScanRecord,rasterFontOptions} from '../server/ventur
 import {rawMarketExportRequest} from '../server/venture-policy.mjs';
 import {createPublicMarketHandler} from '../netlify/functions/public-market.mjs';
 import {createScanMarketHandler} from '../netlify/functions/scan-market.mjs';
+import {billingIdentity,recordKey,DAY} from '../server/billing.mjs';
 import {analysisMarket} from '../server/analysis-sources.mjs';
 import {marketSnapshotKey} from '../server/market-feed.mjs';
 import {sharedScannerKey} from '../server/shared-scanner.mjs';
@@ -15,6 +16,12 @@ const bars=Array.from({length:200},(_,i)=>({date:new Date(now-(201-i)*86400000).
 const env={...authEnv,ASAF_MARKET_ENABLED:'true',ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED:'true',ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED:'true',ASAF_MARKET_AI_LICENSE_CONFIRMED:'true',TWELVE_DATA_API_KEY:'mock-private-key',ASAF_MARKET_DELAY_MINUTES:'0',ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL'};
 const snapshot={symbol:'AAPL',source:'Twelve Data',interval:'1day',receivedAt:new Date(now).toISOString(),latestBarTime:bars.at(-1).date,barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,volumeBasis:{feed:'twelve-data:us-equities',session:'regular',coverage:'partial',basis:'qa-venues',adjustment:'unadjusted',verifiedFrom:'2025-01-01'},bars};
 function seeded(){const state=fixture(),user=seed(state);state.db.set(marketSnapshotKey('AAPL','1day',env),JSON.stringify(snapshot));return {state,user}}
+async function paidScannerFixture(state,user){
+ const configured={...env,ASAF_BILLING_ENABLED:'true'};
+ const identity=await billingIdentity(user.record.id,{env:configured,run:state.run});
+ state.db.set(recordKey(identity,configured),JSON.stringify({paidUntil:now+DAY}));
+ return configured;
+}
 const rawFields=new Set(['bars','open','high','low','close','volume','summary','fundamentals','support20','resistance20','trigger','firstHigh','secondHigh','firstLow','secondLow','headPrice']);
 function noRawFields(value){if(!value||typeof value!=='object')return;for(const [key,item] of Object.entries(value)){assert.equal(rawFields.has(key),false,'Forbidden raw field: '+key);noRawFields(item)}}
 test('static chart emits PNG pixels and bounded metadata, without OHLCV, SVG coordinates or secrets',async()=>{
@@ -29,7 +36,7 @@ test('authenticated image and AI use the same server snapshot and repeated annot
  assert.equal((await handler(request('public-market',{symbol:'AAPL',cachedOnly:true}))).status,401);
 });
 test('scanner applies price, MA, EOD volume and cap filters on server and sends derived-only records',async()=>{
- const {state,user}=seeded(),handler=createScanMarketHandler({env,run:state.run,now:()=>now,fetcher:async()=>{throw Error('No provider call')}});
+ const {state,user}=seeded(),configured=await paidScannerFixture(state,user),handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{throw Error('No provider call')}});
  const scan=async filters=>{const response=await handler(request('scan-market',{symbols:['AAPL'],filters,cachedOnly:true},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);return body.records[0]};
  const filters={minPrice:5,minMarketCap:0,minVolume:0,above20:true,risingVolume:true};
  const partial=await scan(filters);assert.equal(partial.screen.matches,false);assert.equal(partial.presentation,'derived-only');assert.ok(partial.metrics.relativeVolume>1);assert.equal(partial.metrics.volumeCoverage,'partial');assert.match(partial.screen.reasons.join(' '),/מחזור חלקי/);
@@ -44,7 +51,7 @@ test('projection strips raw pivot prices and even unexpected future fields',()=>
  const result=ventureScanRecord(record,screenResult(record,{minVolume:0}));noRawFields(result);assert.equal(result.secret,undefined);assert.equal(result.patterns[0].movePercent,25);assert.equal(result.patterns[0].scenario,undefined);
 });
 test('cache-only re-screening never buys missing fundamentals or time series',async()=>{
- const {state,user}=seeded();const configured={...env,ASAF_MARKET_FUNDAMENTALS_ENABLED:'true',ASAF_MARKET_REQUESTS_PER_MINUTE:'64'};state.db.set(marketSnapshotKey('AAPL','1day',configured),JSON.stringify(snapshot));let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('Unexpected provider request')}});
+ const {state,user}=seeded();const configured={...await paidScannerFixture(state,user),ASAF_MARKET_FUNDAMENTALS_ENABLED:'true',ASAF_MARKET_REQUESTS_PER_MINUTE:'64'};state.db.set(marketSnapshotKey('AAPL','1day',configured),JSON.stringify(snapshot));let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('Unexpected provider request')}});
  const result=await(await handler(request('scan-market',{symbols:['AAPL'],cachedOnly:true,filters:{minMarketCap:1e9}},user.cookie))).json();assert.equal(calls,0);assert.equal(result.records[0].screen.matches,false);
 });
 test('raw export requests are rejected while ordinary research remains available',()=>{
@@ -53,7 +60,7 @@ test('raw export requests are rejected while ordinary research remains available
 });
 
 test('shared three-hour snapshots keep raw records inside the server boundary',async()=>{
- const {state,user}=seeded(),configured={...env,ASAF_HOURLY_SCANNER_ENABLED:'true'};
+ const {state,user}=seeded(),configured={...await paidScannerFixture(state,user),ASAF_HOURLY_SCANNER_ENABLED:'true'};
  const record={...scanBars('AAPL',bars),source:'Twelve Data',receivedAt:snapshot.receivedAt,barPolicy:snapshot.barPolicy,fundamentals:{status:'unavailable'}};
  state.db.set(sharedScannerKey(configured)+':snapshot',JSON.stringify({records:[record],errors:[],completedAt:snapshot.receivedAt,startedAt:snapshot.receivedAt,nextUpdateAt:now+10800000}));
  let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('No provider request')}});

@@ -1,14 +1,27 @@
 import {partialVolumeReason,volumeUnavailableReason} from './comparable-volume.mjs';
-import {csvCell} from './scanner-core.mjs';
 const $=id=>document.getElementById(id),pretty=v=>Number.isFinite(v)?Number(v).toLocaleString('en-US',{maximumFractionDigits:2}):'חסר';
 const headers=['מניה / יום בסיס','התאמה למסננים','מעל MA20 / MA150','ATR%','מחזור יחסי EOD','כיוון Supertrend','RSI14','ADX14','תבניות','יעד מדוד (%)','יחס סיכוי / סיכון','כיוון תרחיש','שווי שוק אומת','סיבות / מקור','פעולות'];
+// Combine cancellation and timeout without AbortSignal.any(), absent on older Safari.
+export async function scannerJson(fetcher,url,options,signal,timeoutMs){
+ const scoped=new AbortController();
+ const relay=()=>scoped.abort(signal.reason);
+ if(signal.aborted)relay();else signal.addEventListener('abort',relay,{once:true});
+ const timer=setTimeout(()=>scoped.abort(new DOMException('Request timed out','TimeoutError')),timeoutMs);
+ try {
+  if(scoped.signal.aborted)throw scoped.signal.reason||new DOMException('Cancelled','AbortError');
+  const response=await fetcher(url,{...options,signal:scoped.signal});
+  return {response,data:await response.json()};
+ } finally {
+  clearTimeout(timer);signal.removeEventListener('abort',relay);
+ }
+}
 export function mountVentureScanner({filters,openCharts}){
  const records=new Map();let busy=false,controller=null,revision=0,lastFilters='',dirty=true,inspectedSymbol=null;
  const translate=value=>window.asafTranslate?.(value)??value;
  const localized=(element,parts)=>{element.translate=false;element.textContent=parts.map(translate).join('');};
  const enumLabel=value=>document.documentElement?.lang&&document.documentElement.lang!=='he'?value:({up:'עולה',down:'יורד',long:'לונג',short:'שורט',crossed:'נחצה בנר האחרון',waiting:'ממתין לחצייה',above:'כבר מעל הרמה',below:'כבר מתחת לרמה',observed:'זוהה בנתונים'}[value]||value);
  [...$('scanRows').closest('table').querySelectorAll('thead th')].forEach((h,i)=>h.textContent=headers[i]);
- const update=document.createElement('button');update.type='button';update.textContent='עדכן תוצאות לפי המסננים';update.className='primary';$('scanExport').before(update);
+ const update=document.createElement('button');update.type='button';update.textContent='עדכן תוצאות לפי המסננים';update.className='primary';$('scanClear').before(update);
  const open=record=>{openCharts();window.dispatchEvent(new CustomEvent('asaf:open-provider-chart',{detail:{symbol:record.symbol}}))};
  function ordered(){return [...records.values()].sort((a,b)=>$('scanSort').value==='symbol'?a.symbol.localeCompare(b.symbol):$('scanSort').value==='scenario'?Math.max(-1,...b.patterns.map(p=>p.movePercent??-1))-Math.max(-1,...a.patterns.map(p=>p.movePercent??-1)):$('scanSort').value==='volume'?(b.metrics.relativeVolume??-1)-(a.metrics.relativeVolume??-1):(b.metrics.atrPercent??-1)-(a.metrics.atrPercent??-1))}
  function render(){
@@ -28,7 +41,6 @@ export function mountVentureScanner({filters,openCharts}){
   if(!host.children.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=15;cell.textContent=records.size?'אין התאמות במסננים האלה.':'לחץ על מצא לי מניות. נתוני המקור נשארים בשרת.';row.append(cell);host.append(row)}
   $('scanSummary').textContent=`נבדקו ${records.size} מניות · ${dirty?'יש לעדכן מסננים':matched+' התאמות'} · מחקר על ימים שהסתיימו`;
   $('scanStatus').textContent=dirty&&records.size?'המסננים השתנו. לחץ ״עדכן תוצאות״ לחישוב בשרת.':'תוצאות נגזרות בלבד · Data provided by Twelve Data · ללא מחירי מקור או נתוני נרות להורדה.';
-  $('scanExport').disabled=dirty||!records.size;
  }
  function details(r){const host=$('scanResearchDetails');host.replaceChildren();host.hidden=false;inspectedSymbol=r.symbol;
   const h=document.createElement('h3'),p=document.createElement('p');h.textContent=r.symbol+' · מחקר נגזר';
@@ -45,7 +57,7 @@ export function mountVentureScanner({filters,openCharts}){
   try{
    let symbols,batchSize=10,delay=31000,shared=false,sharedReceipt='';
    if(cachedOnly){symbols=[...records.keys()];if(!symbols.length)throw Error('יש לבצע סריקה ראשונה לפני עדכון המסננים.');}
-   else if(discover){const response=await fetch('/.netlify/functions/scan-market',{signal:AbortSignal.any([signal,AbortSignal.timeout(15000)]),credentials:'same-origin'}),config=await response.json();if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=config.symbols.slice(0,50);batchSize=Math.min(10,config.maxSymbols||10);delay=Math.max(31000,config.batchDelayMs||0);}
+   else if(discover){const {response,data:config}=await scannerJson(fetch,'/.netlify/functions/scan-market',{credentials:'same-origin'},signal,15000);if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=config.symbols.slice(0,50);batchSize=Math.min(10,config.maxSymbols||10);delay=Math.max(31000,config.batchDelayMs||0);}
    else symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);
    if(!symbols.length||(!discover&&!cachedOnly&&symbols.length>10))throw Error('בחר 1 עד 10 סימולים בכל סריקה ידנית.');
    // A failed cached filter update must remain retryable without refetching market data.
@@ -54,7 +66,7 @@ export function mountVentureScanner({filters,openCharts}){
    for(let offset=0;offset<symbols.length;offset+=batchSize){
     if(offset&&!cachedOnly&&!shared){status.textContent='ממתין למכסת הקבוצה הבאה…';await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException('Cancelled','AbortError'))},timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},delay);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort()})}
     status.textContent=`בודק ${offset+1}–${Math.min(symbols.length,offset+batchSize)} מתוך ${symbols.length}…`;
-    const response=await fetch('/.netlify/functions/scan-market',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize),filters:selected,cachedOnly}),signal:AbortSignal.any([signal,AbortSignal.timeout(35000)])}),data=await response.json();
+    const {response,data}=await scannerJson(fetch,'/.netlify/functions/scan-market',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize),filters:selected,cachedOnly})},signal,35000);
     if(!response.ok)throw Error(data.error||'הסריקה נכשלה.');if(current!==revision||signal.aborted)return;
     if(data.shared){shared=true;sharedReceipt='סריקה משותפת · עדכון '+data.completedAt+' · עדכון הבא '+new Date(data.nextUpdateAt).toLocaleString(globalThis.document?.documentElement?.lang||'he-IL')+(data.stale?' · ממתין לרענון':'');}
     for(const r of data.records||[])if(r.presentation==='derived-only')staged.set(r.symbol,r);
@@ -73,6 +85,5 @@ export function mountVentureScanner({filters,openCharts}){
  $('scanClear').onclick=()=>{controller?.abort();records.clear();dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render()};
  window.addEventListener('asaf:logout',()=>{revision++;controller?.abort();busy=false;records.clear();dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render();update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if($('scanDiscoverStop'))$('scanDiscoverStop').hidden=true});
  $('scanProviderAuto').disabled=true;$('scanProviderAuto').closest('label').hidden=true;
- $('scanExport').textContent='ייצא תוצאות ניתוח בלבד';$('scanExport').onclick=()=>{if(dirty||!records.size)return;const rows=[['Symbol','AsOf','Matches','AboveMA20','AboveMA150','ATRPercent','RelativeVolumeEOD','VolumeCoverage','RSI14','ADX14','PatternKinds','Reasons'],...ordered().filter(r=>!$('scanOnlyMatches').checked||r.screen.matches).map(r=>[r.symbol,r.asOf,r.screen.matches,r.metrics.aboveMA20,r.metrics.aboveMA150,r.metrics.atrPercent,r.metrics.relativeVolume,r.metrics.volumeCoverage,r.metrics.rsi14,r.metrics.adx14,r.patterns.map(p=>p.kind).join(' | '),r.screen.reasons.join(' | ')])];const url=URL.createObjectURL(new Blob(['\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='asaf-analysis.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
  render();
 }

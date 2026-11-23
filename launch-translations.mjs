@@ -47,3 +47,17 @@ const trialExhaustedCopy={
  ja:'無料クレジット{limit}分を使い切りました。補充はされません。有料プランに変更できます。'
 };
 for(const [code,label] of Object.entries(trialExhaustedCopy))launchTranslations[code][trialExhaustedKey]=label;
+
+const marketTermsKey="אין להשתמש בכלים אוטומטיים כדי לגרד או לאסוף נתוני שוק או תוצאות סריקה מהשירות. אין לשתף או להפיץ הלאה נתוני שוק או תוצאות סריקה שמקורן בספקי נתונים, גם אם התוצאות נגזרות, ללא הרשאה מתאימה.";
+const marketTermsCopy={
+ "en": "Do not scrape or automatically collect market data or screener results from the service. Do not share or redistribute third-party market data or screener results derived from that data without the applicable permission.",
+ "es": "No extraigas ni recopiles automáticamente datos de mercado ni resultados del escáner del servicio. No compartas ni redistribuyas datos de mercado de terceros ni resultados del escáner derivados de esos datos sin la autorización correspondiente.",
+ "ar": "يُمنع استخراج بيانات السوق أو نتائج أداة الفرز من الخدمة أو جمعها آليًا. ويُمنع مشاركة بيانات السوق الخاصة بجهات خارجية أو نتائج الفرز المشتقة منها أو إعادة توزيعها من دون الإذن اللازم.",
+ "fr": "Il est interdit d’extraire ou de collecter automatiquement des données de marché ou des résultats du filtre depuis le service. Ne partagez ni ne redistribuez les données de marché tierces ou les résultats de filtrage qui en découlent sans l’autorisation requise.",
+ "de": "Marktdaten und Screener-Ergebnisse dürfen nicht aus dem Dienst ausgelesen oder automatisiert erfasst werden. Marktdaten Dritter und daraus abgeleitete Screener-Ergebnisse dürfen ohne entsprechende Genehmigung nicht weitergegeben oder weiterverbreitet werden.",
+ "pt": "Não extraia nem colete automaticamente dados de mercado ou resultados do filtro a partir do serviço. Não compartilhe nem redistribua dados de mercado de terceiros ou resultados de filtros derivados desses dados sem a devida autorização.",
+ "ru": "Запрещено извлекать или автоматически собирать рыночные данные и результаты скринера из сервиса. Не передавайте и не распространяйте рыночные данные сторонних поставщиков и полученные на их основе результаты скринера без соответствующего разрешения.",
+ "zh": "请勿抓取或自动收集本服务中的市场数据或筛选结果。未经相应许可，不得分享或再分发第三方市场数据或基于该数据得出的筛选结果。",
+ "ja": "本サービスから市場データやスクリーナーの結果をスクレイピングしたり、自動収集したりしないでください。適切な許可なく、第三者の市場データやそのデータから得たスクリーナーの結果を共有または再配布しないでください。"
+};
+for(const [code,label] of Object.entries(marketTermsCopy))launchTranslations[code][marketTermsKey]=label;

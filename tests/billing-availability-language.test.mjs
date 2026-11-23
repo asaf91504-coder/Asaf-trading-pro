@@ -50,3 +50,31 @@ test('trial offer and exhausted-credit UI respect localized policy and prior gra
   }
  }
 });
+
+test('the exhausted-credit dialog exposes canonical labels and retains plan figures in every interface language',async()=>{
+ const {showCreditPlans}=await import('../exhausted-credits-ui.mjs');
+ const {launchTranslations}=await import('../launch-translations.mjs');
+ const node=tag=>({tag,children:[],style:{},append(...children){this.children.push(...children)},addEventListener(){},setAttribute(key,value){this[key]=value},showModal(){}});
+ const previous=globalThis.document;
+ try{
+  globalThis.document={documentElement:{lang:'ar'},getElementById:()=>null,createElement:node,body:node('body')};
+  showCreditPlans();
+  const [dialog]=document.body.children;
+  const [head,notice,...rest]=dialog.children,close=rest.pop();
+  assert.equal(dialog['aria-labelledby'],head.id);
+  assert.equal(head.textContent,'בחר מסלול להמשך השימוש');assert.equal(close.textContent,'חזרה לשיחה');
+  const labels=[head.textContent,notice.textContent,close.textContent];
+  for(const [i,[id,price,amount]] of [['starter',22,150],['plus',30,300],['pro',46,600],['premium',145,2500]].entries()){
+   const a=rest[i], [quoted,,interval,,allowance,,period]=a.children;
+   assert.equal(a.href,'/subscription.html?plan='+id+'#billingAccount');
+   assert.equal(quoted.textContent,id.toUpperCase()+' · $'+price);
+   assert.equal(allowance.textContent,String(amount));
+   labels.push(interval.textContent,period.textContent);
+  }
+  for(const lang of Object.keys(languageNames).filter(l=>l!=='he')){
+   const phrases=createTranslator(launchTranslations[lang]);
+   for(const label of labels)assert.doesNotMatch(phrases(label),/\p{Script=Hebrew}/u,lang+': '+label);
+   if(lang!=='en')assert.notEqual(phrases(head.textContent),'Choose a plan to continue',lang);
+  }
+ }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous}
+});

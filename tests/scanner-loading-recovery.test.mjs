@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../venture-scanner-ui.mjs',import.meta.url),'utf8');
+const helperCode=source.slice(source.indexOf('export async function scannerJson'),source.indexOf('export function mountVentureScanner')).replace('export async function','async function');
 const scanCode=source.slice(source.indexOf('async function scan('),source.indexOf(" $('scanProvider').onclick"));
 function fixture(fetch){
  const nodes=new Map();const $=id=>{if(!nodes.has(id))nodes.set(id,{disabled:false,hidden:true,checked:true,textContent:''});return nodes.get(id)};
  const timeouts=[],timers=[];
  const context={busy:false,revision:0,controller:null,lastFilters:'',dirty:true,records:new Map(),filters:()=>({}),render(){},$,
  update:{disabled:false},AbortController,DOMException,JSON,Date,
- AbortSignal:{any:AbortSignal.any.bind(AbortSignal),timeout:ms=>{timeouts.push(ms);const c=new AbortController();timers.push(c);return c.signal}},fetch};
- vm.createContext(context);vm.runInContext(scanCode,context);
+ setTimeout:(fn,ms)=>{timeouts.push(ms);return timers.push(fn)},clearTimeout:()=>{},fetch};
+ vm.createContext(context);vm.runInContext(helperCode+'\n'+scanCode,context);
  return {context,$,timeouts,timers};
 }
 function assertIdle(f){assert.equal(f.context.busy,false);assert.equal(f.context.controller,null);assert.equal(f.context.update.disabled,false);for(const id of ['scanProvider','scanDiscover'])assert.equal(f.$(id).disabled,false);assert.equal(f.$('scanDiscoverStop').hidden,true)}
@@ -23,8 +24,8 @@ test('hung discovery request is aborted after configured timeout and retry is en
  });
  const pending=f.context.scan({discover:true});
  assert.deepEqual(f.timeouts,[15000]);assert.equal(f.context.busy,true);assert.equal(f.context.update.disabled,true);
- f.timers[0].abort(new DOMException('Discovery request timed out','TimeoutError'));await pending;
- assertIdle(f);assert.equal(f.$('scanDiscoverStatus').textContent,'Discovery request timed out');
+ f.timers[0]();await pending;
+ assertIdle(f);assert.equal(f.$('scanDiscoverStatus').textContent,'Request timed out');
  await f.context.scan({discover:true});assert.equal(attempts,2);assertIdle(f);
 });
 test('discovery network and malformed JSON failures release all controls',async()=>{

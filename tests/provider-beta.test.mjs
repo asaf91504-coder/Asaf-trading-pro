@@ -7,7 +7,7 @@ import {analysisMarket} from '../server/analysis-sources.mjs';
 import {createScanMarketHandler} from '../netlify/functions/scan-market.mjs';
 import {screenResult} from '../scanner-core.mjs';
 import {scannerSettings,asafScannerPreset} from '../scanner-presets.mjs';
-import {env as authEnv,fixture,seed,request,prefix} from './identity-fixture.mjs';
+import {env as authEnv,fixture,seed,seedPaid,request,prefix} from './identity-fixture.mjs';
 const env={...authEnv,ASAF_MARKET_ENABLED:'true',ASAF_MARKET_DISPLAY_LICENSE_CONFIRMED:'true',ASAF_MARKET_PUBLIC_LICENSE_CONFIRMED:'true',ASAF_MARKET_AI_LICENSE_CONFIRMED:'true',ASAF_MARKET_FUNDAMENTALS_ENABLED:'true',ASAF_MARKET_DELAY_MINUTES:'0',ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL,NVDA',TWELVE_DATA_API_KEY:'test-only-secret',ASAF_MARKET_REQUESTS_PER_MINUTE:'610'};
 const time=Date.parse('2026-11-09T18:00:00Z');
 function prices(symbol='AAPL'){
@@ -71,7 +71,7 @@ test('billion-dollar filter rejects missing, stale, wrong-currency and under-thr
  assert.equal(scannerSettings().scanMinMarketCap,1e9);assert.equal(asafScannerPreset().scanMinMarketCap,1e9);
 });
 test('scan-to-chart-to-AI keeps identical previous-day candles and exposes missing cap separately',async()=>{
- const s=fixture(),u=seed(s),calls=[];const handler=createScanMarketHandler({env,run:s.run,now:()=>time,fetcher:async url=>{calls.push(url.pathname);const symbol=url.searchParams.get('symbol');return Response.json(url.pathname==='/statistics'?(symbol==='NVDA'?{status:'error',code:403}:stats(symbol)):prices(symbol))}});
+ const s=fixture(),u=seed(s),calls=[];seedPaid(s,u,time+86400000);const handler=createScanMarketHandler({env:{...env,ASAF_BILLING_ENABLED:'true'},run:s.run,now:()=>time,fetcher:async url=>{calls.push(url.pathname);const symbol=url.searchParams.get('symbol');return Response.json(url.pathname==='/statistics'?(symbol==='NVDA'?{status:'error',code:403}:stats(symbol)):prices(symbol))}});
  const result=await handler(request('scan-market',{symbols:['AAPL','NVDA']},u.cookie));assert.equal(result.status,200);const body=await result.json();assert.equal(body.records.length,2);
  const a=body.records.find(r=>r.symbol==='AAPL'),n=body.records.find(r=>r.symbol==='NVDA');assert.equal(a.marketCapStatus,'available');assert.equal(n.marketCapStatus,'unavailable');assert.equal(a.bars,undefined);assert.equal(a.summary,undefined);assert.ok(a.asOf<'2026-11-09');
  const analysis=await analysisMarket({symbol:a.symbol,interval:'1day',receivedAt:a.receivedAt},{env,run:s.run,now:time});assert.equal(analysis.bars.at(-1).date,a.asOf);assert.ok(analysis.bars.every(b=>b.date<'2026-11-09'));assert.equal(analysis.meta.barPolicy,a.barPolicy);assert.equal(calls.length,4);

@@ -14,3 +14,19 @@ export const subscriptionTranslations=Object.fromEntries(Object.entries(rows).ma
  if(values.length!==source.length)throw Error('Incomplete subscription translation: '+lang);
  return [lang,Object.fromEntries(source.map((text,i)=>[text,values[i]]))];
 }));
+
+const continuePlanLabels={
+ en:['Choose a plan to continue','Back to chat'],
+ es:['Elige un plan para continuar','Volver al chat'],
+ ar:['اختر خطة للمتابعة','العودة إلى المحادثة'],
+ fr:['Choisissez une offre pour continuer','Retour à la conversation'],
+ de:['Wähle einen Tarif, um fortzufahren','Zurück zum Chat'],
+ pt:['Escolha um plano para continuar','Voltar à conversa'],
+ ru:['Выберите тариф, чтобы продолжить','Вернуться в чат'],
+ zh:['选择套餐以继续','返回聊天'],
+ ja:['続けるにはプランを選んでください','チャットに戻る']
+};
+for(const [lang,[title,close]] of Object.entries(continuePlanLabels)){
+ subscriptionTranslations[lang]['בחר מסלול להמשך השימוש']=title;
+ subscriptionTranslations[lang]['חזרה לשיחה']=close;
+}

@@ -43,6 +43,18 @@ export async function subscriptionGuard(user,{env=process.env,run=command,now=Da
   return Response.json({error:'תקופת הניסיון הסתיימה. להמשך השימוש יש לבחור מסלול בעמוד המנוי.',code:'subscription_required',subscriptionUrl:'/subscription.html'},{status:402,headers:{'Cache-Control':'no-store'}});
  }catch{return Response.json({error:'לא ניתן לבדוק את המנוי כרגע. נסה שוב.',code:'billing_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}})}
 }
+// Access to the commercial market scanner must never start a trial or
+// inherit the general guard's bypass when billing is disabled.
+export async function paidSubscriptionGuard(user,{env=process.env,run=command,now=Date.now()}={}){
+ const reply=(error,code,status)=>Response.json({enabled:false,error,code},{status,headers:{'Cache-Control':'no-store'}});
+ if(!user?.id)return reply('יש להיכנס לחשבון.','authentication_required',401);
+ if(!billingEnabled(env))return reply('שירות המנויים אינו זמין כרגע.','billing_unavailable',503);
+ try{
+  const identity=await billingIdentity(user.id,{env,run}),record=await readBilling(identity,{env,run});
+  if(entitlement(record,now).status==='paid')return null;
+  return reply('סריקת מניות זמינה למנויים משלמים בלבד.','paid_subscription_required',402);
+ }catch{return reply('לא ניתן לבדוק את המנוי כרגע. נסה שוב.','billing_unavailable',503)}
+}
 const RELEASE="if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) else return 0 end";
 export async function withBillingLock(identity,fn,{env=process.env,run=command}={}){
  const key=storageKey('billing:lock:'+identity,env),token=randomUUID();
