@@ -1,3 +1,4 @@
+import {currentUSMarketIntent} from './chat-market-intent.mjs';
 import {chatThrottleDisplay} from './chat-throttle-copy.mjs';
 import {localizedChatReply,renderChatReply} from './chat-reply-ui.mjs';
 import {languageCode} from './interface-language.mjs';
@@ -190,7 +191,7 @@ async function ask(q,extra={}){
  if(!question)return;
  chatBusy=true;
  const epoch=conversationEpoch;
- const requestLanguage=languageCode(extra.retryPayload?.language||document.documentElement?.lang);
+ let requestLanguage=languageCode(document.documentElement?.lang);
  const submitButton=form.querySelector('button');
  submitButton.disabled=true;if($("cancelChat"))$("cancelChat").disabled=false;
  const requestState=$('chatRequestState');
@@ -209,12 +210,18 @@ async function ask(q,extra={}){
   if(!message.value.trim()){message.value=question;message.dispatchEvent(new Event('input'))}
  };
  try{
+  if(window.asafWaitForInterfaceLanguage)await window.asafWaitForInterfaceLanguage();
+  if(epoch!==conversationEpoch)return;
+  if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
+  requestLanguage=languageCode(document.documentElement?.lang);
+  if(preparedPayload)preparedPayload={...preparedPayload,language:requestLanguage};
   await refreshAuth();
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
   const intentQuestion=window.asafCanonicalPrompt?.(question)||question;
-  if(!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
+  const broadMarket=!extra.newsArticleId&&currentUSMarketIntent(question);
+  if(!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
    waiting.textContent='טיוטה ליומן המסחר';
    const answer='נפתחה טיוטת עסקה לבדיקה. השמירה מתבצעת רק בכפתור השמירה בטיוטה.';
    conversation.push({role:'user',content:question},{role:'assistant',content:answer});chatHistory.complete(conversation);conversation=conversation.slice(-400);
@@ -222,7 +229,7 @@ async function ask(q,extra={}){
    return;
   }
 
-  const command=!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
+  const command=!broadMarket&&!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
   if(command?.recognized){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
    commandLoadAttempted=result.dataLoadAttempted===true;
@@ -243,7 +250,7 @@ async function ask(q,extra={}){
    waiting.textContent+='\n\nמכין תשובה לשאלה שלך…';
   }
   if(authState.enabled&&!authState.authenticated)throw Object.assign(Error("יש להיכנס לחשבון כדי לקבל תשובת AI. השאלה שלך נשמרה."),{code:'sign_in_required'});
-  const analyzeChart=!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(intentQuestion,{command});
+  const analyzeChart=!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(intentQuestion,{command});
   if(analyzeChart){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value)){
     if(commandLoadAttempted)throw Error('אין עדיין נרות תואמים לניתוח. טעינת הנתונים לא הצליחה; לא נשלחה בקשה למודל.');
@@ -255,12 +262,12 @@ async function ask(q,extra={}){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))throw Error('לא התקבלו נרות תואמים לגרף הנבחר; לא נשלחה בקשה למודל.');
    localReceipt=[localReceipt,'הגרף של '+loaded.symbol+' מוכן: '+(loaded.context.bars||loaded.bars?.length)+' נרות בשרת · '+loaded.source+' · '+loaded.interval+' · נר אחרון: '+loaded.context.date+'.'].filter(Boolean).join('\n');
   }
-  const context=currentContext();
+  const context=broadMarket?null:currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let allowIntrinioHistory=false;
   // The server independently enforces this gate. Check before screenshots or
   // payload preparation so an unavailable analysis has a useful local result.
-  if(activeData?.source==='Intrinio'||preparedPayload?.source==='Intrinio'||preparedPayload?.useServerIntrinio===true){
+  if(!broadMarket&&(activeData?.source==='Intrinio'||preparedPayload?.source==='Intrinio'||preparedPayload?.useServerIntrinio===true)){
    const policy=(await providerFeed.get()).intrinio;
    allowIntrinioHistory=policy.aiAnalysisEnabled===true;
    if(epoch!==conversationEpoch)return;
@@ -280,17 +287,17 @@ async function ask(q,extra={}){
   }
   if(!authState.enabled&&code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
   let image=null;
-  const candidate=chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if(activeData?.presentation==='server-raster')return localChart.snapshot();if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
+  const candidate=broadMarket?null:chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if(activeData?.presentation==='server-raster')return localChart.snapshot();if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   preparedPayload=preparedPayload||{
     message:question,
     language:requestLanguage,
-    chartControl:!extra.newsArticleId&&!localReceipt&&requestsChartControl(intentQuestion),
+    chartControl:!broadMarket&&!extra.newsArticleId&&!localReceipt&&requestsChartControl(intentQuestion),
     chartRevision,
     chartToolReceipt:localReceipt,
-    symbol:activeData?.symbol||normSymbol(),
+    symbol:broadMarket?'':activeData?.symbol||normSymbol(),
     source:activeData?.source||"none",
     interval:activeData?.interval||$('marketInterval').value||"1day",
     receivedAt:activeData?.receivedAt||null,
@@ -308,6 +315,10 @@ async function ask(q,extra={}){
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
+  if(broadMarket){
+   preparedPayload={message:question,language:requestLanguage,webSearch:preparedPayload.webSearch===true};
+   localReceipt='';
+  }
   if(requestState)requestState.textContent=preparedPayload.webSearch?'מחפש מקורות באינטרנט ומכין תשובה…':'הנתונים נשלחו — ממתין לניתוח…';
   slowNotice=setTimeout(()=>{if(epoch===conversationEpoch&&!activeController.signal.aborted&&requestState)requestState.textContent='המודל עדיין מעבד את הבקשה. אפשר להמתין או לבטל; אין צורך לשלוח שוב.'},20000);
   let response=await fetch("/.netlify/functions/free-chat",{method:"POST",signal:activeController.signal,headers:{"Content-Type":"application/json",...(!authState.enabled?{"x-asaf-free-ai-code":code}:{})},body:JSON.stringify(preparedPayload)});
@@ -334,7 +345,7 @@ async function ask(q,extra={}){
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   const followAnswer=isChatNearBottom(log);
   waiting.translate=false;waiting.dir='auto';
-  const chartChanged=preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision;
+  const chartChanged=!broadMarket&&(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision);
   let suffix='';
   if(data.historyRestricted)suffix+='\n\nהשיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.';
   if(chartChanged)suffix+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';

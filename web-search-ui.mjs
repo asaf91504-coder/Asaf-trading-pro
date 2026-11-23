@@ -7,10 +7,13 @@ export function renderSearchSources(parent,research,doc=parent.ownerDocument){
  if(research?.status!=='available'||!Array.isArray(research.sources))return;
  const section=doc.createElement('section');labelChatSource(section,'מקורות מהחיפוש באינטרנט','aria-label');
  const heading=doc.createElement('p');labelChatSource(heading,'מקורות מהחיפוש באינטרנט');section.append(heading);
- for(const source of research.sources.slice(0,5)){
+ for(const source of research.sources.slice(0,research.kind==='cached-market-headlines'?6:5)){
   try{const u=new URL(source.url);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)continue;
-   const row=doc.createElement('p'),a=doc.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.textContent='['+source.id+'] '+String(source.title||u.hostname);row.append(a);section.append(row);
+   const row=doc.createElement('p'),a=doc.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';a.textContent='['+source.id+'] '+String(source.title||u.hostname);row.append(a);
+   if(research.kind==='cached-market-headlines'&&typeof source.publishedAt==='string'&&Number.isFinite(Date.parse(source.publishedAt))){const time=doc.createElement('time');time.dateTime=source.publishedAt;time.textContent=' · '+new Date(source.publishedAt).toLocaleString(doc.documentElement?.lang||'en',{timeZone:'America/New_York',timeZoneName:'short'});row.append(time);}
+   section.append(row);
   }catch{}
  }
+ if(research.kind==='cached-market-headlines'){parent.append(section);return;}
  const stamp=doc.createElement('small');labelChatSource(stamp,'מועד החיפוש: '+String(research.searchedAt||'')+' · אינו מועד פרסום המקורות');section.append(stamp);parent.append(section);
 }

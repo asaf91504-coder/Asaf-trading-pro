@@ -51,6 +51,14 @@ const commandRE=/(?:פתח|תפתח|הצג|תציג|תראה|תביא|תטען|�
 const explanatoryRE=/^(?:מה (?:זה|הם|היא|אומר)|מה ההבדל|איך (?:מחשבים|מזהים|עובד)|הסבר|תסביר|\b(?:what (?:is|are|does)|explain|how (?:does|do|to))\b)/iu;
 const offRE=/(?:הסר|תסיר|הסתר|תסתיר|כבה|תכבה|תוריד|הורד|בלי|ללא|\b(?:remove|hide|disable|off|without)\b)/iu;
 const negatedRE=/(?:אל\s+(?:ת|ל)|לא\s+(?:תוסיף|להוסיף|תסמן|לסמן|תפתח|לפתוח|תשנה|לשנות|תסיר|להסיר)|\b(?:do not|don't|dont|never)\b)/iu;
+// A sourcing constraint is not a chart instruction. In that context, generic
+// research verbs ("check", "show", "בדוק") and a company name are not enough.
+const memoryConstraintRE=/(?:(?<![\p{L}\p{N}_])(?:אל\s+תסתמך|לא\s+להסתמך)\s+על\s+ה?זי?כרו(?:ן|נך)(?:\s+בלבד)?|\b(?:do not|don't|dont|never)\s+rely\s+on\s+(?:your\s+)?memory(?:\s+alone)?)(?=\s*(?:$|[,.;:!?]))/giu;
+const explicitChartRE=/(?<![\p{L}\p{N}_])ו?(?:ת?(?:פתח|טען|סמן|שרטט|מתח|צייר|כבה|מחק|נקה|שנה)|הוסף|תוסיף|הסר|תסיר|הסתר|תסתיר|הורד|תוריד|החלף|תחליף|הפעל|תפעיל)(?![\p{L}\p{N}_])|\b(?:open|load|draw|mark|add|enable|disable|remove|hide|clear|switch|plot)\b|(?:גרף|תרשים|\b(?:chart|trend\s*lines?)\b)/iu;
+function chartIntentText(text){
+ const withoutConstraint=text.replace(memoryConstraintRE,'');
+ return withoutConstraint===text||explicitChartRE.test(withoutConstraint)?withoutConstraint:'';
+}
 const indicatorMatchers=[
  ['MA20',/(?<![\w])(?:sma\s*20|ma\s*20|ממוצע(?:\s+נע)?\s*(?:של\s*)?20)(?!\d)/iu],
  ['MA50',/(?<![\w])(?:sma\s*50|ma\s*50|ממוצע(?:\s+נע)?\s*(?:של\s*)?50)(?!\d)/iu],
@@ -87,7 +95,7 @@ function uniqueActions(actions){
  */
 export function parseChartCommand(value,{currentSymbol=''}={}){
  if(typeof value!=='string'||value.length>6000)return {actions:[],recognized:false,message:'הבקשה ארוכה מדי או אינה טקסט.'};
- const text=expandAverageList(normalize(value));if(!text)return {actions:[],recognized:false,message:''};
+ const text=expandAverageList(chartIntentText(normalize(value)));if(!text)return {actions:[],recognized:false,message:''};
  const command=commandRE.test(text);
  const reservedBare=new Set([...chartActionIndicators.map(id=>id.toUpperCase()),'RSI','ATR','ADX','AI','CSV','OHLC','OHLCV','OK','HELLO','HI','YES','NO','THANKS']);
  const bareKnownCompany=companies.some(([,aliases])=>aliases.some(alias=>alias.toLowerCase()===text.toLowerCase()));
@@ -143,6 +151,6 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
 // the model for a declarative tool plan when the local parser cannot handle it.
 export function requestsChartControl(value){
  if(typeof value!=='string'||value.length>6000)return false;
- const text=normalize(value);
+ const text=chartIntentText(normalize(value));
  return commandRE.test(text)&&!explanatoryRE.test(text)&&!negatedRE.test(text);
 }

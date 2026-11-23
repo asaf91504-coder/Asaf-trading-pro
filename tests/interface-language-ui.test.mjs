@@ -39,6 +39,20 @@ test('language switch updates existing and new UI, preserves drafts/user text an
 test('failed locale fetch keeps working language and blocked persistence does not break selection',async()=>{
  const f=fixture();f.block();await f.ctx.applyLanguage('en');assert.equal(f.nav.textContent,'News');f.fail();await f.ctx.applyLanguage('ar');assert.equal(f.nav.textContent,'News');assert.equal(f.ctx.document.documentElement.lang,'en');
 });
+test('chat language barrier waits for the latest picker selection and uses the last applied language on failure',async()=>{
+ const f=fixture();await f.ctx.window.asafWaitForInterfaceLanguage();
+ const finish=new Map();
+ f.ctx.fetch=url=>new Promise(resolve=>finish.set(url,resolve));
+ f.ctx.chooseLanguage('en');
+ const languageAtSend=f.ctx.window.asafWaitForInterfaceLanguage().then(()=>f.ctx.document.documentElement.lang);
+ f.ctx.chooseLanguage('es');
+ finish.get('./locales/es.json')({ok:true,json:async()=>({'חדשות':'Noticias'})});
+ finish.get('./locales/en.json')({ok:true,json:async()=>({'חדשות':'News'})});
+ assert.equal(await languageAtSend,'es');assert.equal(f.nav.textContent,'Noticias');
+ f.ctx.chooseLanguage('fr');finish.get('./locales/fr.json')({ok:false});
+ await f.ctx.window.asafWaitForInterfaceLanguage();
+ assert.equal(f.ctx.document.documentElement.lang,'es');
+});
 test('application text updates replace original translation source without observer loops',async()=>{
  const f=fixture();await f.ctx.applyLanguage('en');const text=f.nav.childNodes[0];f.observe([{type:'characterData',target:text}]);assert.equal(text.nodeValue,'News');text.nodeValue='NVDA 123.45';f.observe([{type:'characterData',target:text}]);await f.ctx.applyLanguage('he');assert.equal(f.nav.textContent,'NVDA 123.45');
 });
