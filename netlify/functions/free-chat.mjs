@@ -1,3 +1,4 @@
+import {ownerWebPilotLimit,requestOwnerWebPilot} from '../../server/owner-web-pilot.mjs';
 import {currentUSMarketIntent} from '../../chat-market-intent.mjs';
 import {readUSMarketHeadlines} from '../../server/us-market-headlines.mjs';
 import {isChatOwner,reserveOwnerChatBurst} from '../../server/owner-chat.mjs';
@@ -163,6 +164,18 @@ async function handler(request,{requireOwner=false}={}){
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  if(unsupportedChatRequest(question))return reply(scopeError(payload.language),422);
+ if(ownerChat&&payload.webSearch===true&&ownerWebPilotLimit()){
+  const result=await requestOwnerWebPilot({member,question,language:responseLanguage});
+  if(result.status===429&&['owner_chat_burst_limited','chat_web_search_quota_exhausted'].includes(result.code))return throttleReply(result.code,responseLanguage);
+  const copy={
+   owner_web_question_not_supported:['הפיילוט מיועד למחקר ציבורי על השוק, חדשות ודוחות. אל תצרף פרטים אישיים או תבקש ציטוטי מחיר.','The pilot searches public market, news and filing questions only. Do not include private information or request price quotes.'],
+   owner_web_no_citations:['לא התקבלה תשובה עם מקורות מאומתים. אפשר להמשיך בלי חיפוש.','No answer with validated source links was returned. You can continue without search.'],
+   owner_web_quota_unavailable:['מכסת החיפוש אינה זמינה. לא נשלחה בקשה למודל.','The search allowance is unavailable; no model request was sent.'],
+   owner_web_unavailable:['שירות החיפוש לא השלים את הבקשה. לא בוצע ניסיון חוזר.','Search did not complete. No automatic retry was made.']
+  };
+  if(result.status!==200)return reply({error:(copy[result.code]||copy.owner_web_unavailable)[responseLanguage==='he'?0:1],code:result.code},result.status);
+  return reply({answer:result.answer,responseLanguage,ownerChatNoAppCredits:true,analysisContext:null,source:'none',provider:ai.provider,model:ai.model,webSearch:{status:'available',kind:'owner-hosted-search',searchedAt:result.searchedAt,sources:result.sources}});
+ }
  const broadMarket=!payload.newsArticleId&&currentUSMarketIntent(question);
  // A market overview does not inherit the visible instrument, licensed data,
  // image, prior conversation, client receipts or chart-action mode.

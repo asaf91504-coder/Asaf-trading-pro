@@ -1,3 +1,5 @@
+import {isChatOwner} from '../../server/owner-chat.mjs';
+import {ownerWebPilotLimit} from '../../server/owner-web-pilot.mjs';
 import {command,storageKey} from '../../server/storage.mjs';
 import {publicAuthConfigured,normalizeEmail,digest,passwordMatches,currentUser,createSession,cookieToken,sessionCookie} from '../../server/auth-core.mjs';
 const response=(body,status=200,extra={})=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...extra}});
@@ -5,7 +7,7 @@ export default async function handler(request){
  if(!['GET','POST'].includes(request.method))return response({error:'Method not allowed'},405);
  if(!publicAuthConfigured())return response({enabled:false,authenticated:false},request.method==='GET'?200:503);
  try{
-  if(request.method==='GET'){const user=await currentUser(request);return response({enabled:true,authenticated:!!user,...(user?{memberId:user.id}:{})})}
+  if(request.method==='GET'){const user=await currentUser(request);return response({enabled:true,authenticated:!!user,...(user?{memberId:user.id,...(isChatOwner(user)&&ownerWebPilotLimit()?{ownerHostedSearch:true}:{})}:{})})}
   if(request.headers.get('origin')!==new URL(request.url).origin)return response({error:'Origin mismatch'},403);
   if(!(request.headers.get('content-type')||'').includes('application/json'))return response({error:'JSON only'},415);
   const raw=await request.text();if(raw.length>4096)return response({error:'Request too large'},413);

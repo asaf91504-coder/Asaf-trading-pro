@@ -1,3 +1,4 @@
+import {authState} from './auth-ui.mjs';
 // Health reports server configuration, not the current viewer's entitlement or
 // the source of an open chart. In particular, publicMarketDataEnabled is false
 // for private Twelve Data trials. Keep this badge source-neutral; the chart's
@@ -25,6 +26,16 @@ button?.addEventListener("click",async()=>{
 
 
 const searchInput=document.getElementById('chatWebSearch'),searchStatus=searchInput?document.createElement('small'):null;if(searchInput){searchInput.disabled=true;searchInput.checked=false;searchStatus.setAttribute('role','status');searchInput.closest('label').after(searchStatus);}
+let legacySearchEnabled=false;
+function updateSearchStatus(){
+ if(!searchInput)return;
+ const hosted=authState.ownerHostedSearch===true;
+ searchInput.disabled=!hosted&&!legacySearchEnabled;
+ if(searchInput.disabled)searchInput.checked=false;
+ searchInput.title=hosted?'פיילוט חיפוש לבעלים בלבד. החיפוש שולח את השאלה הנוכחית ל-OpenAI וצורך מהמכסה שאושרה.':legacySearchEnabled?'חיפוש באינטרנט פעיל':'חיפוש באינטרנט עדיין אינו פעיל';
+ searchStatus.textContent=searchInput.title;
+}
+window.addEventListener('asaf:auth',updateSearchStatus);updateSearchStatus();
 // Configuration labels do not claim that a provider price has been fetched.
-fetch('/.netlify/functions/health',{cache:'no-store',signal:AbortSignal.timeout(6000)}).then(async r=>{if(!r.ok)return;const data=await r.json();if(data.application!=='ASAF TRADING PRO'||data.status!=='ok')return;if(searchInput){searchInput.disabled=data.webSearchEnabled!==true;searchInput.title=data.webSearchEnabled?'חיפוש באינטרנט פעיל':'חיפוש באינטרנט עדיין אינו פעיל';searchStatus.textContent=searchInput.title;}
+fetch('/.netlify/functions/health',{cache:'no-store',signal:AbortSignal.timeout(6000)}).then(async r=>{if(!r.ok)return;const data=await r.json();if(data.application!=='ASAF TRADING PRO'||data.status!=='ok')return;legacySearchEnabled=data.webSearchEnabled===true;updateSearchStatus();
 const market=document.getElementById('marketConnectionState'),news=document.getElementById('newsConnectionState'),ai=document.getElementById('freeAiStatus');if(market)market.textContent=configuredMarketLabel(data);if(news)news.textContent=data.newsEnabled?(data.newsMode==='public-rss'?'חדשות RSS ציבוריות · כל 15 דקות':'ספק חדשות מוגדר · זמני העדכון בפיד'):'חדשות: טרם חוברו';if(ai)ai.textContent=data.aiEnabled?(data.aiProvider==='openai'?'OpenAI מוגדר · זמינות נבדקת בעת שליחה':'AI חינמי מוגדר · נדרשת כניסה; זמינות נבדקת בעת שליחה'):'AI ממתין להגדרה'}).catch(()=>{});
