@@ -23,3 +23,14 @@ for(const code of Object.keys(languageNames))test(`scanner screenshot regression
  for(const source of samples){const translated=tr(source);if(code==='he')assert.equal(translated,source);else assert.doesNotMatch(translated,/[\u0590-\u05ff]/,`${code}: ${source} => ${translated}`)}
  assert.equal(tr('NASDAQ:NVDA 123.45'),'NASDAQ:NVDA 123.45');
 });
+
+test('both workspace entry points omit the provider CSV export, and terms forbid scraping and sharing',()=>{
+ const read=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
+ for(const entry of ['index.html','finlogix-trial.html'])assert.doesNotMatch(read(entry),/id="scanExport"/);
+ assert.doesNotMatch(read('venture-scanner-ui.mjs'),/scanExport|asaf-analysis\.csv|text\/csv/);
+ const terms=read('terms.html');
+ assert.match(terms,/אין להשתמש בכלים אוטומטיים כדי לגרד/);
+ assert.match(terms,/אין לשתף או להפיץ הלאה נתוני שוק או תוצאות סריקה/);
+ assert.match(read('launch-translations.mjs'),/Do not scrape or automatically collect market data or screener results/);
+ assert.match(read('launch-translations.mjs'),/Do not share or redistribute third-party market data or screener results/);
+});

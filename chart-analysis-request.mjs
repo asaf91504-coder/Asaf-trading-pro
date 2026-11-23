@@ -7,6 +7,8 @@ export function requestsChartAnalysis(question,{command}={}){
  if(/(?:איך|כיצד)\s+(?:מנתחים|לנתח|לקרוא|קוראים)|\bhow (?:do (?:I|you)|to) (?:analy[sz]e|read)\b/iu.test(text))return false;
  if(/^(?:(?:מהו|מהי|מה זה)\s+|(?:הסבר|תסביר)\s+(?:לי\s+)?(?:מה(?:ו|י)?|את המושג)\s+|(?:איך|כיצד)\s+(?:קובעים|מחשבים|משתמשים|להגדיר)\s+).*(?:כניסה|סטופ)|\b(?:what is|explain what|how to)\b.*\b(?:entry|stop)\b/iu.test(text))return false;
  if(/^(?:נתח|תנתח)(?:\s+בבקשה)?$|(?:נקודת כניסה|סטופ[־ -]?לוס|איפה.*(?:כניסה|סטופ)|\b(?:entry (?:point|price)|stop[ -]?loss)\b)/iu.test(text))return true;
+ // A definition in the field of chart analysis is not analysis of the selected chart.
+ if(/^(?:what (?:does|do)\s+[^?.!]+\s+mean|what is\s+[^?.!]+|(?:please )?define\s+[^?.!]+)\s+in\s+(?:(?:technical|chart|stock|market)\s+)+analysis\s*[?.!]?$/iu.test(text))return false;
  const analysis=/(?:תנתח|נתח|ניתוח|analy[sz]e|analysis)/iu.test(text);
  if(analysis&&command?.actions?.some(action=>action.type==='symbol'))return true;
  const chart=/(?:גרף|מניה|מנייה|המגמה|הנרות|\b(?:chart|stock|candles|trend)\b)/iu.test(text);

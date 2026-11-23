@@ -16,3 +16,8 @@ test('analysis data must match symbol and interval and include enough actual can
 test('educational questions and explicit refusals do not trigger a chart fetch',()=>{
  for(const question of ['אל תנתח את הגרף','אני לא רוצה לנתח את הגרף','לא לנתח מניה עכשיו','מהו ניתוח גרף?','מה זה ניתוח מניה?','הסבר לי ניתוח גרף','תסביר מהו ניתוח טכני של מניה',"don't analyze this chart",'do not analyze the stock','what is chart analysis?'])assert.equal(requestsChartAnalysis(question),false,question);
 });
+
+test('definitions in chart analysis do not request a trade scenario, unlike analysis of the selected chart',()=>{
+ for(const text of ['What does MA20 mean in chart analysis?','What do weekly candles mean in technical analysis?','What is RSI in stock analysis?','Define ATR in market analysis.'])assert.equal(requestsChartAnalysis(text),false,text);
+ for(const text of ['Analyze my chart now.','Explain this chart.','What does MA20 mean in chart analysis? Also analyze this chart and give me a stop loss.'])assert.equal(requestsChartAnalysis(text),true,text);
+});

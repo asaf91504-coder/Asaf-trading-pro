@@ -32,3 +32,8 @@ export function seed(state,email='member@example.test',id='12345678-1234-1234-12
  const record={id,version:'v1',enabled:true,salt:'0'.repeat(32),hash:'0'.repeat(64)};
  state.db.set(prefix+'auth:user:'+digest(email),JSON.stringify(record));state.db.set(prefix+'auth:member:'+id,JSON.stringify({id,version:'v1',enabled:true}));state.db.set(prefix+'auth:index:'+id,digest(email));state.db.set(prefix+'auth:session:'+digest(session),JSON.stringify({id,version:'v1',expires:Date.now()+600000}));return {record,cookie:'asaf_session='+session};
 }
+
+export function seedPaid(state,user,paidUntil){
+ const identity=digest('billing:'+state.db.get(prefix+'auth:index:'+user.record.id));
+ state.db.set(prefix+'billing:account:'+identity,JSON.stringify({paidUntil}));
+}
