@@ -18,7 +18,11 @@ function harness(lang='he'){
    addEventListener(k,v){listeners[k]=v},focus(){this.focused=true}};
  }
  const document={documentElement:{lang},createElement:node,getElementById:id=>{
-  if(!elements.has(id)){const n=node('element');if(id==='filter')n.value='pending';elements.set(id,n);}
+  if(!elements.has(id)){const n=node('element');if(id==='filter')n.value='pending';if(id==='manualForm'){
+   const entries=['symbol','side','atr14','entry','stop','target','title','analysis','ownAnalysis'].map(name=>Object.assign(node('input'),{name}));
+   entries.namedItem=name=>entries.find(n=>n.name===name);
+   n.elements=entries;n.reset=()=>entries.forEach(x=>{x.value='';x.checked=false;});
+  }elements.set(id,n);}
   return elements.get(id);
  },querySelector:()=>null};
  const fetch=async(_path,opts)=>{
@@ -100,4 +104,25 @@ test('exact 2 ATR stop updates automatically on an edit to the entry',async()=>{
   assert.equal(h.post[0].edits.stop,stop+1);
   assert.equal(h.post[0].edits.entry,111);
  }
+});
+
+test('manual authoring is owner-only and submits just a new private draft even with unavailable scanner',async()=>{
+ const manual={...candidate,manual:true,draft:{revision:rev,analysis:'A thesis'},atr14:3.5};
+ const h=harness();
+ h.queue.push({reviewer:true,published:[],queue:[],stale:true});await h.events.pageshow();
+ assert.equal(h.get('manualSetup').hidden,true);
+ h.queue.push({reviewer:true,canAuthor:true,published:[],queue:[],manualQueue:[],stale:true});await h.events.pageshow();
+ assert.equal(h.get('manualSetup').hidden,false);
+ const form=h.get('manualForm');
+ const field=name=>form.elements.namedItem(name);
+ for(const [key,value] of Object.entries({symbol:'MSFT',side:'long',atr14:'3.5',entry:'100',target:'120',title:'Title',analysis:'A thesis'}))field(key).value=value;
+ field('ownAnalysis').checked=true;form.listeners.input();
+ assert.equal(field('stop').value,'93');
+ h.queue.push({status:'pending',revision:rev},{reviewer:true,canAuthor:true,published:[],queue:[],manualQueue:[manual],stale:true});
+ form.onsubmit({preventDefault(){}});await tick();
+ assert.deepEqual(h.post[0],{action:'create-manual-draft',idea:{symbol:'MSFT',side:'long',atr14:3.5,entry:100,target:120,title:'Title',analysis:'A thesis',ownAnalysis:true}});
+ const buttons=h.all(h.get('queue'));
+ assert.equal(buttons.find(n=>n.textContent==='אשר לפרסום').disabled,false);
+ assert.equal(buttons.find(n=>n.textContent==='הרמות המקוריות מהסורק'),undefined);
+ for(const locale of Object.keys(languageNames).filter(code=>code!=='he'))assert.ok(launchTranslations[locale]['הוספת סטאפ ידני']);
 });
