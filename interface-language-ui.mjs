@@ -25,5 +25,11 @@ async function applyLanguage(value){const code=languageCode(value),request=++rev
  let catalog={};if(code!=='he'){const response=await fetch('./locales/'+code+'.json',{signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('language');catalog=await response.json();if(!catalog||Array.isArray(catalog)||typeof catalog!=='object')throw Error('catalog')}
  if(request!==revision)return;catalog={...catalog,...launchTranslations[code]};translate=createTranslator(catalog);document.title=translate(originalTitle);for(const [source,translated] of Object.entries(catalog))canonicalPrompts.set(translated,source);window.asafCanonicalPrompt=question=>canonicalPrompts.get(question)||question;window.asafTranslate=translate;selected=code;document.documentElement.lang=code;document.documentElement.dir=languageDirection(code);try{saveLanguage(window.localStorage,code)}catch{};select.value=code;select.setAttribute('aria-label',languageCaptions[code]);caption.textContent='🌐 '+languageCaptions[code];observer.disconnect();scan(document.body);observe();window.dispatchEvent(new CustomEvent('asaf:language',{detail:{language:code}}));window.dispatchEvent(new Event('asaf:layout'));
  }catch{if(request===revision){select.value=selected;status.textContent='Language unavailable. Try again. / טעינת השפה נכשלה; נסה שוב.'}}finally{if(request===revision)select.disabled=false}}
-select.addEventListener('change',()=>applyLanguage(select.value));
-let initial='he';try{initial=savedLanguage(window.localStorage)}catch{}observe();applyLanguage(initial);
+let languageChangePending;
+function chooseLanguage(code){languageChangePending=applyLanguage(code)}
+window.asafWaitForInterfaceLanguage=async()=>{
+ let pending;
+ do{pending=languageChangePending;await pending}while(pending!==languageChangePending);
+};
+select.addEventListener('change',()=>chooseLanguage(select.value));
+let initial='he';try{initial=savedLanguage(window.localStorage)}catch{}observe();chooseLanguage(initial);

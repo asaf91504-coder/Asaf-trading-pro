@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseChartCommand,validateChartActions,chartActionIndicators,chartActionPatterns,maxChartActions} from '../chat-chart-actions.mjs';
+import {parseChartCommand,requestsChartControl,validateChartActions,chartActionIndicators,chartActionPatterns,maxChartActions} from '../chat-chart-actions.mjs';
 
 test('Bitcoin and Ethereum aliases select explicit CoinLore USD pairs without pretending to be stock symbols',()=>{
  for(const text of ['ביטקוין','bitcoin','BTC','BTCUSD','פתח $BTC','פתח BTC','פתח COINLORE:BTCUSD','פתח סימול COINLORE:BTCUSD'])assert.deepEqual(parseChartCommand(text).actions,[{type:'symbol',symbol:'COINLORE:BTCUSD'}],text);
@@ -50,9 +50,16 @@ test('ordinary educational questions do not mutate chart',()=>{
  for(const text of ['מה זה RSI','מה ההבדל בין MA20 ל MA50','תסביר לי על תמיכות והתנגדויות','what is cup and handle?','שלום'])assert.equal(parseChartCommand(text).recognized,false,text);
 });
 test('negated mutation is blocked rather than reversing or partially executing request',()=>{
- for(const text of ['אל תוסיף MA20','תפתח אפל אבל אל תסיר RSI','do not remove RSI']){
-  const result=parseChartCommand(text);assert.deepEqual(result.actions,[]);assert.equal(result.recognized,true);assert.match(result.message,/לא לבצע/);
+ for(const text of ['אל תוסיף MA20','תפתח אפל אבל אל תסיר RSI','do not remove RSI','תפתח אפל, אל תסיר RSI ואל תסתמך על הזיכרון',"Open NVDA, but don't remove RSI and don't rely on memory.","Don't rely on memory to draw trendlines."]){
+  const result=parseChartCommand(text);assert.deepEqual(result.actions,[]);assert.equal(result.recognized,true);assert.match(result.message,/לא לבצע/);assert.equal(requestsChartControl(text),false);
  }
+});
+test('a memory constraint preserves ordinary sourcing questions and can coexist with an explicit chart command',()=>{
+ for(const text of ['בדוק אם יש לך גישה למקור עדכני: מה הודיעה NVIDIA בדוח הרבעוני האחרון שלה? תן רק נתון אחד, תאריך וקישור רשמי מאומת; אם אינך יכול לאמת, אל תסתמך על זיכרון.',"Check NVIDIA's latest earnings release; don't rely on your memory."]){
+  assert.deepEqual(parseChartCommand(text,{currentSymbol:'AAPL'}),{actions:[],recognized:false,message:''});
+  assert.equal(requestsChartControl(text),false);
+ }
+ assert.deepEqual(actions('תוסיף MA20. אל תסתמך על זיכרון.'),[{type:'indicator',indicator:'MA20',enabled:true}]);
 });
 test('indicator enable/disable is scoped to its own requested operation',()=>{
  assert.deepEqual(actions('הסר RSI ותוסיף MA50 וסמן תמיכות'),[

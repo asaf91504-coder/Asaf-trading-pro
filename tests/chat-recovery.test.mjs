@@ -1,3 +1,4 @@
+import {currentUSMarketIntent} from '../chat-market-intent.mjs';
 import {chatThrottleCopy,chatThrottleDisplay} from '../chat-throttle-copy.mjs';
 import {launchTranslations} from "../launch-translations.mjs";
 import {languageCode,createTranslator} from '../interface-language.mjs';
@@ -9,7 +10,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {parseChartCommand} from '../chat-chart-actions.mjs';
+import {parseChartCommand,requestsChartControl} from '../chat-chart-actions.mjs';
 import {isChatNearBottom} from '../chat-interaction.mjs';
 import {recentAIBars} from '../chart-data.mjs';
 import {requestsChartAnalysis,hasAnalysisCandles} from '../chart-analysis-request.mjs';
@@ -21,7 +22,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
+ ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -37,6 +38,23 @@ function analysisData(symbol='AAPL',source='Twelve Data'){
  const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,9,1+i)).toISOString().slice(0,10),open:100,high:102,low:99,close:101,volume:1000}));
  return {symbol,source,interval:'1day',bars,receivedAt:'2026-11-09T20:00:00Z',context:{date:bars.at(-1).date}};
 }
+
+test('a question sent during a language switch waits for the committed interface locale',async()=>{
+ const s=setup();s.ctx.document.documentElement={lang:'en'};
+ let commit;const pending=new Promise(resolve=>{commit=()=>{s.ctx.document.documentElement.lang='es';resolve()}});
+ s.ctx.window.asafWaitForInterfaceLanguage=()=>pending;
+ const asking=s.ctx.ask('What was the report? Answer in English.');
+ assert.equal(s.calls(),0);commit();await asking;
+ assert.equal(s.payloads[0].language,'es');
+});
+
+test('retry keeps its data but follows the current interface language',async()=>{
+ const s=setup();s.ctx.document.documentElement={lang:'he'};
+ await s.ctx.ask('Question in English',{newsArticleId:'chosen'});
+ s.ctx.document.documentElement.lang='fr';
+ await s.ctx.ask('Question in English',{retryPayload:s.payloads[0]});
+ assert.deepEqual(s.payloads[1],{...s.payloads[0],language:'fr'});
+});
 
 test('local tool history retains Intrinio source after chart changes or data clearing',async()=>{
  const s=setup();s.ctx.parseChartCommand=parseChartCommand;s.ctx.loaded=analysisData('AAPL','Intrinio');
@@ -163,6 +181,14 @@ test('explicit local chart control reports execution and does not spend an AI re
  const s=setup();s.ctx.parseChartCommand=parseChartCommand;let received;
  s.ctx.runChatActions=async actions=>{received=actions;return {changed:true,messages:['הופעל MA20.']}};
  await s.ctx.ask('הוסף ממוצע 20');assert.equal(s.calls(),0);assert.equal(received[0].indicator,'MA20');assert.match(s.bubbles[1].textContent,/הופעל MA20/);assert.equal(s.ctx.chatBusy,false);
+});
+test('earnings question with a source-memory constraint reaches normal chat, unchanged and without a chart receipt',async()=>{
+ const s=setup();Object.assign(s.ctx,{parseChartCommand,requestsChartControl,runChatActions:async()=>assert.fail('unexpected chart action')});
+ const q='בדוק אם יש לך גישה למקור עדכני: מה הודיעה NVIDIA בדוח הרבעוני האחרון שלה? תן רק נתון אחד, תאריך וקישור רשמי מאומת; אם אינך יכול לאמת, אל תסתמך על זיכרון.';
+ await s.ctx.ask(q);
+ assert.equal(s.calls(),1);assert.equal(s.payloads[0].message,q);
+ assert.equal(s.payloads[0].chartControl,false);assert.equal(s.payloads[0].chartToolReceipt,'');
+ assert.doesNotMatch(s.bubbles[1].textContent,/הבקשה כוללת הוראה לא לבצע פעולה/);
 });
 test('stock selection with an analysis request continues to the model using resulting chart',async()=>{
  const s=setup();s.ctx.parseChartCommand=parseChartCommand;s.ctx.runChatActions=async()=>({changed:true,messages:['נבחרה AAPL.']});s.ctx.currentContext=()=>({date:'2026-10-28'});s.ctx.loaded={symbol:'AAPL',source:'Twelve Data',bars:[],interval:'1day'};s.ctx.localChart.settings=()=>({style:'candles',indicators:['MA20']});let payload;
@@ -439,4 +465,19 @@ for(const locale of replyLocales)for(const [name,response,code] of rateLimitResp
  assert.equal(attempts,1);assert.equal(s.message.value,question);assert.equal(s.ctx.conversation.length,0);
  const actual=s.bubbles[1].textContent;assert.equal(actual,'⚠️ '+chatThrottleCopy(code,locale));
  assert.doesNotMatch(actual,/LEGACY|GATEWAY/);if(locale!=='he')assert.doesNotMatch(actual,/[\u0590-\u05ff]/u);
+});
+
+test('broad market request neither carries chart data into the chat nor warns about a chart change',async()=>{
+ const question='מה אתה חושב על השוק היום';
+ const s=setup({draft:question});
+ s.ctx.loaded={symbol:'AAPL',source:'Intrinio',bars:[{close:123.45}],context:{close:123.45}};
+ s.ctx.currentContext=()=>s.ctx.loaded.context;
+ s.ctx.providerFeed={get:async()=>{throw Error('market overview must not read the selected chart provider')}};
+ s.ctx.fetch=async(url,options)=>{
+  assert.deepEqual(JSON.parse(options.body),{message:question,language:'he',webSearch:false});
+  return {ok:true,json:async()=>({answer:'סקירת שוק כללית',responseLanguage:'he'})};
+ };
+ await s.ctx.ask(question);
+ assert.match(s.bubbles.at(-1).textContent,/סקירת שוק כללית/);
+ assert.doesNotMatch(s.bubbles.at(-1).textContent,/תשתנה|השתנה|Intrinio|AAPL/);
 });
