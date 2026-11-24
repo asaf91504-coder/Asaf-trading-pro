@@ -1,3 +1,4 @@
+import {isLearningQuestion,wantsTradeReview,analysisChartActions} from './chat-request-intent.mjs';
 import {chartStyles} from './chart-styles.mjs';
 
 // Declarative chart controls only. No executable code, selectors, URLs or trading orders.
@@ -6,13 +7,14 @@ export const chartActionPatterns=Object.freeze(['cup_handle','inverse_head_shoul
 export const maxChartActions=20;
 const indicatorSet=new Set(chartActionIndicators),patternSet=new Set(chartActionPatterns);
 const symbolRE=/^(?:(?:NASDAQ|NYSE|AMEX|NYSEARCA|ARCA|BATS|OTC|COINLORE):)?[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/;
-const actionKeys={symbol:['type','symbol'],indicator:['type','indicator','enabled'],style:['type','style'],levels:['type','kind'],trendlines:['type'],pattern:['type','pattern'],clear_annotations:['type']};
+const actionKeys={symbol:['type','symbol'],indicator:['type','indicator','enabled'],style:['type','style'],levels:['type','kind'],trendlines:['type'],pattern:['type','pattern'],clear_annotations:['type'],tradelevels:['type','side']};
 
 export function validateChartActions(value){
  if(!Array.isArray(value)||value.length>maxChartActions)throw Error('רשימת פעולות הגרף אינה תקינה או ארוכה מדי.');
  return value.map(action=>{
   if(!action||typeof action!=='object'||Array.isArray(action)||![Object.prototype,null].includes(Object.getPrototypeOf(action))||!Object.hasOwn(actionKeys,action.type))throw Error('פעולת גרף אינה מוכרת.');
   const keys=actionKeys[action.type];if(Object.keys(action).length!==keys.length||!keys.every(key=>Object.hasOwn(action,key)))throw Error('שדות פעולת הגרף אינם תקינים.');
+  if(action.type==='tradelevels'&&!['long','short'].includes(action.side))throw Error('כיוון תרחיש אינו תקין.');
   if(action.type==='symbol'&&(typeof action.symbol!=='string'||!symbolRE.test(action.symbol)))throw Error('סימול המניה אינו תקין.');
   if(action.type==='indicator'&&(!indicatorSet.has(action.indicator)||typeof action.enabled!=='boolean'))throw Error('המדד או מצב התצוגה אינם תקינים.');
   if(action.type==='style'&&!chartStyles.includes(action.style))throw Error('סגנון הגרף אינו מוכר.');
@@ -95,6 +97,7 @@ function uniqueActions(actions){
  */
 export function parseChartCommand(value,{currentSymbol=''}={}){
  if(typeof value!=='string'||value.length>6000)return {actions:[],recognized:false,message:'הבקשה ארוכה מדי או אינה טקסט.'};
+ if(isLearningQuestion(value))return {actions:[],recognized:false,message:''};
  const text=expandAverageList(chartIntentText(normalize(value)));if(!text)return {actions:[],recognized:false,message:''};
  const command=commandRE.test(text);
  const reservedBare=new Set([...chartActionIndicators.map(id=>id.toUpperCase()),'RSI','ATR','ADX','AI','CSV','OHLC','OHLCV','OK','HELLO','HI','YES','NO','THANKS']);
@@ -106,7 +109,7 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  for(const match of text.matchAll(/\$([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)\b/giu))symbols.add(match[1].toUpperCase());
  for(const company of companyMatchers)if(company.matchers.some(re=>{const match=re.exec(text);return match&&text[match.index+match[0].length]!==':'})){const ticker=company.symbol.split(':').at(-1);if(company.symbol.startsWith('COINLORE:')&&[...symbols].some(s=>s.includes(':')&&s.split(':').at(-1)===ticker.replace(/USD$/,'')))continue;if(![...symbols].some(s=>s.includes(':')&&s.endsWith(':'+ticker)))symbols.add(company.symbol)}
  for(const match of text.matchAll(/(?:מני(?:ה|ית|ת)|סימול|טיקר|גרף\s+של|\b(?:ticker|stock|chart\s+(?:of|for))\b)\s*[:]?\s*\$?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu))symbols.add(match[1].toUpperCase());
- for(const match of text.matchAll(/(?:פתח|תפתח|טען|תטען|נתח|תנתח|\b(?:open|load|analy[sz]e)\b)\s+(?:את\s+)?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu)){if(!indicatorSet.has(match[1])&&!['AI','OHLC','OHLCV','CSV'].includes(match[1]))symbols.add(match[1])}
+ for(const match of text.matchAll(/(?:פתח|תפתח|טען|תטען|נתח|תנתח|\b(?:open|load|analy[sz]e)\b)\s+(?:לי\s+)?(?:את\s+)?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu)){if(!indicatorSet.has(match[1])&&!['AI','OHLC','OHLCV','CSV'].includes(match[1]))symbols.add(match[1])}
  if(bareSymbol&&!symbols.size)symbols.add(text.replace(/^\$/,'').toUpperCase());
  // Unqualified crypto aliases have an explicit venue/pair; qualified stock
  // symbols keep their requested exchange and are never silently reclassified.
@@ -143,14 +146,15 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  let inverse=false;
  if(!clear)for(const [pattern,re] of patternMatchers){const match=re.exec(text);if(match&&!offRE.test(controlContext(text,match.index))){if(pattern==='head_shoulders'&&inverse)continue;actions.push({type:'pattern',pattern});if(pattern==='inverse_head_shoulders')inverse=true}}
  if(!clear&&!offRE.test(text)&&!actions.some(a=>a.type==='pattern')&&/(?:כל\s*התבניות|תבניות\s*(?:גרפיות|טכניות)?|\ball\s*(?:chart\s*)?patterns\b)/iu.test(text))actions.push({type:'pattern',pattern:'all'});
- const result=validateChartActions(uniqueActions(actions));
+ const review=wantsTradeReview(text)&&!/(?:אל|לא).{0,12}(?:צייר|תצייר|סמן|תסמן|שרטט)|\b(?:do not|don't) (?:draw|mark)\b/iu.test(text);
+ const result=validateChartActions(uniqueActions(review?analysisChartActions(actions,/שורט|\bshort\b/iu.test(text)?'short':'long'):actions));
  return {actions:result,recognized:!!(result.length||notes.length||bareSymbol),message:notes.join(' '),...(!symbol&&currentSymbol&&symbolRE.test(currentSymbol)?{currentSymbol}:{})};
 }
 
 // Ordinary questions use natural text; only an explicit display command asks
 // the model for a declarative tool plan when the local parser cannot handle it.
 export function requestsChartControl(value){
- if(typeof value!=='string'||value.length>6000)return false;
+ if(typeof value!=='string'||value.length>6000||isLearningQuestion(value))return false;
  const text=chartIntentText(normalize(value));
  return commandRE.test(text)&&!explanatoryRE.test(text)&&!negatedRE.test(text);
 }
