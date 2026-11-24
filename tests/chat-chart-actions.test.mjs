@@ -14,6 +14,14 @@ test('Bitcoin and Ethereum aliases select explicit CoinLore USD pairs without pr
 });
 
 const actions=text=>parseChartCommand(text).actions;
+test('key-person and ordinary learning questions do not become open-chart commands',()=>{
+ for(const q of ['מה הסיכון בתלות באיש מפתח ובפומו כשמניה פותחת בעלייה חדה?','תלות באיש מפתח במניה עלולה להגדיל סיכון?','תלות באיש מפתח משנה את הסיכון במניה?','מה המשמעות של פתיחה גבוהה במניה?']){
+  assert.equal(parseChartCommand(q,{currentSymbol:'NYSEARCA:SPY'}).recognized,false,q);
+  assert.equal(requestsChartControl(q),false,q);
+ }
+ assert.deepEqual(actions('פתח אפל והוסף MA20'),[{type:'symbol',symbol:'NASDAQ:AAPL'},{type:'indicator',indicator:'MA20',enabled:true}]);
+ assert.equal(requestsChartControl('ותוסיף MA20'),true);
+});
 test('the displayed trendline shortcut and common Hebrew phrasing execute local tools',()=>{
  for(const text of ['מתח קווי מגמה','תמתח לי קווי מגמה','תמתח קו מגמה'])assert.deepEqual(actions(text),[{type:'trendlines'}],text);
  assert.deepEqual(actions('אל תמתח קווי מגמה'),[]);

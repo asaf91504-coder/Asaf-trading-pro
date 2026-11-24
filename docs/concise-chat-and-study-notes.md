@@ -34,3 +34,10 @@ authenticated OpenAI request construction, external-note retrieval, opt-in
 detail, localized compact cards, saved receipt compatibility, server snapshot
 levels, scanner remaining-potential checks and the existing billing/source gates.
 Live model quality is checked separately after deployment.
+
+Live follow-up: the short FOMO explanation and an explicitly requested detailed
+hypothetical example both returned correctly. A separate live question containing
+"איש מפתח" exposed an old substring match for "פתח". Hebrew chart imperatives
+now require complete words (with an optional attached conjunction), and ordinary
+risk/meaning questions remain conversational. The complete updated suite passes
+1,734 tests.
