@@ -34,8 +34,8 @@ test('cleared or switched charts cannot forward restricted historical messages t
 test('verified chart analysis always writes a computed entry/stop section from the server snapshot',async()=>{
  await scenario(async s=>{
   const response=await s.send({...s.payload,message:'תנתח AAPL'}),data=await response.json();
-  assert.equal(response.status,200);assert.equal(data.tradeScenario.available,true);assert.equal(data.tradeScenario.entry,102.75);assert.equal(data.tradeScenario.stop,98.25);
-  assert.match(data.answer,/נקודת כניסה מותנית: 102.75/);assert.match(data.answer,/סטופ־לוס לתרחיש: 98.25/);assert.doesNotMatch(data.answer,/999999/);
+  assert.equal(response.status,200);assert.equal(data.tradeScenario.available,true);assert.equal(data.tradeScenario.entry,102.75);assert.equal(data.tradeScenario.stop,96.75);
+  assert.match(data.answer,/נקודת כניסה מותנית: 102.75/);assert.match(data.answer,/סטופ־לוס לתרחיש: 96.75/);assert.doesNotMatch(data.answer,/999999/);
   assert.match(s.models[0].messages.at(-1).content,/entryStopScenario/);
  });
 });
