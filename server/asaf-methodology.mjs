@@ -8,15 +8,19 @@ export const ASAF_ANALYSIS_POLICY=`\nApply the ASAF Pro analysis framework: firs
 
 export function reviewScannerMethodology(record,{now=Date.now()}={}){
  const atr=closedSetupAtr14(record),s=record.summary||{},prior=record.bars?.at(-2);
+ const supportedLong=new Set(['breakout20','doubleBottom','downtrendBreak','inverseHeadShoulders']);
  const candidates=(record.research?.candidates||[]).map(c=>{
-  const scenario=exactTwoAtrStop(c.scenario,atr);
+  // Re-evaluate remaining potential at the latest closed price. A cached pattern
+  // cannot keep an obsolete cheaper entry after the move has already happened.
+  const priced=c.scenario?.side==='long'&&Number.isFinite(s.close)?{...c.scenario,entry:Math.max(c.scenario.entry,s.close)}:c.scenario;
+  const scenario=exactTwoAtrStop(priced,atr);
   if(!scenario)return {...c,scenario:null};
   const reward=scenario.side==='long'?scenario.target-scenario.entry:scenario.entry-scenario.target;
   const risk=Math.abs(scenario.entry-scenario.stop);
   if(!Number.isFinite(reward)||reward<=0)return {...c,scenario:null};
   return {...c,scenario:{...scenario,movePercent:reward/scenario.entry*100,riskReward:reward/risk,method:'Conditional measured target; stop exactly 2× daily ATR14. No fill or return guarantee.'}};
  });
- const long=candidates.filter(c=>['waiting','crossed','above'].includes(c.stage)&&c.scenario?.side==='long'&&c.scenario.movePercent>=15);
+ const long=candidates.filter(c=>supportedLong.has(c.kind)&&['waiting','crossed','above'].includes(c.stage)&&c.scenario?.side==='long'&&c.scenario.movePercent>=15);
  const volume=record.volumeComparison;
  const checks=[
   ['closedDaily',atr!==null,'נדרשים נרות יומיים שהושלמו ו־ATR14 תקין'],
@@ -31,7 +35,7 @@ export function reviewScannerMethodology(record,{now=Date.now()}={}){
  const label={crossed:'חצייה בנר האחרון — תרחיש מותנה',waiting:'מועמד למעקב — ממתין לחצייה',above:'כבר מעל הרמה — לבדוק מרחק מהכניסה',incomplete:'אינו עומד בכללי השיטה'}[stage];
  const warnings=['יעד מדוד אינו תחזית; ביצוע סטופ במחיר שנקבע אינו מובטח.','מועדי דוחות, חדשות וסיכון אירוע לא נבדקו בסריקה זו.'];
  if(Math.abs(record.research?.gapOpenPercent)>=2)warnings.push('פער פתיחה של 2% לפחות; יש לבדוק סיכון פערים לפני החלטה.');
- return {record:{...record,research:{...record.research,candidates}},methodology:{version:'asaf-method-v1',eligible,stage,label,checks:checks.map(([key,passed,reason])=>({key,passed,reason})),warnings,ma150Context:s.aboveMA150??null,stopAtrMultiple:2}};
+ return {record:{...record,research:{...record.research,candidates}},methodology:{version:'asaf-method-v2',eligible,stage,label,checks:checks.map(([key,passed,reason])=>({key,passed,reason})),warnings,ma150Context:s.aboveMA150??null,stopAtrMultiple:2}};
 }
 
 export function screenWithMethodology(input,filters,options){

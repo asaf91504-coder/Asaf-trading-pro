@@ -1,0 +1,209 @@
+{
+  "version": "gemini-study-notes-2026-11-24-v1",
+  "provenance": "user_supplied_gemini_summary_intake_with_editorial_clarifications",
+  "intakeLibraryFileId": "libfile_fde3_f-917ecdcfeb448191b97f2026a4a74f25_cc26e2b36f648191a3e3aad51262ea73",
+  "intakeVersion": 0,
+  "sourceSummaries": 6,
+  "alreadyReviewedSourceDuplicates": 4,
+  "newVideoReviews": 0,
+  "newTranscriptsRead": 0,
+  "fullAcademyCoverageClaimVerified": false,
+  "records": [
+    {
+      "id": "gemini-guide-fomo-key-person",
+      "title": "FOMO, תלות באיש מפתח ותגובה לכותרת",
+      "sections": [
+        "supplemental-study-notes"
+      ],
+      "reviewType": "user_provided_external_summary",
+      "sourceVideoIds": [
+        "NR4kvh-l6Gc"
+      ],
+      "keywords": [
+        "fomo",
+        "פומו",
+        "מנכל",
+        "מנכ״ל",
+        "איש מפתח",
+        "key person",
+        "headline",
+        "פתיחה גבוהה"
+      ],
+      "summary": "התלהבות מאדם או מכותרת אינה תחליף לבדיקת העסק, המחיר ותוכנית הסיכון. פתיחה גבוהה אינה אישור שתימשך מגמת עלייה; תגובת המחיר בהמשך עשויה להיות שונה.",
+      "notes": [
+        "הסיכום החיצוני דן במכירות אחרי פתיחה גבוהה ובתלות באיש מפתח. זו תמצית מיוחסת; אין לשחזר ממנה חדשות על חזרת מנכ״ל, חקירות או פוליטיקה כעובדות.",
+        "לשאלה מעשית מפרידים בין סיפור העסק לבין אישור במחיר וטריגר מותנה. אין לרדוף אחרי תנועה או להמציא רמה בלי נתונים."
+      ],
+      "coverage": {
+        "kind": "external_summary_intake",
+        "fullVideoReviewed": false,
+        "transcriptRange": null
+      },
+      "timestamps": [],
+      "limitations": [
+        "תיעוד סיכומי Gemini שהעביר המשתמש, לא תמלול מקור או צפייה עצמאית.",
+        "אין אימות חדשות, רציפות כיסוי או השלמת האקדמיה; אין שינוי בכללי הסינון."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false
+    },
+    {
+      "id": "gemini-guide-crypto-cycles",
+      "title": "קריפטו: מחזורים, נזילות ורגולציה",
+      "sections": [
+        "supplemental-study-notes"
+      ],
+      "reviewType": "user_provided_external_summary",
+      "sourceVideoIds": [
+        "swfNuxQ2Zq0"
+      ],
+      "keywords": [
+        "קריפטו",
+        "ביטקוין",
+        "מחזורי קריפטו",
+        "נזילות",
+        "רגולציה",
+        "crypto",
+        "bitcoin",
+        "cycles",
+        "liquidity",
+        "regulation"
+      ],
+      "summary": "בסיכום שיחה עם בן סמוחה נידונו מחזורי קריפטו, נזילות, רגולציה ומיצוע. מחזור היסטורי הוא הקשר לתרחישים ולא לוח זמנים מובטח. יעד מחיר עתידי הוא תחזית מיוחסת.",
+      "notes": [
+        "אין להפוך יעד מיליון דולר לביטקוין לתוצאה מתמטית ודאית או להמלצה. אין בסיכום אימות לנתוני שוק או למדיניות רגולטורית עדכנית.",
+        "השיחה היא גישה של משתתפיה, ולא כלל המחייב מיצוע בכל ירידה או שינוי באופק ההשקעה של הלקוח."
+      ],
+      "coverage": {
+        "kind": "external_summary_intake",
+        "fullVideoReviewed": false,
+        "transcriptRange": null
+      },
+      "timestamps": [],
+      "limitations": [
+        "תיעוד סיכומי Gemini שהעביר המשתמש, לא תמלול מקור או צפייה עצמאית.",
+        "אין אימות חדשות, רציפות כיסוי או השלמת האקדמיה; אין שינוי בכללי הסינון."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false
+    },
+    {
+      "id": "gemini-guide-moving-average-timeframe",
+      "title": "ממוצעים: 50 שבועות לעומת 150 תקופות",
+      "sections": [
+        "supplemental-study-notes"
+      ],
+      "reviewType": "user_provided_external_summary",
+      "sourceVideoIds": [
+        "swfNuxQ2Zq0"
+      ],
+      "keywords": [
+        "ממוצע שבועי",
+        "ממוצע יומי",
+        "50 שבועות",
+        "150",
+        "moving average",
+        "weekly",
+        "daily",
+        "timeframe"
+      ],
+      "summary": "ממוצע מחושב לפי מספר נרות במסגרת זמן מוגדרת. ממוצע של 50 שבועות אינו אותו מדד כמו ממוצע של 150 ימים; יש לציין את מספר התקופות וטווח הזמן לפני השוואה.",
+      "notes": [
+        "זהו דגש עריכה מתוך אזכור הממוצעים בסיכום החיצוני; טווח הזמן של כל אזכור 150 לא אומת מהתמלול. אין להשלים אותו בניחוש.",
+        "אין להמיר דוגמה או העדפת מרואיין למסנן חובה מעל MA150. כללי ASAF וסטופ השרת נשארים מחייבים."
+      ],
+      "coverage": {
+        "kind": "external_summary_intake",
+        "fullVideoReviewed": false,
+        "transcriptRange": null
+      },
+      "timestamps": [],
+      "limitations": [
+        "תיעוד סיכומי Gemini שהעביר המשתמש, לא תמלול מקור או צפייה עצמאית.",
+        "אין אימות חדשות, רציפות כיסוי או השלמת האקדמיה; אין שינוי בכללי הסינון."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false
+    },
+    {
+      "id": "gemini-guide-real-return-currency",
+      "title": "תשואה נומינלית, אינפלציה ומטבע",
+      "sections": [
+        "supplemental-study-notes"
+      ],
+      "reviewType": "user_provided_external_summary",
+      "sourceVideoIds": [
+        "RwxqPdJuC2Y"
+      ],
+      "keywords": [
+        "תשואה ריאלית",
+        "תשואה נומינלית",
+        "אינפלציה",
+        "כוח קנייה",
+        "דולר",
+        "שקל",
+        "real return",
+        "nominal return",
+        "inflation",
+        "currency"
+      ],
+      "summary": "צריך להפריד בין תשואת הנכס במטבע המדידה, השפעת המרת מטבע ושינוי בכוח הקנייה עקב אינפלציה. רווח בדולרים, רווח בשקלים ותשואה ריאלית אינם מדידה זהה.",
+      "notes": [
+        "זו הבהרת עריכה בעקבות קליטת הסיכום, ולא אימות של חישובי הסרטון. שער מטבע לבדו אינו הגדרה לתשואה ריאלית.",
+        "בדוגמה היפותטית, תשואה ריאלית היא (1+r)/(1+i)-1 לאותה תקופה ומטבע; אין להפחית שיעורים כאילו זה חישוב מדויק. רווחי עבר אינם תשואה מובטחת."
+      ],
+      "coverage": {
+        "kind": "external_summary_intake",
+        "fullVideoReviewed": false,
+        "transcriptRange": null
+      },
+      "timestamps": [],
+      "limitations": [
+        "תיעוד סיכומי Gemini שהעביר המשתמש, לא תמלול מקור או צפייה עצמאית.",
+        "אין אימות חדשות, רציפות כיסוי או השלמת האקדמיה; אין שינוי בכללי הסינון."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false
+    },
+    {
+      "id": "gemini-guide-business-price-exit",
+      "title": "חברה טובה, ריבאונד ותוכנית יציאה",
+      "sections": [
+        "supplemental-study-notes"
+      ],
+      "reviewType": "user_provided_external_summary",
+      "sourceVideoIds": [
+        "fCCIiUzc7xE",
+        "XMBPzWTHxOQ",
+        "rurEegyMMuY"
+      ],
+      "keywords": [
+        "חברה טובה",
+        "מניה טובה",
+        "ריבאונד",
+        "תחתית",
+        "תוכנית יציאה",
+        "good company",
+        "rebound",
+        "exit plan"
+      ],
+      "summary": "איכות העסק, התאמת המניה במחיר נתון ואישור מגמה הן שאלות נפרדות. ריבאונד אינו בהכרח שינוי מגמה. מגדירים תוכנית יציאה בהתאם לאופק לפני פעולה.",
+      "notes": [
+        "התיעוד מציין שסיכומי המקורות האלה חופפים לסקירות קיימות. הם מחזקים הבחנות שכבר נשמרו ולא נספרים כמקורות חדשים.",
+        "אין לייחס לקלט החיצוני תמלול מלא, חותמות זמן שאומתו או הוכחה לתחתית. מיצוע במדד והשקעה במניה בודדת אינם אותה החלטה."
+      ],
+      "coverage": {
+        "kind": "external_summary_intake",
+        "fullVideoReviewed": false,
+        "transcriptRange": null
+      },
+      "timestamps": [],
+      "limitations": [
+        "תיעוד סיכומי Gemini שהעביר המשתמש, לא תמלול מקור או צפייה עצמאית.",
+        "אין אימות חדשות, רציפות כיסוי או השלמת האקדמיה; אין שינוי בכללי הסינון."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 // Preserve every scanner field and its handlers; change only the presentation.
+import {asafScannerPreset} from './scanner-presets.mjs';
 const $=id=>document.getElementById(id),scanner=$('scanner');
 const heading=scanner.querySelector('.section-heading');
 heading.querySelector('h2').textContent='מצא מניות למחקר';
@@ -28,8 +29,15 @@ const presets=scanner.querySelector('.scanner-preset-tools');if(presets)advanced
 const utilities=$('scanClear').closest('.row');utilities.classList.add('scanner-result-actions');scanner.querySelector('.table-scroll').after(utilities);
 
 const shortlist=document.createElement('div');shortlist.id='scanShortlist';shortlist.className='scanner-shortlist';$('scanSummary').after(shortlist);
+function applyCoreRules(){
+ const preset=asafScannerPreset();
+ for(const id of ['scanMinMarketCap','scanMinPrice','scanMinVolume','scanMinMeasuredMove','scanScenarioSide'])$(id).value=String(preset[id]);
+ for(const id of ['scanAbove20','scanRisingVolume','scanOnlyMatches'])$(id).checked=preset[id];
+ $('scanMinPrice').dispatchEvent(new Event('input',{bubbles:true}));
+}
+// Start in the reviewed technical framework; optional advanced controls remain available.
+applyCoreRules();
 $('scanAsafRules').onclick=()=>{
- for(const [id,value] of [['scanMinMarketCap',1000000000],['scanMinPrice',5],['scanMinVolume',1],['scanMinMeasuredMove',15]])$(id).value=String(value);
- $('scanAbove20').checked=true;$('scanRisingVolume').checked=true;$('scanScenarioSide').value='long';$('scanMinPrice').dispatchEvent(new Event('input',{bubbles:true}));
+ applyCoreRules();
  $('scanDiscoverStatus').textContent='הוחלו: שווי שוק מיליארד דולר, מחיר מעל $5, מעל MA20, יום עולה עם מחזור מעל הממוצע ותרחיש לונג עם יעד מדוד של 15% לפחות. יעד מדוד אינו תחזית. יתר המסננים נשארו כפי שהגדרת.';
 };

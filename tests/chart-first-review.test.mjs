@@ -45,13 +45,13 @@ test('repeated analysis replaces an old trade side, and clearing removes old res
  const next=mergeResearchActions(previous,[{type:'tradelevels',side:'short'}]);assert.equal(next.filter(a=>a.type==='tradelevels').length,1);assert.equal(next.at(-1).side,'short');
  const cleared=mergeResearchActions(next,[{type:'clear_annotations'}]);assert.deepEqual(cleared.map(a=>a.type),['indicator','clear_annotations']);
 });
-test('compact scenarios are short and localized while preserving the actual prices and date',()=>{
+test('compact scenarios show four localized practical lines; calculation details retain the date',()=>{
  const plan=entryStopScenario(bars,meta);
  for(const language of ['he','en','es','ar','fr','de','pt','ru','zh','ja']){
-  const text=compactEntryStopText(plan,language);assert.ok(text.includes('102.75'));assert.ok(text.includes('96.75'));assert.ok(text.includes('105'));assert.ok(text.includes(plan.asOf));assert.equal(text.split('\n').length,7);
+  const text=compactEntryStopText(plan,language);assert.ok(text.includes('102.75'));assert.ok(text.includes('96.75'));assert.ok(text.includes('105'));assert.equal(text.split('\n').length,4);assert.doesNotMatch(text,/Twelve Data|server|שרת|2026-/);
   if(language!=='he')assert.doesNotMatch(text,/[\u0590-\u05ff]/);
  }
- const prompt=withMichaKnowledge([{role:'system',content:'rules'},{role:'user',content:'נתח את הגרף'}],'נתח את הגרף');assert.match(prompt[0].content,/RESPONSE STYLE.*at most90 words/s);
+ const prompt=withMichaKnowledge([{role:'system',content:'rules'},{role:'user',content:'נתח את הגרף'}],'נתח את הגרף');assert.match(prompt[0].content,/RESPONSE STYLE.*at most60 words/s);assert.match(prompt[0].content,/RESPONSE DEPTH: BRIEF/);
 });
 test('tool logs are collapsed separately and model prose remains visible and unmodified',()=>{
  const doc={documentElement:{lang:'he'},createElement:tag=>new Node(tag),createTextNode:text=>new Node('#text',text)};

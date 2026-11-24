@@ -58,13 +58,21 @@ export function entryStopText(plan,language='he'){
  ].join('\n');
 }
 
-const levelLabels={es:['Soporte','Resistencia'],ar:['دعم','مقاومة'],fr:['Support','Résistance'],de:['Unterstützung','Widerstand'],pt:['Suporte','Resistência'],ru:['Поддержка','Сопротивление'],zh:['支撑','阻力'],ja:['サポート','レジスタンス']};
-
 export function compactEntryStopText(plan,language='he'){
  const code=languageCode(language),copy=chatPresentationCopy[code]||chatPresentationCopy.en,labels=scenarioLocales[code]||{};
  if(!plan?.available)return entryStopText(plan,language);
  const number=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:Math.abs(value)>=1?2:8});
  const fill=(text,value)=>text.replace('{value}',number(value));
  const entry=labels.entry||'כניסה מותנית: {value}.',stop=labels.stop||'סטופ: {value}.';
- return [plan.stage==='already-crossed'?copy.crossed:copy.waiting,fill(entry,plan.entry),fill(stop,plan.stop),...(Number.isFinite(plan.support)&&Number.isFinite(plan.resistance)?[(code==='he'?'תמיכה':code==='en'?'Support':levelLabels[code][0])+': '+number(plan.support)+' · '+(code==='he'?'התנגדות':code==='en'?'Resistance':levelLabels[code][1])+': '+number(plan.resistance)]:[]),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+number(plan.riskReward)+':1':''),copy.date+': '+plan.asOf+' · '+(plan.interval||''),copy.caveat].join('\n');
+ return [fill(entry,plan.entry).replace(/\.$/,'')+' · '+fill(stop,plan.stop).replace(/\.$/,''),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+Number(plan.riskReward).toLocaleString('en-US',{maximumFractionDigits:2})+':1':''),plan.stage==='already-crossed'?copy.crossed:copy.waiting,copy.caveat].join('\n');
+}
+
+// Supports both legacy long receipts and the short default when reopening history.
+export function withoutScenarioText(answer,plan,language='he'){
+ let text=String(answer||'');if(!plan)return text;
+ for(const receipt of [entryStopText(plan,language),compactEntryStopText(plan,language)]){
+  const start=text.indexOf('\n\n'+receipt),end=start+receipt.length+2;
+  if(start!==-1&&(end===text.length||text.startsWith('\n\n',end)))text=text.slice(0,start)+text.slice(end);
+ }
+ return text;
 }

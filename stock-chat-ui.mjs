@@ -4,7 +4,7 @@ import {currentUSMarketIntent} from './chat-market-intent.mjs';
 import {chatThrottleDisplay} from './chat-throttle-copy.mjs';
 import {localizedChatReply,renderChatReply} from './chat-reply-ui.mjs';
 import {languageCode} from './interface-language.mjs';
-import {entryStopText,compactEntryStopText} from './entry-stop-scenario.mjs';
+import {entryStopText,compactEntryStopText,withoutScenarioText} from './entry-stop-scenario.mjs';
 import {createVentureChartView} from './venture-chart-view.mjs';
 import {showCreditPlans} from './exhausted-credits-ui.mjs';
 import {createMarketFeedClient} from './market-feed-client.mjs';
@@ -114,7 +114,7 @@ function rememberSymbol(){const symbol=normSymbol();if(symbol){const url=new URL
 function datasetReady(){rememberSymbol();if(loaded?.presentation==='server-raster'){window.dispatchEvent(new Event('asaf:dataset-cleared'));window.dispatchEvent(new CustomEvent('asaf:provider-image-ready',{detail:{symbol:loaded.symbol,interval:loaded.interval,receivedAt:loaded.receivedAt,latestBarTime:loaded.context.date}}));return;}if(loaded)window.dispatchEvent(new CustomEvent('asaf:dataset-ready',{detail:{symbol:loaded.symbol,bars:loaded.bars,source:loaded.source,interval:loaded.interval,receivedAt:loaded.receivedAt,...marketSnapshotMetadata(loaded),...(loaded.source==='CoinLore'?{internalResearchOnly:true,coverage:loaded.coverage,quote:loaded.quote,latestBarMayBePartial:loaded.latestBarMayBePartial}:{})}}))}
 // Changing the chart invalidates pending analysis, not the conversation itself.
 // Previous messages retain their own chartContext and are historical references.
-const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){const bubble=say(m.role==='user'?'user':'bot','');if(m.uiReceipt){renderChatReply(bubble,{before:m.content,answer:''});continue}const storedScenario=m.tradeScenario?entryStopText(m.tradeScenario,m.responseLanguage||'he'):'';renderChatReply(bubble,{before:m.toolReceipt||'',answer:storedScenario?m.content.replace('\n\n'+storedScenario,''):m.content});if(m.tradeScenario)appendScenario(bubble,m.tradeScenario)}}});
+const chatHistory=mountChatHistory({host:log,isBusy:()=>chatBusy,onNew:()=>{resetRequest({clearHistory:true});log.replaceChildren()},onOpen:messages=>{resetRequest({clearHistory:true});conversation=messages.slice();log.replaceChildren();for(const m of conversation){const bubble=say(m.role==='user'?'user':'bot','');if(m.uiReceipt){renderChatReply(bubble,{before:m.content,answer:''});continue}renderChatReply(bubble,{before:m.toolReceipt||'',answer:withoutScenarioText(m.content,m.tradeScenario,m.responseLanguage||'he')});if(m.tradeScenario)appendScenario(bubble,m.tradeScenario)}}});
 function resetRequest({clearHistory=false}={}){
  const invalidate=requestInvalidated;requestInvalidated=null;
  lastVisibleChart=null;conversationEpoch++;requestController?.abort();requestController=null;chatBusy=false;
@@ -359,8 +359,8 @@ async function ask(q,extra={}){
    if(chartChanged)suffix+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
    else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;localReceipt=[localReceipt,...execution.messages].filter(Boolean).join('\n');}catch(error){if(error.name==='AbortError')throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
   }
-  const scenarioText=data.tradeScenario?entryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
-  const modelAnswer=scenarioText&&data.answer.endsWith('\n\n'+scenarioText)?data.answer.slice(0,-scenarioText.length-2):data.answer;
+  const scenarioText=data.tradeScenario?compactEntryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
+  const modelAnswer=withoutScenarioText(data.answer,data.tradeScenario,data.responseLanguage||preparedPayload.language);
   const replyParts={before:localReceipt,answer:modelAnswer,after:suffix,...(data.webSearch?.kind==='owner-hosted-search'?{citationSources:data.webSearch.sources}:{})};
   const translate=window.asafTranslate|| (text=>text);
   const completedAnswer=localizedChatReply({...replyParts,before:''},translate)+(scenarioText?'\n\n'+scenarioText:'')+(data.webSearch?.status==='available'&&data.webSearch.sources?.length?'\n\n'+translate('מקורות שנמצאו בחיפוש:')+'\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
