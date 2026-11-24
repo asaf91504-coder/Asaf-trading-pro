@@ -15,6 +15,7 @@ export function cleanChatMessage(value,role){
  }
  if(result.tradeScenario?.available){
   const input=value.tradeScenario,p=result.tradeScenario;
+  for(const key of ['support','resistance'])if(Number.isFinite(input[key])&&input[key]>0)p[key]=input[key];
   if(Number.isFinite(input.target)&&input.target>0&&(p.side==='long'?input.target>p.entry:input.target<p.entry))p.target=input.target;
   if(Number.isFinite(input.riskReward)&&input.riskReward>0)p.riskReward=input.riskReward;
   if(Number.isFinite(input.atr14)&&input.atr14>0&&input.atrStopMultiple===2&&Math.abs(Math.abs(p.entry-p.stop)-2*input.atr14)<1e-8){p.atr14=input.atr14;p.atrStopMultiple=2;}
