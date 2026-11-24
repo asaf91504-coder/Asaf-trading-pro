@@ -17,7 +17,7 @@ const cases=[
  ['Clear all annotations',c=>assert.deepEqual(c.actions,[{type:'clear_annotations'}])],
  ['Add MA37',c=>{assert.deepEqual(c.actions,[]);assert.match(c.message,/MA37/) }],
  ['Open AAPL and NVDA',c=>{assert.deepEqual(c.actions,[]);assert.equal(c.unresolvedSymbol,true)}],
- ['נתח את NVDA לשורט עם נקודת כניסה וסטופ לוס',c=>assert.deepEqual(c.actions,[{type:'symbol',symbol:'NASDAQ:NVDA'}])],
+ ['נתח את NVDA לשורט עם נקודת כניסה וסטופ לוס',c=>assert.deepEqual(c.actions,[{type:'symbol',symbol:'NASDAQ:NVDA'},{type:'levels',kind:'both'},{type:'trendlines'},{type:'tradelevels',side:'short'}])],
  ['Explain RSI 14 without changing the chart',c=>{assert.equal(c.recognized,false);assert.deepEqual(c.actions,[])}]
 ];
 for(const [prompt,check] of cases)test('additional chat prompt: '+prompt,async()=>{

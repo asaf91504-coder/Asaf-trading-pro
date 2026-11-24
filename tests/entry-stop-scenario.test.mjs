@@ -5,18 +5,18 @@ import {requestsChartAnalysis} from '../chart-analysis-request.mjs';
 const bars=Array.from({length:40},(_,i)=>({date:new Date(Date.UTC(2026,0,i+1)).toISOString().slice(0,10),open:100,high:102,low:99,close:101,volume:1000}));
 const meta={provenance:'server-provider-cache',source:'Twelve Data',interval:'1day',latestBarMayBePartial:false};
 
-test('long and short scenarios use actual range and ATR with opposite invalidation edges',()=>{
+test('long and short scenarios use actual range entries and exact 2×ATR stops',()=>{
  const original=JSON.stringify(bars),long=entryStopScenario(bars,meta),short=entryStopScenario(bars,meta,'short');
- assert.equal(long.available,true);assert.equal(long.atr14,3);assert.equal(long.entry,102.75);assert.equal(long.stop,98.25);
- assert.equal(short.entry,98.25);assert.equal(short.stop,102.75);assert.equal(long.stage,'waiting');
+ assert.equal(long.available,true);assert.equal(long.atr14,3);assert.equal(long.entry,102.75);assert.equal(long.stop,96.75);
+ assert.equal(short.entry,98.25);assert.equal(short.stop,104.25);assert.equal(long.stage,'waiting');
  assert.equal(JSON.stringify(bars),original);assert.equal(long.asOf,bars.at(-1).date);
- assert.match(entryStopText(long),/נקודת כניסה מותנית: 102.75/);assert.match(entryStopText(long),/סטופ־לוס לתרחיש: 98.25/);
+ assert.match(entryStopText(long),/נקודת כניסה מותנית: 102.75/);assert.match(entryStopText(long),/סטופ־לוס לתרחיש: 96.75/);
  assert.match(entryStopText(short),/סגירת נר מתחת/);assert.match(entryStopText(long),/לא מהתיק/);
 });
 test('a possibly open last candle cannot move entry/stop or the scenario timestamp',()=>{
  const partial={...bars.at(-1),open:100,high:999999,low:1,close:999999};
  const plan=entryStopScenario([...bars.slice(0,-1),partial],{...meta,latestBarMayBePartial:true});
- assert.equal(plan.entry,102.75);assert.equal(plan.stop,98.25);assert.equal(plan.asOf,bars.at(-2).date);assert.equal(plan.excludedLatest,true);
+ assert.equal(plan.entry,102.75);assert.equal(plan.stop,96.75);assert.equal(plan.asOf,bars.at(-2).date);assert.equal(plan.excludedLatest,true);
  assert.equal(entryStopScenario(bars.slice(0,21),{...meta,latestBarMayBePartial:undefined}).available,false);
 });
 test('missing, browser supplied, malformed or flat data never produce invented prices',()=>{

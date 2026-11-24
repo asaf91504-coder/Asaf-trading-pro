@@ -1,3 +1,4 @@
+import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {methodologyTranslations} from './methodology-translations.mjs';
 import {qaI18nTranslations} from "./qa-i18n-translations.mjs";
 import {accessibilityStatementTranslations} from './accessibility-statement-translations.mjs';
@@ -64,3 +65,5 @@ const marketTermsCopy={
 for(const [code,label] of Object.entries(marketTermsCopy))launchTranslations[code][marketTermsKey]=label;
 
 for(const [code,copy] of Object.entries(methodologyTranslations))Object.assign(launchTranslations[code],copy);
+
+for(const [code,copy] of Object.entries(chatPresentationCopy))if(code!=="he")for(const key of ["drawn","noScenario"])launchTranslations[code][chatPresentationCopy.he[key]]=copy[key];

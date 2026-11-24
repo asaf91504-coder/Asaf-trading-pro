@@ -13,6 +13,13 @@ export function cleanChatMessage(value,role){
   if(p.available===false)result.tradeScenario={available:false,reason:String(p.reason||'').slice(0,500)};
   else if(p.available===true&&['long','short'].includes(p.side)&&[p.entry,p.stop,p.riskPercent].every(Number.isFinite))result.tradeScenario={available:true,side:p.side,entry:p.entry,stop:p.stop,riskPercent:p.riskPercent,asOf:String(p.asOf||'').slice(0,40),interval:String(p.interval||'').slice(0,20),stage:p.stage==='already-crossed'?'already-crossed':'waiting',excludedLatest:p.excludedLatest===true};
  }
+ if(result.tradeScenario?.available){
+  const input=value.tradeScenario,p=result.tradeScenario;
+  if(Number.isFinite(input.target)&&input.target>0&&(p.side==='long'?input.target>p.entry:input.target<p.entry))p.target=input.target;
+  if(Number.isFinite(input.riskReward)&&input.riskReward>0)p.riskReward=input.riskReward;
+  if(Number.isFinite(input.atr14)&&input.atr14>0&&input.atrStopMultiple===2&&Math.abs(Math.abs(p.entry-p.stop)-2*input.atr14)<1e-8){p.atr14=input.atr14;p.atrStopMultiple=2;}
+ }
+ if(role==='assistant'&&typeof value.toolReceipt==='string'&&value.toolReceipt.trim())result.toolReceipt=value.toolReceipt.slice(0,6000);
  if(value.chartContext){const c=value.chartContext;result.chartContext={symbol:String(c.symbol||'').slice(0,30),source:String(c.source||'unknown').slice(0,30),interval:String(c.interval||'').slice(0,20),receivedAt:typeof c.receivedAt==='string'?c.receivedAt.slice(0,40):null}}
  return result;
 }

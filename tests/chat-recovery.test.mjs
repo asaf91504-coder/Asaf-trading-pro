@@ -1,3 +1,4 @@
+import {isLearningQuestion} from '../chat-request-intent.mjs';
 import {currentUSMarketIntent} from '../chat-market-intent.mjs';
 import {chatThrottleCopy,chatThrottleDisplay} from '../chat-throttle-copy.mjs';
 import {launchTranslations} from "../launch-translations.mjs";
@@ -22,7 +23,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
+ ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -324,7 +325,7 @@ test('explanations reach the model without candles and include an honest local t
 test('an unavailable chart command can be explained but still cannot bypass model authentication',async()=>{
  const s=setup();s.ctx.parseChartCommand=()=>({recognized:true,actions:[],message:'טווח לא נתמך'});
  let sent;s.ctx.fetch=async(_url,options)=>{sent=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'הסבר למגבלה'})}};
- await s.ctx.ask('למה הבקשה הזו לא נתמכת?');assert.match(sent.chartToolReceipt,/לא נתמך/);assert.match(s.bubbles[1].textContent,/הסבר למגבלה/);
+ await s.ctx.ask('למה הבקשה הזו לא נתמכת?');assert.equal(sent.chartToolReceipt,'');assert.match(s.bubbles[1].textContent,/הסבר למגבלה/);
  const anonymous=setup();anonymous.ctx.authState.authenticated=false;anonymous.ctx.parseChartCommand=parseChartCommand;
  anonymous.ctx.runChatActions=async()=>({messages:['הופעל MA20.']});await anonymous.ctx.ask('הוסף MA20 ותסביר למה');
  assert.equal(anonymous.calls(),0);assert.match(anonymous.bubbles[1].textContent,/להיכנס לחשבון/);
@@ -480,4 +481,22 @@ test('broad market request neither carries chart data into the chat nor warns ab
  await s.ctx.ask(question);
  assert.match(s.bubbles.at(-1).textContent,/סקירת שוק כללית/);
  assert.doesNotMatch(s.bubbles.at(-1).textContent,/תשתנה|השתנה|Intrinio|AAPL/);
+});
+
+test('CRWV trade review selects and annotates its data before the model request',async()=>{
+ const s=setup();s.ctx.parseChartCommand=parseChartCommand;s.ctx.requestsChartControl=requestsChartControl;let symbol='AAPL',actions;
+ s.ctx.normSymbol=()=>symbol;
+ s.ctx.runChatActions=async input=>{actions=input;symbol=input.find(a=>a.type==='symbol').symbol;s.ctx.loaded=analysisData(symbol);s.ctx.currentContext=()=>s.ctx.loaded.context;return {changed:true,dataLoadAttempted:true,messages:['גרף מוכן']}};
+ await s.ctx.ask('תנתח לי את CRWV ותגיד מתי להיכנס ולצאת');
+ assert.equal(s.payloads[0].symbol,'CRWV');assert.equal(s.payloads[0].useServerMarket,true);assert.equal(s.payloads[0].chartControl,false);
+ assert.ok(actions.some(a=>a.type==='trendlines'));assert.ok(actions.some(a=>a.type==='tradelevels'));
+});
+test('hypothetical scanner and compounding lessons reach chat without an incidental chart attachment',async()=>{
+ for(const q of ['בחן מועמד לסורק על סמך נתונים היפותטיים: MA20=28, MA150=35 ותבנית waiting. אל תניח נתונים נוספים.','אתגר לימודי: חשב ריבית דריבית ב־8% ואינפלציה ב־3%. אל תבטיח תשואה ואל תשנה את כללי הסורק.']){
+  const s=setup();s.ctx.parseChartCommand=parseChartCommand;s.ctx.requestsChartControl=requestsChartControl;s.ctx.loaded=analysisData();s.ctx.currentContext=()=>s.ctx.loaded.context;
+  s.ctx.runChatActions=async()=>assert.fail('learning question must not operate on chart');
+  await s.ctx.ask(q);assert.equal(s.calls(),1);const sent=s.payloads[0];
+  assert.equal(sent.source,'none');assert.equal(sent.useServerMarket,false);assert.equal(sent.chartToolReceipt,'');assert.equal(sent.bars,null);
+  assert.doesNotMatch(s.bubbles[1].textContent,/הבקשה כוללת הוראה לא לבצע פעולה/);
+ }
 });
