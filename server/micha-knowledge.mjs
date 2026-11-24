@@ -56,7 +56,13 @@ export function withMichaKnowledge(messages,query,{maxInputBytes=48000}={}){
  const policy=MICHA_KNOWLEDGE_POLICY+responseDepthPolicy(query);
  const spare=maxInputBytes-copy.reduce((n,m)=>n+textSize(m.content),0)-Buffer.byteLength(policy)-2048;
  const context=retrieveMichaKnowledge(query,{maxBytes:Math.min(7000,spare)});
- if(spare<0)return copy;
+ if(spare<0){
+  // Response style must not disappear when a large chart leaves no room for
+  // supplemental notes. Add it alone when it fits the existing input ceiling.
+  const style=CONCISE_CHAT_POLICY+responseDepthPolicy(query);
+  if(copy.reduce((n,m)=>n+textSize(m.content),0)+Buffer.byteLength(style)<=maxInputBytes)system.content+=style;
+  return copy;
+ }
  system.content+=policy;
  if(!context)return copy;
  if(typeof current.content==='string')current.content=context+'\n\n'+current.content;
