@@ -48,7 +48,7 @@ test('repeated analysis replaces an old trade side, and clearing removes old res
 test('compact scenarios are short and localized while preserving the actual prices and date',()=>{
  const plan=entryStopScenario(bars,meta);
  for(const language of ['he','en','es','ar','fr','de','pt','ru','zh','ja']){
-  const text=compactEntryStopText(plan,language);assert.ok(text.includes('102.75'));assert.ok(text.includes('96.75'));assert.ok(text.includes('105'));assert.ok(text.includes(plan.asOf));assert.equal(text.split('\n').length,6);
+  const text=compactEntryStopText(plan,language);assert.ok(text.includes('102.75'));assert.ok(text.includes('96.75'));assert.ok(text.includes('105'));assert.ok(text.includes(plan.asOf));assert.equal(text.split('\n').length,7);
   if(language!=='he')assert.doesNotMatch(text,/[\u0590-\u05ff]/);
  }
  const prompt=withMichaKnowledge([{role:'system',content:'rules'},{role:'user',content:'נתח את הגרף'}],'נתח את הגרף');assert.match(prompt[0].content,/RESPONSE STYLE.*at most90 words/s);
@@ -68,5 +68,14 @@ test('new tool outcomes translate in every supported interface language',()=>{
  for(const language of Object.keys(chatPresentationCopy).filter(c=>c!=='he')){
   const tr=createTranslator(launchTranslations[language]);
   for(const key of ['drawn','noScenario']){assert.equal(tr(chatPresentationCopy.he[key]),chatPresentationCopy[language][key]);assert.doesNotMatch(tr(chatPresentationCopy.he[key]),/[\u0590-\u05ff]/);}
+ }
+});
+
+test('Hebrew index requests select SPY before analysis rather than retaining AAPL',()=>{
+ for(const name of ['הסנפ','הסנף','הסנ״פ','הסנ״ף','S&P 500','SPX']){
+  const q='נתח לי את '+name,command=parseChartCommand(q,{currentSymbol:'NASDAQ:AAPL'});
+  assert.equal(command.actions[0]?.symbol,'NYSEARCA:SPY',q);
+  assert.equal(requestsChartAnalysis(q,{command}),true,q);
+  assert.ok(command.actions.some(a=>a.type==='tradelevels'));
  }
 });

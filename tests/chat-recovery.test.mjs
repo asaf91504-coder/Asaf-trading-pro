@@ -23,7 +23,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate));
+ ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -402,8 +402,9 @@ for(const locale of replyLocales){
   s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:reviewModel,historyRestricted:true,actions:[{type:'indicator',indicator:'MA20',enabled:true}]})});
   await s.ctx.ask('Propose a chart action');
   const rendered=s.bubbles[1].textContent;
-  assert.equal(rendered,s.ctx.conversation.at(-1).content);assert.ok(rendered.startsWith(reviewModel));assert.match(rendered,/OpenAI/);assert.match(rendered,/MA20/);
-  for(const text of ['השיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.','תוצאת הביצוע בפועל:','הופעל MA20.'])checkedCopy(rendered,text,s.ctx.window.asafTranslate);
+  assert.ok(s.ctx.conversation.at(-1).content.startsWith(reviewModel));assert.match(rendered,/OpenAI/);assert.match(rendered,/MA20/);
+  assert.equal(s.ctx.lastReplyParts.before,'הופעל MA20.');assert.equal(s.ctx.conversation.at(-1).toolReceipt,'הופעל MA20.');assert.doesNotMatch(s.ctx.conversation.at(-1).content,/MA20/);
+  for(const text of ['השיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.','הופעל MA20.'])checkedCopy(rendered,text,s.ctx.window.asafTranslate);
  });
  test(`client chat ${locale}: a chart execution error gets a localized message and no raw internal error`,async()=>{
   const s=setupLocalizedReply(locale);

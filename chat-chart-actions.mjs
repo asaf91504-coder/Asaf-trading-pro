@@ -40,7 +40,7 @@ const companies=[
  ['NASDAQ:PYPL',['פייפאל','paypal','pypl']],['NASDAQ:HOOD',['רובינהוד','robinhood','hood']],
  ['NYSE:UBER',['אובר','uber']],['NYSE:SPOT',['ספוטיפיי','spotify','spot']],
  ['NASDAQ:AVGO',['ברודקום','broadcom','avgo']],['NYSE:TSM',['טי אס אם סי','tsmc','tsm']],
- ['NASDAQ:QQQ',['qqq']],['NYSEARCA:SPY',['spy']],['NYSEARCA:IWM',['iwm']]
+ ['NASDAQ:QQQ',['qqq']],['NYSEARCA:SPY',['spy','סנפ','סנף','סנ"פ','סנ"ף','הסנפ','הסנף','הסנ"פ','הסנ"ף','אס אנד פי','s&p 500','s&p500','s&p','sp500','spx']],['NYSEARCA:IWM',['iwm']]
 ];
 const escapeRE=text=>text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const boundary='[\\p{L}\\p{N}_]';
@@ -109,14 +109,16 @@ export function parseChartCommand(value,{currentSymbol=''}={}){
  for(const match of text.matchAll(/\$([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)\b/giu))symbols.add(match[1].toUpperCase());
  for(const company of companyMatchers)if(company.matchers.some(re=>{const match=re.exec(text);return match&&text[match.index+match[0].length]!==':'})){const ticker=company.symbol.split(':').at(-1);if(company.symbol.startsWith('COINLORE:')&&[...symbols].some(s=>s.includes(':')&&s.split(':').at(-1)===ticker.replace(/USD$/,'')))continue;if(![...symbols].some(s=>s.includes(':')&&s.endsWith(':'+ticker)))symbols.add(company.symbol)}
  for(const match of text.matchAll(/(?:מני(?:ה|ית|ת)|סימול|טיקר|גרף\s+של|\b(?:ticker|stock|chart\s+(?:of|for))\b)\s*[:]?\s*\$?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu))symbols.add(match[1].toUpperCase());
- for(const match of text.matchAll(/(?:פתח|תפתח|טען|תטען|נתח|תנתח|\b(?:open|load|analy[sz]e)\b)\s+(?:לי\s+)?(?:את\s+)?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:])/gu)){if(!indicatorSet.has(match[1])&&!['AI','OHLC','OHLCV','CSV'].includes(match[1]))symbols.add(match[1])}
+ for(const match of text.matchAll(/(?:פתח|תפתח|טען|תטען|נתח|תנתח|\b(?:open|load|analy[sz]e)\b)\s+(?:לי\s+)?(?:את\s+)?([A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?)(?![\p{L}\p{N}_:&])/gu)){if(!indicatorSet.has(match[1])&&!['AI','OHLC','OHLCV','CSV'].includes(match[1]))symbols.add(match[1])}
  if(bareSymbol&&!symbols.size)symbols.add(text.replace(/^\$/,'').toUpperCase());
  // Unqualified crypto aliases have an explicit venue/pair; qualified stock
  // symbols keep their requested exchange and are never silently reclassified.
  for(const symbol of [...symbols])if(!symbol.includes(':')&&cryptoAliases.has(symbol)&&![...symbols].some(other=>other.includes(':')&&other.split(':').at(-1)===symbol)){symbols.delete(symbol);symbols.add(cryptoAliases.get(symbol))}
  // Same ticker with/without an explicit exchange is one request; prefer exchange.
  for(const symbol of [...symbols])if(!symbol.includes(':')&&[...symbols].some(other=>other.endsWith(':'+symbol)))symbols.delete(symbol);
+ for(const alias of ['SPX','SP500'])if(symbols.has('NYSEARCA:SPY'))symbols.delete(alias);
  if(symbols.size>1)return {actions:[],recognized:true,message:'מצאתי כמה מניות בבקשה. בחר מניה אחת לגרף הפעיל כדי שאפעל על הנתונים הנכונים.',unresolvedSymbol:true};
+ for(const alias of ['SPX','SP500'])if(symbols.has('NYSEARCA:SPY'))symbols.delete(alias);
  const symbol=[...symbols][0];
  const stockRequest=/(?:מני(?:ה|ית|ת)|טיקר|סימול|גרף\s+של|\b(?:stock|ticker|chart\s+(?:of|for))\b)/iu.test(text)||bareSymbol;
  if(command&&stockRequest&&!symbol&&!/(?:המניה|הגרף|הנוכחי|הפתוח|הזו|הזאת|this|current)/iu.test(text))return {actions:[],recognized:true,message:'לא זיהיתי בוודאות את המניה. כתוב סימול מפורש, למשל $AAPL או NASDAQ:AAPL.',unresolvedSymbol:true};

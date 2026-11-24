@@ -58,11 +58,13 @@ export function entryStopText(plan,language='he'){
  ].join('\n');
 }
 
+const levelLabels={es:['Soporte','Resistencia'],ar:['دعم','مقاومة'],fr:['Support','Résistance'],de:['Unterstützung','Widerstand'],pt:['Suporte','Resistência'],ru:['Поддержка','Сопротивление'],zh:['支撑','阻力'],ja:['サポート','レジスタンス']};
+
 export function compactEntryStopText(plan,language='he'){
  const code=languageCode(language),copy=chatPresentationCopy[code]||chatPresentationCopy.en,labels=scenarioLocales[code]||{};
  if(!plan?.available)return entryStopText(plan,language);
  const number=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:Math.abs(value)>=1?2:8});
  const fill=(text,value)=>text.replace('{value}',number(value));
  const entry=labels.entry||'כניסה מותנית: {value}.',stop=labels.stop||'סטופ: {value}.';
- return [plan.stage==='already-crossed'?copy.crossed:copy.waiting,fill(entry,plan.entry),fill(stop,plan.stop),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+number(plan.riskReward)+':1':''),copy.date+': '+plan.asOf+' · '+(plan.interval||''),copy.caveat].join('\n');
+ return [plan.stage==='already-crossed'?copy.crossed:copy.waiting,fill(entry,plan.entry),fill(stop,plan.stop),...(Number.isFinite(plan.support)&&Number.isFinite(plan.resistance)?[(code==='he'?'תמיכה':code==='en'?'Support':levelLabels[code][0])+': '+number(plan.support)+' · '+(code==='he'?'התנגדות':code==='en'?'Resistance':levelLabels[code][1])+': '+number(plan.resistance)]:[]),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+number(plan.riskReward)+':1':''),copy.date+': '+plan.asOf+' · '+(plan.interval||''),copy.caveat].join('\n');
 }
