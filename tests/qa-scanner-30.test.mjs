@@ -91,9 +91,9 @@ for(const code of Object.keys(languageNames))ui('rendered states use production 
  const samples=f.headings.map(liveText).concat(liveText(f.rows()[0].children[0]),liveText(f.$('scanSummary')),liveText(f.$('scanStatus')));
  await f.scan();
  const row=f.rows()[0];
- const card=f.$('scanShortlist').children[0];
+ assert.equal(f.$('scanShortlist').children.length,0);
  const cells=row.children.slice(0,-1).map(liveText),status=liveText(f.$('scanDiscoverStatus'));
- samples.push(...cells,liveText(card.children[0]),liveText(card.children[1]),status,liveText(f.$('scanSummary')));
+ samples.push(...cells,status,liveText(f.$('scanSummary')));
  assert.equal(cells[2],tr('כן')+' / '+tr('לא'));
  assert.equal(cells[5],code==='he'?'עולה':tr('up'));
  assert.equal(cells[11],code==='he'?'לונג / שורט':tr('long')+' / '+tr('short'));
