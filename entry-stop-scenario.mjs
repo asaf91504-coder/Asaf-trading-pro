@@ -64,5 +64,5 @@ export function compactEntryStopText(plan,language='he'){
  const number=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:Math.abs(value)>=1?2:8});
  const fill=(text,value)=>text.replace('{value}',number(value));
  const entry=labels.entry||'כניסה מותנית: {value}.',stop=labels.stop||'סטופ: {value}.';
- return [fill(entry,plan.entry),fill(stop,plan.stop),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+number(plan.riskReward)+':1':''),plan.stage==='already-crossed'?copy.crossed:copy.waiting,copy.date+': '+plan.asOf+' · '+(plan.interval||''),copy.caveat].join('\n');
+ return [plan.stage==='already-crossed'?copy.crossed:copy.waiting,fill(entry,plan.entry),fill(stop,plan.stop),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+number(plan.riskReward)+':1':''),copy.date+': '+plan.asOf+' · '+(plan.interval||''),copy.caveat].join('\n');
 }

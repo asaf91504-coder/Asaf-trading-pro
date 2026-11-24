@@ -37,7 +37,7 @@ export async function ventureChart(snapshot,input=[]){
  [...indicators].forEach((id,j)=>{const points=series[id].slice(start).map((v,i)=>Number.isFinite(v)?x(i)+','+y(v):null).filter(Boolean);if(points.length)svg+=`<polyline points="${points.join(' ')}" fill="none" stroke="${colors[j]}" stroke-width="2"/>`;legend.push(`<text x="${25+j*140}" y="620" fill="${colors[j]}" font-size="14">${id}${points.length?'':' (no history)'}</text>`)});
  const positions=new Map(visible.map((b,i)=>[b.date,i]));
  const lineLabels=[];
- for(const a of annotations){
+ for(const a of [...annotations].sort((a,b)=>Number(/^(BREAK|STOP|MEASURED)/.test(b.label||''))-Number(/^(BREAK|STOP|MEASURED)/.test(a.label||'')))){
   // Horizontal levels may start outside the visible 120-bar window.
   const horizontal=a.points.length===2&&a.points[0].price===a.points[1].price;
   const points=horizontal?[`${left},${y(a.points[0].price)}`,`${W-right},${y(a.points[0].price)}`]:a.points.filter(p=>positions.has(p.date)).map(p=>x(positions.get(p.date))+','+y(p.price));
