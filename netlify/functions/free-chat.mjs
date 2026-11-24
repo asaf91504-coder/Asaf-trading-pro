@@ -1,3 +1,4 @@
+import {withMichaKnowledge} from '../../server/micha-knowledge.mjs';
 import {ownerWebPilotLimit,requestOwnerWebPilot} from '../../server/owner-web-pilot.mjs';
 import {currentUSMarketIntent} from '../../chat-market-intent.mjs';
 import {readUSMarketHeadlines} from '../../server/us-market-headlines.mjs';
@@ -290,7 +291,8 @@ async function handler(request,{requireOwner=false}={}){
   // Storage/quota preparation can cross the trial boundary. Do not send a
   // previously authorized snapshot or inherited derived prices after expiry.
   if(privateTrial&&(twelveRequested||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
-  const result=await requestAI({signal:controller.signal,messages:[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(broadMarket?BROAD_MARKET_SYSTEM:'')+(!broadMarket&&!selectedArticleId&&needsScenario?TECHNICAL_REVIEW_SYSTEM:'')+(meta.source==='Twelve Data'?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(responseLanguage)},...history,{role:'user',content}]});
+  const promptMessages=[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(broadMarket?BROAD_MARKET_SYSTEM:'')+(!broadMarket&&!selectedArticleId&&needsScenario?TECHNICAL_REVIEW_SYSTEM:'')+(meta.source==='Twelve Data'?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(responseLanguage)},...history,{role:'user',content}];
+  const result=await requestAI({signal:controller.signal,messages:ai.provider==='openrouter'?withMichaKnowledge(promptMessages,question):promptMessages});
   const {answer,truncated}=result;
   const ownerState=ownerChat?{ownerChatNoAppCredits:true}:{};
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);
