@@ -1,3 +1,4 @@
+import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {scenarioLocales} from './entry-stop-locales.mjs';
 import {languageCode} from './interface-language.mjs';
 import {chartIndicators} from './chart-indicators.mjs';
@@ -18,15 +19,18 @@ export function entryStopScenario(input,meta={},side='long'){
  const atr=chartIndicators(bars).atr14.at(-1);
  if(!Number.isFinite(atr)||atr<=0||support>=resistance)return unavailable('אין טווח מחיר ותנודתיות מספיקים לבניית תרחיש.');
  // Same transparent rule on every symbol: breakout of the prior 20 bars,
- // with 0.25 ATR14 clearance and invalidation beyond the opposite range edge.
- const buffer=atr*.25,entry=side==='long'?resistance+buffer:support-buffer,stop=side==='long'?support-buffer:resistance+buffer;
+ // with 0.25 ATR14 clearance and the user's exact 2×ATR stop.
+ const buffer=atr*.25,entry=side==='long'?resistance+buffer:support-buffer,stop=entry+(side==='long'?-2:2)*atr;
  if(![entry,stop].every(v=>Number.isFinite(v)&&v>0)||(side==='long'?stop>=entry:stop<=entry))return unavailable('לא ניתן לגזור כניסה וסטופ תקינים מהטווח הנוכחי.');
- return {available:true,side,entry,stop,atr14:atr,buffer,support,resistance,riskPercent:Math.abs(entry-stop)/entry*100,asOf:last.date,interval:meta.interval||null,source:meta.source||null,excludedLatest,barsUsed:bars.length,
-  stage:(side==='long'?last.close>entry:last.close<entry)?'already-crossed':'waiting',method:'Prior 20-bar range breakout with 0.25 ATR14 buffer; stop beyond opposite range edge. Conditional research only.'};
+ const height=resistance-support,measured=side==='long'?resistance+height:support-height;
+ const target=measured>0&&(side==='long'?measured>entry:measured<entry)?measured:null;
+ return {available:true,side,entry,stop,target,riskReward:target===null?null:Math.abs(target-entry)/Math.abs(entry-stop),atrStopMultiple:2,atr14:atr,buffer,support,resistance,riskPercent:Math.abs(entry-stop)/entry*100,asOf:last.date,interval:meta.interval||null,source:meta.source||null,excludedLatest,barsUsed:bars.length,
+  structuralStopConflict:side==='long'?stop>=support:stop<=resistance,
+  stage:(side==='long'?last.close>entry:last.close<entry)?'already-crossed':'waiting',method:'Prior 20-bar range breakout with 0.25 ATR14 buffer; stop exactly 2×ATR14; target is measured range height if still beyond entry. Conditional research only.'};
 }
 
 export function scenarioSide(question){
- return /שורט|\bshort\b/iu.test(String(question))?'short':'long';
+ return /שורט|\bshort\b/iu.test(String(question).replace(/\bshort\s+(?:answer|reply|summary)\b/giu,''))?'short':'long';
 }
 
 export function entryStopText(plan,language='he'){
@@ -48,8 +52,17 @@ export function entryStopText(plan,language='he'){
   'סטופ־לוס לתרחיש: '+number(plan.stop)+'.',
   'תנאי הפעלה: סגירת נר '+(isLong?'מעל':'מתחת')+' נקודת הכניסה ובדיקה חוזרת שמחזיקה '+(isLong?'מעליה':'מתחתיה')+'. נדרש מחיר עדכני לאימות לפני פעולה.',
   ...(plan.stage==='already-crossed'?['הסגירה האחרונה כבר עברה את הרמה; אין כאן הנחיית כניסה מיידית. התרחיש תלוי בבדיקה חוזרת.']:[]),
-  'שיטת החישוב: '+(isLong?'שיא':'שפל')+' 20 הנרות הקודמים, עם מרווח של רבע ATR14; הסטופ מעבר לקצה הנגדי של אותו טווח. מרחק הכניסה מהסטופ: '+number(plan.riskPercent)+'% ממחיר הכניסה, לא מהתיק.',
+  'שיטת החישוב: '+(isLong?'שיא':'שפל')+' 20 הנרות הקודמים, עם מרווח של רבע ATR14; הסטופ במרחק בדיוק 2×ATR14 מהכניסה. מרחק הכניסה מהסטופ: '+number(plan.riskPercent)+'% ממחיר הכניסה, לא מהתיק.',
   ...(plan.excludedLatest?['הנר האחרון הוצא מהחישוב כי ייתכן שעדיין אינו סגור.']:[]),
   'הרמות הן ביחידות המחיר של הנכס ומבוססות על נתונים היסטוריים. זהו תרחיש לבדיקה, לא הוראת מסחר; הסטופ אינו מבטיח מחיר ביצוע.'
  ].join('\n');
+}
+
+export function compactEntryStopText(plan,language='he'){
+ const code=languageCode(language),copy=chatPresentationCopy[code]||chatPresentationCopy.en,labels=scenarioLocales[code]||{};
+ if(!plan?.available)return entryStopText(plan,language);
+ const number=value=>Number(value).toLocaleString('en-US',{maximumFractionDigits:Math.abs(value)>=1?2:8});
+ const fill=(text,value)=>text.replace('{value}',number(value));
+ const entry=labels.entry||'כניסה מותנית: {value}.',stop=labels.stop||'סטופ: {value}.';
+ return [fill(entry,plan.entry),fill(stop,plan.stop),copy.target+': '+(Number.isFinite(plan.target)?number(plan.target):copy.unknown)+(Number.isFinite(plan.riskReward)?' · '+copy.rr+' '+number(plan.riskReward)+':1':''),plan.stage==='already-crossed'?copy.crossed:copy.waiting,copy.date+': '+plan.asOf+' · '+(plan.interval||''),copy.caveat].join('\n');
 }
