@@ -18,7 +18,7 @@ export async function executeChartActions(input,tools){
   else messages.push('המניה הפעילה: '+current+'.');
  }
  // Fetch exactly once, only when explicitly requested actions need missing data.
- const needsData=selected||actions.some(a=>['levels','trendlines','pattern','style'].includes(a.type)||a.type==='indicator'&&a.enabled);
+ const needsData=selected||actions.some(a=>['levels','trendlines','tradelevels','pattern','style'].includes(a.type)||a.type==='indicator'&&a.enabled);
  if(needsData&&!tools.getData()){
   dataLoadAttempted=true;
   try{await tools.fetchData();check();messages.push('נתוני הספק נטענו לגרף.');changed=true;}
@@ -36,6 +36,13 @@ export async function executeChartActions(input,tools){
   }
   const data=tools.getData();
   if(!data?.bars?.length){messages.push('לא בוצע סימון: אין נרות תואמים למניה שנבחרה.');continue;}
+  if(action.type==='tradelevels'){
+   const plan=tools.getTradeScenario?.(action.side);
+   if(!plan?.available){messages.push('רמות כניסה וסטופ לא סומנו: אין תרחיש שרת מאומת.');continue;}
+   const first=data.bars[0].date,last=plan.asOf;
+   for(const [field,label,kind] of [['entry',action.side==='long'?'BREAKOUT ENTRY':'BREAKDOWN ENTRY','resistance'],['stop','STOP 2 ATR','support'],['target','MEASURED TARGET','resistance']])if(Number.isFinite(plan[field]))annotations.push({kind,label:label+' '+Number(plan[field].toFixed(2)),points:[{date:first,price:plan[field]},{date:last,price:plan[field]}]});
+   messages.push('סומנו טריגר כניסה, סטופ ויעד מדוד כשזמין. הרמות מותנות ואינן הבטחת ביצוע.');continue;
+  }
   const result=analyzeChartTools({bars:data.bars,kind:action.type==='levels'?'supportResistance':action.type==='trendlines'?'trendlines':kinds[action.pattern]});
   let items=result.annotations;
   if(action.type==='levels'&&action.kind!=='both')items=items.filter(item=>item.kind===action.kind);
