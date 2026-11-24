@@ -209,7 +209,7 @@ async function ask(q,extra={}){
  requestInvalidated=({clearHistory})=>{
   clearTimeout(requestTimeout);clearTimeout(slowNotice);
   if(clearHistory)return;
-  waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+'הבקשה נעצרה כי בחירת הגרף או הנתונים השתנתה. השיחה הקודמת נשמרה; אפשר לשלוח שוב על הבחירה החדשה.';
+  renderChatReply(waiting,{before:localReceipt,answer:'הבקשה נעצרה כי בחירת הגרף או הנתונים השתנתה. אפשר לשלוח שוב על הגרף החדש.'});
   if(!message.value.trim()){message.value=question;message.dispatchEvent(new Event('input'))}
  };
  try{
@@ -241,7 +241,7 @@ async function ask(q,extra={}){
    if(epoch!==conversationEpoch)return;
    const answer=[command.message,...result.messages].filter(Boolean).join('\n');
    localReceipt=answer||'לא זוהתה פעולה לביצוע. נסה לציין סימול וכלי גרף.';
-   waiting.textContent=localReceipt;
+   waiting.textContent='מכין ניתוח לגרף שנבחר…';
    const wantsAnalysis=/(?:תנתח|נתח|ניתוח|תסביר|הסבר|למה|מדוע|האם|מה דעתך|analy[sz]e|analysis|explain|why)/iu.test(intentQuestion);
    // Conceptual explanations can proceed without candles. Actual chart
    // analysis below must have matching data before contacting the model.
@@ -357,7 +357,7 @@ async function ask(q,extra={}){
   if(chartChanged)suffix+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
   if(Array.isArray(data.actions)&&data.actions.length){
    if(chartChanged)suffix+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
-   else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;suffix+='\n\nתוצאת הביצוע בפועל:\n'+execution.messages.join('\n');}catch(error){if(error.name==='AbortError')throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
+   else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;localReceipt=[localReceipt,...execution.messages].filter(Boolean).join('\n');}catch(error){if(error.name==='AbortError')throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
   }
   const scenarioText=data.tradeScenario?entryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
   const modelAnswer=scenarioText&&data.answer.endsWith('\n\n'+scenarioText)?data.answer.slice(0,-scenarioText.length-2):data.answer;
@@ -372,12 +372,12 @@ async function ask(q,extra={}){
 
   conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(localReceipt?{toolReceipt:localReceipt}:{}),...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   chatHistory.complete(conversation);conversation=conversation.slice(-400);
-  if(data.analysisContext){const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);waiting.append(receipt);
+  if(data.analysisContext){const sourceDetails=document.createElement('details'),sourceSummary=document.createElement('summary');sourceSummary.textContent=(chatPresentationCopy[languageCode(document.documentElement.lang)]||chatPresentationCopy.en).details;sourceDetails.append(sourceSummary);waiting.append(sourceDetails);const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);sourceDetails.append(receipt);
    const volume=data.analysisContext.volumeComparison;
    if(volume?.status==='unverifiable'||volume?.coverage==='partial'){
     const disclosure=document.createElement('p');disclosure.className='chat-analysis-receipt';
     const label=volume.status==='unverifiable'?'לא ניתן לאמת מחזור השוואתי ל־20 ימי המסחר הקודמים':'מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור';
-    disclosure.textContent=window.asafTranslate?.(label)||label;waiting.append(disclosure);
+    disclosure.textContent=window.asafTranslate?.(label)||label;sourceDetails.append(disclosure);
    }
   }
   if(followAnswer)log.scrollTop=log.scrollHeight;
