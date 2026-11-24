@@ -91,7 +91,7 @@ function restore(){
   const saved=JSON.parse(sessionStorage.getItem(key)||"null");
   if(saved?.source==='Twelve Data'){sessionStorage.removeItem(key);return;}
   if(saved&&(saved.source==="Twelve Data"||saved.source==='CoinLore'&&saved.internalResearchOnly===true&&cryptoResearchSymbol(saved.symbol)===saved.symbol&&cryptoIntervals.has(saved.interval))&&Array.isArray(saved.bars)&&typeof saved.symbol==="string"&&/^[A-Z0-9:._-]{1,30}$/.test(saved.symbol)){
-    saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT);if(!new URLSearchParams(location.search).has("symbol"))chartSymbol.value=saved.symbol;
+    saved.bars=saved.bars.slice(-CHART_HISTORY_LIMIT); // The page default or explicit link owns selection; cached candles never override it.
     chartRevision++;const meta={source:saved.source,interval:saved.interval||"1day",receivedAt:saved.receivedAt||null,...marketSnapshotMetadata(saved),...(saved.source==='CoinLore'?{internalResearchOnly:true,coverage:saved.coverage||'CoinLore aggregated crypto data',quote:saved.quote,latestBarMayBePartial:saved.latestBarMayBePartial===true}:{})};loaded={symbol:saved.symbol,bars:saved.bars,...meta,context:datasetContext(saved.symbol,saved.bars,meta)};
     if(normSymbol()===saved.symbol){
       const selector=$('marketInterval');
