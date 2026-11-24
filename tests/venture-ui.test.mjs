@@ -1,3 +1,4 @@
+import {mergeResearchActions} from '../chat-request-intent.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -8,7 +9,7 @@ const code=source.slice(source.indexOf('function installVentureSnapshot('),sourc
 function fixture(){
  const nodes=new Map(),images=[],requests=[],events=[];const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='marketInterval'?'1day':'AAPL',textContent:''});return nodes.get(id)};
  const image={symbol:'AAPL',source:'Twelve Data',presentation:'server-raster',interval:'1day',receivedAt:'2026-11-17T14:00:00Z',latestBarTime:'2026-11-16',candleCount:500,image:'data:image/png;base64,test',chartSettings:{style:'candles',indicators:['MA20','MA150']},messages:['Server annotations applied']};
- const c={key:'cache',Event,DOMException,CustomEvent:class extends Event{constructor(name,o){super(name);this.detail=o?.detail}},marketSnapshotMetadata,chartRevision:0,lastVisibleChart:null,loaded:null,ventureActions:[],conversationEpoch:0,$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,cryptoResearchSymbol:s=>s.startsWith('COINLORE:')?s:null,localChart:{clear(){},setSnapshot:s=>images.push(s)},sessionStorage:{removeItem(){}},renderStatus(){},datasetReady(){},rememberSymbol(){},window:{dispatchEvent:e=>events.push(e.type)},executeChartActions:async()=>({changed:true,messages:['native-crypto']}),fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>({...image,symbol:node('symbol').value.split(':').at(-1)})}}};
+ const c={mergeResearchActions,key:'cache',Event,DOMException,CustomEvent:class extends Event{constructor(name,o){super(name);this.detail=o?.detail}},marketSnapshotMetadata,chartRevision:0,lastVisibleChart:null,loaded:null,ventureActions:[],conversationEpoch:0,$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,cryptoResearchSymbol:s=>s.startsWith('COINLORE:')?s:null,localChart:{clear(){},setSnapshot:s=>images.push(s)},sessionStorage:{removeItem(){}},renderStatus(){},datasetReady(){},rememberSymbol(){},window:{dispatchEvent:e=>events.push(e.type)},executeChartActions:async()=>({changed:true,messages:['native-crypto']}),fetch:async(url,options)=>{requests.push({url,body:JSON.parse(options.body)});return {ok:true,json:async()=>({...image,symbol:node('symbol').value.split(':').at(-1)})}}};
  vm.createContext(c);vm.runInContext(code,c);c.loadMarketData=async()=>{c.installVentureSnapshot({...image,symbol:node('symbol').value.split(':').at(-1)},node('symbol').value);return c.loaded};
  return {c,images,requests,events,image};
 }
