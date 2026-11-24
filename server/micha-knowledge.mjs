@@ -1,6 +1,11 @@
 import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
 import {ASAF_ANALYSIS_POLICY} from './asaf-methodology.mjs';
-const corpus=JSON.parse(readFileSync(new URL('./knowledge/micha-reviewed.json',import.meta.url),'utf8'));
+// Netlify may bundle the module into the function; included files keep their
+// repository path under LAMBDA_TASK_ROOT instead of the module's original URL.
+const root=process.env.LAMBDA_TASK_ROOT||fileURLToPath(new URL('..',import.meta.url));
+const corpus=JSON.parse(readFileSync(resolve(root,'server/knowledge/micha-reviewed.json'),'utf8'));
 export const MICHA_KNOWLEDGE_INFO=Object.freeze({version:corpus.version,sources:corpus.reviewedSources,academy:corpus.academySources,remaining:corpus.academyRemaining});
 // Public answers use neutral methods; original attribution stays in the private corpus.
 export function neutralEducationalText(value,language='he'){
