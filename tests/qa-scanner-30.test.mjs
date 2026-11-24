@@ -83,6 +83,7 @@ test('scanner CSV: rejects intraday input instead of calculating daily filters o
 
 
 const localizedSample={...derived('QA',false,{aboveMA150:false,atrPercent:null,relativeVolume:null,supertrendDirection:'up'}),coverage:'נרות יומיים קודמים בלבד. כיסוי נפח המסחר טרם אומת; אין להניח שזהו מחזור השוק המלא.',screen:{matches:false,reasons:['מתחת ל-MA20 או שווה לו','מחזור חסר']},patterns:[{label:'מועמד לדאבל בוטום',stage:'crossed',side:'long',movePercent:15,riskReward:2},{label:'מועמד לדאבל טופ',stage:'waiting',side:'short'}]};
+localizedSample.methodology={label:'אינו עומד בכללי השיטה',checks:[...['closedDaily','marketCap','price','ma20','risingClose','volume','pattern'].map(key=>({key,passed:true,reason:''})),{key:'volume',passed:false,reason:'נדרש מחזור שוק מאוחד ומאומת מעל ממוצע 20 הימים'}],warnings:['יעד מדוד אינו תחזית; ביצוע סטופ במחיר שנקבע אינו מובטח.','מועדי דוחות, חדשות וסיכון אירוע לא נבדקו בסריקה זו.','פער פתיחה של 2% לפחות; יש לבדוק סיכון פערים לפני החלטה.']};
 for(const code of Object.keys(languageNames))ui('rendered states use production translation pipeline / '+code,async()=>json({records:[localizedSample],shared:true,stale:true,completedAt:'2026-11-19T11:00:00.000Z',nextUpdateAt:'2026-11-19T14:00:00.000Z'}),async f=>{
  const catalog=code==='he'?{}:{...JSON.parse(readFileSync(new URL('../locales/'+code+'.json',import.meta.url))),...launchTranslations[code]};
  const tr=createTranslator(catalog);
@@ -91,9 +92,9 @@ for(const code of Object.keys(languageNames))ui('rendered states use production 
  const samples=f.headings.map(liveText).concat(liveText(f.rows()[0].children[0]),liveText(f.$('scanSummary')),liveText(f.$('scanStatus')));
  await f.scan();
  const row=f.rows()[0];
- const card=f.$('scanShortlist').children[0];
+ assert.equal(f.$('scanShortlist').children.length,0);
  const cells=row.children.slice(0,-1).map(liveText),status=liveText(f.$('scanDiscoverStatus'));
- samples.push(...cells,liveText(card.children[0]),liveText(card.children[1]),status,liveText(f.$('scanSummary')));
+ samples.push(...cells,status,liveText(f.$('scanSummary')));
  assert.equal(cells[2],tr('כן')+' / '+tr('לא'));
  assert.equal(cells[5],code==='he'?'עולה':tr('up'));
  assert.equal(cells[11],code==='he'?'לונג / שורט':tr('long')+' / '+tr('short'));
