@@ -1,0 +1,695 @@
+{
+  "version": "academy-study-guide-2026-11-24-v1",
+  "provenance": "user_provided_outline_and_checklist_with_editorial_clarifications",
+  "fullAcademyCoverageClaimVerified": false,
+  "newVideoReviews": 0,
+  "newTranscriptsRead": 0,
+  "lessonCount": 11,
+  "topicCount": 12,
+  "lessons": [
+    {
+      "lesson": "1.1",
+      "id": "M0cRjA24Fug",
+      "title": "למה צריך להשקיע ואיך ריבית דריבית עובדת",
+      "url": "https://www.youtube.com/watch?v=M0cRjA24Fug",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "1.2",
+      "id": "2nrOQT8uOy0",
+      "title": "מהי בורסה ומה המשמעות של מניה",
+      "url": "https://www.youtube.com/watch?v=2nrOQT8uOy0",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "1.3",
+      "id": "mjZqUqUvXfk",
+      "title": "וול סטריט, NYSE ו־NASDAQ",
+      "url": "https://www.youtube.com/watch?v=mjZqUqUvXfk",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "1.4",
+      "id": "FHYwxTFhR3Q",
+      "title": "מדדים, קרנות סל ופיזור גלובלי",
+      "url": "https://www.youtube.com/watch?v=FHYwxTFhR3Q",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "2.1",
+      "id": "PwusiCWDBKw",
+      "title": "פלטפורמות מסחר והקנייה הראשונה",
+      "url": "https://www.youtube.com/watch?v=PwusiCWDBKw",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "2.2",
+      "id": "k9XdqPJiN14",
+      "title": "פקודות קנייה ומכירה",
+      "url": "https://www.youtube.com/watch?v=k9XdqPJiN14",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "2.3",
+      "id": "4PG47yq-a8g",
+      "title": "עקרונות לשמירה על ההון",
+      "url": "https://www.youtube.com/watch?v=4PG47yq-a8g",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "3.1",
+      "id": "gobEooZy-yQ",
+      "title": "טווח ארוך, מניה בודדת וגמישות",
+      "url": "https://www.youtube.com/watch?v=gobEooZy-yQ",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "3.2",
+      "id": "3Gk5041hZGI",
+      "title": "סטופ לוס ונקודות שבירה",
+      "url": "https://www.youtube.com/watch?v=3Gk5041hZGI",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "3.3",
+      "id": "h-SxrGkDH7U",
+      "title": "מימוש רווחים, סטופ נגרר ו־ATR",
+      "url": "https://www.youtube.com/watch?v=h-SxrGkDH7U",
+      "newlyWatched": false,
+      "transcriptRange": null
+    },
+    {
+      "lesson": "4.1",
+      "id": "BIoDB3zmQbw",
+      "title": "תמיכות והתנגדויות באמצעות Volume Profile",
+      "url": "https://www.youtube.com/watch?v=BIoDB3zmQbw",
+      "newlyWatched": false,
+      "transcriptRange": null
+    }
+  ],
+  "verificationSources": [
+    {
+      "topic": "orders",
+      "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-14",
+      "scope": "Market/Limit trade-offs"
+    },
+    {
+      "topic": "stops-trailing",
+      "url": "https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-15",
+      "scope": "Stop trigger, execution risk, trailing behavior"
+    },
+    {
+      "topic": "diversification",
+      "url": "https://www.investor.gov/introduction-investing/getting-started/asset-allocation",
+      "scope": "ETF breadth and overlapping holdings"
+    },
+    {
+      "topic": "atr",
+      "url": "https://www.fidelity.com/learning-center/trading-investing/technical-analysis/technical-indicator-guide/atr",
+      "scope": "Volatility measure, not direction"
+    },
+    {
+      "topic": "liquidity",
+      "url": "https://syndication.finra.org/content/understanding-disclosure-documents",
+      "scope": "Liquidity distinct from cap and bid-ask spread"
+    },
+    {
+      "topic": "volume-profile",
+      "url": "https://www.tradingview.com/support/solutions/43000502040-volume-profile-indicators-basic-concepts/",
+      "scope": "Historical volume-at-price, selected range and POC; implementation approximation verified separately against project volume-profile.mjs"
+    }
+  ],
+  "records": [
+    {
+      "id": "academy-guide-compounding",
+      "title": "ריבית דריבית, אינפלציה וכוח הזמן",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "M0cRjA24Fug"
+      ],
+      "keywords": [
+        "compound interest",
+        "compounding",
+        "ריבית דריבית",
+        "אינפלציה",
+        "חיסכון",
+        "תשואה ריאלית"
+      ],
+      "summary": "ריבית דריבית היא צבירה שבה גם הרווחים שנשארו מושקעים משתתפים בצבירה הבאה. הזמן, ההפקדות, העלויות והמס משפיעים על התוצאה. אינפלציה שוחקת כוח קנייה; יש להבדיל בין שינוי נומינלי לשינוי ריאלי.",
+      "notes": [
+        "מודל ללא הפקדות: FV=P×(1+r)^n. זהו חישוב בהנחת תשואה קבועה, לא תחזית לתשואות שוק. דוגמה היפותטית: 10,000 בריבית שנתית של 10% לעשר שנים נותנים כ־25,937 לפני מס ועמלות. בשוק התשואות משתנות וייתכנו הפסדים.",
+        "תשואה ריאלית מדויקת לתקופה: (1+תשואה נומינלית)/(1+אינפלציה)−1. ירידה של 50% דורשת עלייה של 100% כדי לחזור למחיר ההתחלתי. אין לזהות חישוב מתמטי עם מוצר שמבטיח ריבית.",
+        "שאלות מתאימות: מה זו ריבית דריבית?; איך אינפלציה שוחקת חיסכון?; What is compound interest?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "מה זו ריבית דריבית?",
+        "איך אינפלציה שוחקת חיסכון?",
+        "What is compound interest?"
+      ]
+    },
+    {
+      "id": "academy-guide-stock-exchange",
+      "title": "מניה, בורסה, NYSE ונאסדק",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "2nrOQT8uOy0",
+        "mjZqUqUvXfk"
+      ],
+      "keywords": [
+        "stock",
+        "share",
+        "exchange",
+        "NYSE",
+        "NASDAQ",
+        "בורסה",
+        "מניה",
+        "נאסדק",
+        "וול סטריט"
+      ],
+      "summary": "מניה מייצגת זכויות בעלות בחברה בהתאם לסוג המניה; מחירה בשוק אינו זהה בהכרח לערך העסקי שלה. בורסה היא זירת מסחר מפוקחת שבה נפגשות הצעות קנייה ומכירה. NYSE ונאסדק הן בורסות שונות; Nasdaq יכול לציין גם משפחת מדדים, לפי ההקשר.",
+      "notes": [
+        "מחזיק מניה יכול להרוויח משינוי במחירה או מדיבידנד שהחברה החליטה לחלק, אך אף אחד מהם אינו מובטח. יש להבחין בין חברה, נייר ערך, בורסה, מדד, ברוקר וחשבון מסחר.",
+        "בהסבר על נכס מסוים יש לבקש סימול ולוודא באיזו זירה, מטבע וסוג נכס מדובר. אין להסיק מחברות מדד או מקום מסחר על בטיחות או על תשואה עתידית.",
+        "שאלות מתאימות: מה ההבדל בין מניה לבורסה?; מה ההבדל בין נאסדק לבורסה של ניו יורק?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "מה ההבדל בין מניה לבורסה?",
+        "מה ההבדל בין נאסדק לבורסה של ניו יורק?"
+      ]
+    },
+    {
+      "id": "academy-guide-index-etf",
+      "title": "מדדים, קרנות סל ופיזור גלובלי",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "FHYwxTFhR3Q"
+      ],
+      "keywords": [
+        "index",
+        "ETF",
+        "diversification",
+        "מדד",
+        "מדדים",
+        "קרן סל",
+        "תעודת סל",
+        "פיזור",
+        "סנפ",
+        "עולמי"
+      ],
+      "summary": "מדד הוא סל מחושב לפי מתודולוגיה; קרן סל היא מוצר נסחר שיכול לעקוב אחר מדד או אסטרטגיה. מדד אינו מוצר שקונים ישירות. פיזור רחב מצמצם ריכוזיות, אך אינו מבטל סיכון שוק. לא כל ETF מפוזר: קרן ענפית או ממונפת יכולה להיות מרוכזת ומסוכנת.",
+      "notes": [
+        "לפני השוואת קרנות יש לבדוק את המדד וההחזקות, מדינת ההתאגדות, דמי הניהול, אופן עקיבה, מטבע, חלוקה/צבירה, מינוף ושגיאת עקיבה. אין להסיק מיסוי אישי או זכאות על סמך שם הקרן.",
+        "S&P 500 אינו מדד עולמי; מספר קרנות המחזיקות אותן מניות אינן בהכרח פיזור נוסף. אין לקבוע שמדדים תמיד מתאימים לטווח ארוך או שמניה בודדת לעולם אינה מתאימה; הדבר תלוי בתוכנית, בפיזור וביכולת לשאת סיכון.",
+        "שאלות מתאימות: מה ההבדל בין מדד לקרן סל?; האם כמה ETF נותנים פיזור עולמי?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "מה ההבדל בין מדד לקרן סל?",
+        "האם כמה ETF נותנים פיזור עולמי?"
+      ]
+    },
+    {
+      "id": "academy-guide-account-first-purchase",
+      "title": "חשבון מסחר ותהליך קנייה ראשונה",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "PwusiCWDBKw",
+        "4PG47yq-a8g"
+      ],
+      "keywords": [
+        "broker",
+        "account",
+        "first purchase",
+        "ברוקר",
+        "חשבון",
+        "קנייה ראשונה",
+        "פלטפורמה",
+        "עמלות"
+      ],
+      "summary": "לפני קנייה ראשונה מגדירים מטרה, אופק, הון וסיכון; בודקים את זהות הברוקר, הפיקוח, העמלות, המטבע וסוג החשבון. מוודאים סימול וסוג נכס, כמות, סוג פקודה ותוקף לפני אישור. יש להבדיל בין אישור קליטת פקודה לבין ביצוע בפועל.",
+      "notes": [
+        "לאחר ביצוע בודקים מחיר ממוצע וכמות שבוצעה, לרבות ביצוע חלקי, ומתאימים את תוכנית ההגנה לכמות בפועל. אם יש בברוקר פקודות תלויות או משולבות יש לברר את התנאים והתמיכה; אין להניח שהן קיימות או פועלות מחוץ לשעות המסחר.",
+        "ASAF Pro מנתח ומסביר; הצ׳אט אינו ברוקר ואינו מבצע קנייה, מכירה, הזנת סטופ או שינויו. אין לומר שנשלחה פקודה או שהכסף מוגן ללא אישור אמיתי ממערכת ביצוע מורשית.",
+        "שאלות מתאימות: איך קונים מניה בפעם הראשונה?; איך מוודאים שהפקודה בוצעה?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "איך קונים מניה בפעם הראשונה?",
+        "איך מוודאים שהפקודה בוצעה?"
+      ]
+    },
+    {
+      "id": "academy-guide-orders",
+      "title": "פקודות Market, Limit, Stop ו־Stop Limit",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "k9XdqPJiN14",
+        "3Gk5041hZGI"
+      ],
+      "keywords": [
+        "orders",
+        "market order",
+        "limit",
+        "stop limit",
+        "פקודות",
+        "קנייה",
+        "מכירה",
+        "לימיט",
+        "מרקט"
+      ],
+      "summary": "Market מבקש ביצוע במחיר הזמין ואינו מקבע מחיר. Buy Limit קובע מחיר מרבי לקנייה, ו־Sell Limit מחיר מינימלי למכירה; Limit אינו מבטיח ביצוע. Stop מפעיל פקודת Market בהגעה לטריגר. Stop Limit מפעיל Limit ולכן יכול להישאר ללא ביצוע.",
+      "notes": [
+        "השימוש ב־Limit הוא בחירת שליטה במחיר מול סיכון לאי־ביצוע, ולא כלל עליון המתאים לכל פעולה. דוגמה היפותטית: Buy Limit ב־100 יכול להתבצע ב־100 או פחות. Buy Limit מעל השוק אינו ממתין בהכרח לפריצה; אם דרוש טריגר עלייה יש להבחין בינו לבין Buy Stop או Stop Limit.",
+        "צריך לבדוק תוקף, שעות פעילות, תנאי טריגר וכללי הברוקר. בתנודתיות או בפער מחיר, Stop יכול להתבצע רחוק מהטריגר ו־Stop Limit יכול לא להתבצע כלל. אין לומר שמחיר הסטופ הוא הפסד מקסימלי מובטח.",
+        "שאלות מתאימות: מה ההבדל בין Limit ל־Market?; מה ההבדל בין Stop ל־Stop Limit?; האם לימיט מעל המחיר מחכה לפריצה?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "מה ההבדל בין Limit ל־Market?",
+        "מה ההבדל בין Stop ל־Stop Limit?",
+        "האם לימיט מעל המחיר מחכה לפריצה?"
+      ]
+    },
+    {
+      "id": "academy-guide-horizon-discipline",
+      "title": "אופק השקעה, חברה מול מניה ומשמעת",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "4PG47yq-a8g",
+        "gobEooZy-yQ"
+      ],
+      "keywords": [
+        "investment horizon",
+        "psychology",
+        "FOMO",
+        "טווח ארוך",
+        "חברה",
+        "מניה",
+        "משמעת",
+        "רגש",
+        "להתאהב"
+      ],
+      "summary": "מגדירים מראש אם זו השקעה או עסקת מסחר, באיזה אופק ומה יפריך את ההנחה. איכות החברה וביצועי המניה הם שאלות נפרדות. ירידה במחיר אינה בהכרח הזדמנות, והארכת אופק בדיעבד כדי להימנע ממימוש הפסד אינה תוכנית השקעה.",
+      "notes": [
+        "העדפת מדדים מפוזרים לטווח ארוך היא מסגרת לימודית; אין להפוך אותה לאיסור מוחלט על מניות לטווח ארוך או להבטחת התאוששות של מדדים. במניה בודדת יש להתייחס לריכוזיות, אירועי חברה ושינוי בתזה.",
+        "לפני כניסה נכתבת תוכנית: תנאי כניסה, ביטול, סיכון, יעד/ניהול רווחים וזמן בדיקה. הימנעות מרדיפה אחרי תנועה ו־FOMO אינה ניחוש תחתית. שומרים על כללי אסף ולא מחליפים אותם בסיסמאות או בשמות של יוצרים.",
+        "שאלות מתאימות: איך לא להתאהב במניה?; האם חברה טובה היא תמיד מניה טובה?; האם מניה בודדת מתאימה לטווח ארוך?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "איך לא להתאהב במניה?",
+        "האם חברה טובה היא תמיד מניה טובה?",
+        "האם מניה בודדת מתאימה לטווח ארוך?"
+      ]
+    },
+    {
+      "id": "academy-guide-stop-invalidation",
+      "title": "סטופ לוס, תמיכה ונקודת ביטול",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "3Gk5041hZGI",
+        "h-SxrGkDH7U"
+      ],
+      "keywords": [
+        "stop loss",
+        "invalidation",
+        "סטופ",
+        "ביטול",
+        "תמיכה",
+        "נקודת שבירה",
+        "הפסד"
+      ],
+      "summary": "נקודת הביטול מתארת מה יפריך את תרחיש העסקה. סטופ הוא כלי ביצוע לניהול סיכון, לא ביטוח. יש לקבוע תוכנית יציאה לפני הכניסה ולבדוק אם מרחק הסטופ מתאים לתנודתיות, למבנה הגרף ולתקציב הסיכון.",
+      "notes": [
+        "ב־ASAF Pro רמות כניסה וסטופ המחושבות בשרת מחייבות; מרחק הסטופ בתרחיש השרת הוא בדיוק 2×ATR. אם התמיכה והסטופ המחושב אינם מתאימים לתזה, מסבירים את חוסר ההתאמה או ממתינים — לא משנים בשקט את רמות השרת.",
+        "פערי מחיר, נזילות ושעות מסחר עלולים להגדיל הפסד בפועל לעומת סיכון מתוכנן. לאחר ביצוע יש לבדוק שהוראות ההגנה קיימות ותואמות לכמות שבוצעה; הצ׳אט אינו מכניס אותן לברוקר ואינו מאשר שבוצעו.",
+        "שאלות מתאימות: איפה שמים סטופ לוס?; האם הסטופ מבטיח שלא אפסיד יותר?; מה עושים אם התמיכה רחוקה מדי?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "איפה שמים סטופ לוס?",
+        "האם הסטופ מבטיח שלא אפסיד יותר?",
+        "מה עושים אם התמיכה רחוקה מדי?"
+      ]
+    },
+    {
+      "id": "academy-guide-trailing-profits",
+      "title": "סטופ נגרר ותכנון מימוש רווחים",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "h-SxrGkDH7U"
+      ],
+      "keywords": [
+        "trailing stop",
+        "profit taking",
+        "סטופ נגרר",
+        "טריילינג",
+        "מימוש רווחים",
+        "רווח"
+      ],
+      "summary": "תוכנית ניהול רווחים יכולה לכלול יעד, מימוש חלקי או סטופ נגרר. ב־Trailing Stop ללונג, רמת ההפעלה עולה עם תנועה חיובית לפי המרחק שנבחר, ואינה יורדת אוטומטית כשהמחיר יורד. יש להבדיל בין Trailing Stop Market ל־Trailing Stop Limit.",
+      "notes": [
+        "דוגמה היפותטית: בשיא של 120 ומרחק נגרר של 5, הטריגר הוא 115; שינוי תנאי המסחר או פער עלולים לגרום למחיר ביצוע אחר. סטופ נגרר עשוי להיות מופעל גם מתנודתיות רגילה ואינו מבטיח לשמור על כל הרווח.",
+        "אין שיעור מימוש או מרחק נגרר אחד המתאים לכל מניה. קובעים את הכלל לפני העסקה ובודקים תנודתיות, אופק ותמיכה. הסבר לימודי על ניהול בהמשך אינו שינוי אוטומטי של סטופ השרת או הוראה שבוצעה.",
+        "שאלות מתאימות: איך עובד סטופ נגרר?; מתי מממשים רווח?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "איך עובד סטופ נגרר?",
+        "מתי מממשים רווח?"
+      ]
+    },
+    {
+      "id": "academy-guide-atr-sizing",
+      "title": "ATR, תנודתיות וגודל פוזיציה",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "h-SxrGkDH7U"
+      ],
+      "keywords": [
+        "ATR",
+        "ATRP",
+        "position sizing",
+        "תנודתיות",
+        "גודל פוזיציה",
+        "סיכון",
+        "כמות מניות"
+      ],
+      "summary": "ATR מודד תנודתיות בטווחי מחיר כולל פערים, ואינו מנבא כיוון. יש לציין תקופה וטווח זמן; ATR14 יומי שונה מ־ATR14 שעתי. ATR מוצג ביחידות מחיר; ATR% הוא ATR חלקי מחיר הסגירה כפול 100.",
+      "notes": [
+        "True Range הוא המקסימום של גבוה פחות נמוך, הערך המוחלט של גבוה פחות סגירה קודמת, והערך המוחלט של נמוך פחות סגירה קודמת. השרת משתמש ב־ATR14 לפי החלקת Wilder; אין להחליף את הערך בנתון לא מאומת מהתמונה.",
+        "כמות מניות שלמות מוגבלת גם על ידי תקציב הסיכון חלקי המרחק לסטופ וגם על ידי ההון הזמין חלקי הכניסה. דוגמה היפותטית: תיק 25,000, סיכון שנבחר 1%=250, כניסה 100 ו־ATR יומי 2; סטופ 2×ATR הוא 96. הסיכון המתוכנן למניה הוא 4 ולכן עד 62 מניות, סיכון 248 לפני עלויות ופערים. 1% הוא נתון הדוגמה ולא כלל חדש.",
+        "שאלות מתאימות: מה ההבדל בין ATR לאחוז סיכון מהתיק?; איך מחשבים כמות מניות לפי סטופ?; Does ATR predict direction?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "מה ההבדל בין ATR לאחוז סיכון מהתיק?",
+        "איך מחשבים כמות מניות לפי סטופ?",
+        "Does ATR predict direction?"
+      ]
+    },
+    {
+      "id": "academy-guide-volume-profile",
+      "title": "Volume Profile, נפח לפי מחיר ואזורי מפתח",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "BIoDB3zmQbw"
+      ],
+      "keywords": [
+        "volume profile",
+        "POC",
+        "HVN",
+        "LVN",
+        "ווליום פרופייל",
+        "פרופיל",
+        "נפח לפי מחיר",
+        "מזרן תמיכה",
+        "התנגדות"
+      ],
+      "summary": "Volume Profile מציג התפלגות מחזור לפי רמות מחיר בחלון שנבחר, לעומת עמודות מחזור לפי זמן. אזורים בעלי נפח גבוה עשויים להצביע על פעילות היסטורית רבה, לא על תמיכה מובטחת. POC הוא תא המחיר בעל המחזור הגבוה ביותר בפרופיל המחושב.",
+      "notes": [
+        "בוחנים את החלון, הרזולוציה, הכיסוי ואופן הקצאת הנפח למחיר. פרופיל המבוסס רק על OHLCV יומי עשוי להיות אומדן: אי אפשר לדעת באילו מחירים בתוך הנר באמת נסחר כל המחזור. ביישום הנוכחי החלוקה של נפח הנר בטווח שלו היא קירוב, ולא פרופיל עסקאות ברזולוציית טיק.",
+        "אין להמציא POC/HVN/LVN מדויק אם לא חושב ונמסר. אין להסיק תמיכה, התנגדות או כיסוי שוק מלא מתמונה או מנתון חלקי. משלבים אזור מחיר עם מבנה מגמה, תגובת המחיר, תנודתיות ותרחיש ביטול; פרופיל לבדו אינו אישור כניסה.",
+        "שאלות מתאימות: איך משתמשים ב־Volume Profile לתמיכה?; מה זה POC?; האם נפח של נר מספר באיזה מחיר נסחר?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "איך משתמשים ב־Volume Profile לתמיכה?",
+        "מה זה POC?",
+        "האם נפח של נר מספר באיזה מחיר נסחר?"
+      ]
+    },
+    {
+      "id": "academy-guide-liquidity-ma",
+      "title": "נזילות, Spread וממוצעים 150/200 כהקשר",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "4PG47yq-a8g",
+        "gobEooZy-yQ",
+        "BIoDB3zmQbw"
+      ],
+      "keywords": [
+        "liquidity",
+        "spread",
+        "market cap",
+        "MA150",
+        "MA200",
+        "סחירות",
+        "ספרד",
+        "מרווח",
+        "ממוצע",
+        "מיליארד",
+        "גדולות"
+      ],
+      "summary": "שווי שוק, מחזור מסחר ונזילות אינם אותו דבר. Spread הוא ההפרש בין מחיר קנייה מוצע למחיר מכירה מוצע, והוא משתנה לפי שעות ותנאי שוק. חברה גדולה אינה מבטיחה מרווח צר או ביצוע בטוח.",
+      "notes": [
+        "בצ׳ק ליסט שסופק מופיעה העדפה לחברות מעל 10 מיליארד דולר ולמחיר מעל MA150/200. אלה העדפות אסטרטגיה נוספות, ולא שינוי של כללי המוצר: שווי שוק מאומת של לפחות מיליארד דולר, מחיר מעל 5 ומעל MA20. MA150 נשאר הקשר ולא תנאי חובה; אין להוסיף 10 מיליארד או MA200 למסנן הראשי בלי שינוי מפורש.",
+        "אפשר להסביר שמניה עומדת בסף אסף אך אינה עומדת בהעדפת 10 מיליארד, ולתאר מיקום ביחס לממוצע ארוך רק אם הנתון קיים. אין להכריז על מרווח צר או עומק ספר פקודות מתוך ATR, מחזור EOD או שווי שוק בלבד.",
+        "שאלות מתאימות: למה הסף הוא מיליארד ולא 10 מיליארד?; האם חייבים להיות מעל ממוצע 150?; האם חברה גדולה תמיד סחירה?"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "למה הסף הוא מיליארד ולא 10 מיליארד?",
+        "האם חייבים להיות מעל ממוצע 150?",
+        "האם חברה גדולה תמיד סחירה?"
+      ]
+    },
+    {
+      "id": "academy-guide-pretrade-checklist",
+      "title": "צ׳ק ליסט לפני כניסה: תוכנית, גרף, סיכון וביצוע",
+      "sections": [
+        "academy",
+        "user-study-guide"
+      ],
+      "reviewType": "user_provided_study_guide",
+      "sourceVideoIds": [
+        "k9XdqPJiN14",
+        "4PG47yq-a8g",
+        "gobEooZy-yQ",
+        "3Gk5041hZGI",
+        "h-SxrGkDH7U",
+        "BIoDB3zmQbw"
+      ],
+      "keywords": [
+        "checklist",
+        "צקליסט",
+        "צק ליסט",
+        "לפני כניסה",
+        "לפני קנייה",
+        "תוכנית עסקה",
+        "pretrade"
+      ],
+      "summary": "לפני כניסה: (1) מטרה ואופק; (2) מקור ותאריך הנתונים, סימול, שווי שוק וסחירות; (3) מגמה, MA20 והקשר MA150/200; (4) אזורי תמיכה והתנגדות, תבנית ושלב האישור; (5) מחזור בר השוואה; (6) טריגר, ביטול, ATR וסטופ שרת 2×ATR; (7) פוטנציאל מדוד, יחס סיכוי/סיכון וכמות; (8) תוכנית רווחים; (9) דוחות, חדשות ופערים; (10) סוג פקודה ואימות ביצוע והגנה.",
+      "notes": [
+        "בניתוח גרף יש להשתמש רק במה שאומת ולהציג מה חסר. כשאין מחיר, ATR, שווי שוק, מחזור, פרופיל או מועד דוח אמינים — כותבים שלא ניתן לבדוק, ולא מסמנים את התנאי כעבר. מבדילים בין waiting, crossed ו־above; אין לתאר מועמד ממתין כפריצה שהושלמה.",
+        "העדפת Limit נשקלת לצד אפשרות לאי־ביצוע. מפה טכנית אינה הוראת קנייה: אם המחיר רחוק מהאזור או הסיכון אינו מתאים, ממתינים במקום להמציא סטופ צפוף או לרדוף. חברה טובה אינה מבטיחה מניה עולה. ASAF Pro מספק מחקר ותוכנית מותנית ואינו מבצע פקודות.",
+        "שאלות מתאימות: תן צ׳ק ליסט לפני כניסה למניה; תבדוק את העסקה לפי כל מה שלמדת; Give me a pre-trade checklist"
+      ],
+      "coverage": {
+        "kind": "user_outline_and_checklist",
+        "transcriptRange": null,
+        "fullVideoReviewed": false
+      },
+      "timestamps": [],
+      "limitations": [
+        "מסמך זה מבוסס על מתווה וצ׳ק ליסט שסיפק המשתמש, בתוספת הבהרות לימודיות; אין בו תמלול מלא של השיעורים.",
+        "אין להסיק צפייה חדשה, חותמות זמן או כיסוי מלא של כל האקדמיה.",
+        "הדוגמאות לימודיות ואינן מחירים עדכניים או ביצוע פקודות."
+      ],
+      "currentFactsVerified": false,
+      "independentFullWatch": false,
+      "questions": [
+        "תן צ׳ק ליסט לפני כניסה למניה",
+        "תבדוק את העסקה לפי כל מה שלמדת",
+        "Give me a pre-trade checklist"
+      ]
+    }
+  ]
+}

@@ -30,8 +30,13 @@ test('exact source matching wins over broad keywords and preserves provenance',(
 });
 
 test('customer context and replies omit creator branding while private provenance remains',()=>{
- for(const r of corpus.records){const context=retrieveMichaKnowledge(r.id);assert.doesNotMatch(context,/מיכה|\bmicha(?:[. ]stocks)?\b/iu);assert.equal(typeof r.url,'string')}
+ for(const r of corpus.records){const context=retrieveMichaKnowledge(r.id);assert.equal(neutralEducationalText(context),context);assert.equal(typeof r.url,'string')}
  for(const text of ['לפי מיכה סטוקס','Micha.Stocks says','Micha Stocks','מיכה-סטוקס'])assert.doesNotMatch(neutralEducationalText(text),/מיכה|micha/i);
  const messages=withMichaKnowledge([{role:'system',content:'base'},{role:'user',content:'???'}],'???');
  assert.match(messages[0].content,/ASAF Pro analysis framework/);assert.match(messages[0].content,/Do not mention the source creator/);
+});
+
+test('creator-name filtering preserves Hebrew support terminology and normal word boundaries',()=>{
+ for(const text of ['תמיכה','תמיכה והתנגדות','המחיר קרוב לתמיכה','תמיכה בממוצע'])assert.equal(neutralEducationalText(text),text);
+ for(const text of ['מיכה סטוקס','למיכה','מיכה','Micha.Stocks'])assert.notEqual(neutralEducationalText(text),text);
 });
