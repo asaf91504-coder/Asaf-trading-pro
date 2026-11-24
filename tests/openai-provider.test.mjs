@@ -60,6 +60,14 @@ test('existing OpenAI route gets reviewed methods in one call and keeps creator 
  assert.doesNotMatch(calls[0].input.at(-1).content,/מיכה|Micha/i);assert.doesNotMatch(result.answer,/מיכה|Micha/i);
  assert.equal(result.actions[0].indicator,'MA20');assert.equal(calls[0].max_output_tokens,1800);assert.equal(calls[0].tools,undefined);
 },{},JSON.stringify({answer:'לפי מיכה סטוקס בודקים מגמה.',actions:[{type:'indicator',indicator:'MA20',enabled:true}]})));
+test('supplied Academy guide reaches the authenticated chat without claiming video coverage or changing ASAF rules',async()=>withRoute(async({user,calls})=>{
+ const response=await handler(request('free-chat',{message:'תן צ׳ק ליסט לפני כניסה למניה',language:'he'},user.cookie));
+ assert.equal(response.status,200);assert.equal(calls.length,1);
+ const sent=calls[0];assert.match(sent.input.at(-1).content,/academy-guide-pretrade-checklist/);
+ assert.match(sent.input.at(-1).content,/user_provided_study_guide/);assert.match(sent.input.at(-1).content,/fullVideoReviewed":false/);
+ assert.match(sent.instructions,/not a replacement for ASAF/);assert.match(sent.instructions,/not full transcripts/);
+ assert.equal(sent.max_output_tokens,1800);assert.equal(sent.tools,undefined);
+}));
 test('authenticated OpenAI chat retains language, history and validated chart actions',async()=>withRoute(async({user,calls})=>{
  const response=await handler(request('free-chat',{message:'Add MA20',language:'es',chartControl:true,history:[{role:'user',content:'Compare moving averages.'}]},user.cookie));
  assert.equal(response.status,200);const body=await response.json();assert.equal(body.provider,'openai');assert.equal(body.model,OPENAI_MODEL);assert.equal(body.actions[0].indicator,'MA20');
