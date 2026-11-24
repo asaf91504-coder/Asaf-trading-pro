@@ -12,6 +12,13 @@
   included_files = ["server-assets/*.ttf", "server/knowledge/*.json"]
   external_node_modules = ["@resvg/resvg-js"]
 
+# Educational provenance is an inference input, not a public website download.
+[[redirects]]
+  from = "/server/knowledge/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
 [[headers]]
   for = "/sw.js"
   [headers.values]
