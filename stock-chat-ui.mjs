@@ -380,7 +380,7 @@ async function ask(q,extra={}){
     disclosure.textContent=window.asafTranslate?.(label)||label;sourceDetails.append(disclosure);
    }
   }
-  if(followAnswer)log.scrollTop=log.scrollHeight;
+  if(followAnswer){if(data.tradeScenario&&waiting.getBoundingClientRect&&log.getBoundingClientRect)log.scrollTop+=waiting.getBoundingClientRect().top-log.getBoundingClientRect().top;else log.scrollTop=log.scrollHeight;}
   pendingImage=null;
   if(imageInput)imageInput.value="";
   if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";
