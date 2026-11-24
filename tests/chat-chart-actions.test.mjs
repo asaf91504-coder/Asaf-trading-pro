@@ -112,9 +112,10 @@ test('validator rejects unknown operation, fields, selectors, values and malform
  assert.throws(()=>validateChartActions([{type:'trendlines'},{type:'levels',kind:'bad'}]));
  assert.throws(()=>validateChartActions(Array.from({length:maxChartActions+1},()=>({type:'trendlines'}))));
 });
-test('general analysis passes through to real model rather than being swallowed by empty control plan',()=>{
+test('general analysis prepares observable chart tools and continues to model analysis',()=>{
  for(const text of ['תנתח את הגרף ואת המגמה','נתח את הגרף הנוכחי','תנתח מגמה','analyze the chart']){
-  const result=parseChartCommand(text);assert.deepEqual(result.actions,[]);assert.equal(result.recognized,false,text);
+  const result=parseChartCommand(text);assert.equal(result.recognized,true,text);
+  assert.deepEqual(result.actions,[{type:'levels',kind:'both'},{type:'trendlines'},{type:'tradelevels',side:'long'}]);
  }
 });
 test('standalone indicator and ordinary English word never become a stock symbol',()=>{
