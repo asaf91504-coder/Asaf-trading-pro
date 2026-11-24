@@ -40,9 +40,9 @@ test('scanner applies price, MA, EOD volume and cap filters on server and sends 
  const scan=async filters=>{const response=await handler(request('scan-market',{symbols:['AAPL'],filters,cachedOnly:true},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);return body.records[0]};
  const filters={minPrice:5,minMarketCap:0,minVolume:0,above20:true,risingVolume:true};
  const partial=await scan(filters);assert.equal(partial.screen.matches,false);assert.equal(partial.presentation,'derived-only');assert.ok(partial.metrics.relativeVolume>1);assert.equal(partial.metrics.volumeCoverage,'partial');assert.match(partial.screen.reasons.join(' '),/מחזור חלקי/);
- const pricesOnly=await scan({...filters,risingVolume:false});assert.equal(pricesOnly.screen.matches,true);
+ const pricesOnly=await scan({...filters,risingVolume:false});assert.equal(pricesOnly.screen.matches,false);assert.equal(pricesOnly.methodology.eligible,false);
  state.db.set(marketSnapshotKey('AAPL','1day',env),JSON.stringify({...snapshot,volumeBasis:{...snapshot.volumeBasis,coverage:'consolidated',basis:'qa-consolidated'}}));
- const match=await scan(filters);assert.equal(match.screen.matches,true);assert.equal(match.metrics.relativeVolume,partial.metrics.relativeVolume);
+ const match=await scan(filters);assert.equal(match.screen.matches,false);assert.match(match.screen.reasons.join(' '),/שווי שוק|תבנית/);assert.equal(match.metrics.relativeVolume,partial.metrics.relativeVolume);
  const reject=await scan({minPrice:1000,minMarketCap:1e9,minVolume:0});assert.equal(reject.screen.matches,false);assert.match(reject.screen.reasons.join(' '),/מחיר|שווי שוק/);assert.equal(reject.marketCapStatus,'unavailable');
 });
 test('projection strips raw pivot prices and even unexpected future fields',()=>{
@@ -64,7 +64,7 @@ test('shared three-hour snapshots keep raw records inside the server boundary',a
  const record={...scanBars('AAPL',bars),source:'Twelve Data',receivedAt:snapshot.receivedAt,barPolicy:snapshot.barPolicy,fundamentals:{status:'unavailable'}};
  state.db.set(sharedScannerKey(configured)+':snapshot',JSON.stringify({records:[record],errors:[],completedAt:snapshot.receivedAt,startedAt:snapshot.receivedAt,nextUpdateAt:now+10800000}));
  let calls=0;const handler=createScanMarketHandler({env:configured,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('No provider request')}});
- const response=await handler(request('scan-market',{symbols:['AAPL'],filters:{minPrice:5,minMarketCap:0,minVolume:0}},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);assert.equal(body.shared,true);assert.equal(body.records[0].screen.matches,true);assert.equal(calls,0);
+ const response=await handler(request('scan-market',{symbols:['AAPL'],filters:{minPrice:5,minMarketCap:0,minVolume:0}},user.cookie));assert.equal(response.status,200);const body=await response.json();noRawFields(body);assert.equal(body.shared,true);assert.equal(body.records[0].screen.matches,false);assert.equal(body.records[0].methodology.stage,'incomplete');assert.equal(calls,0);
 });
 
 test('bundled server font produces visible price and attribution glyphs without system fonts',()=>{
