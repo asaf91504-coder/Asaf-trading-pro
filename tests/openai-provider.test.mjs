@@ -42,17 +42,24 @@ test('quota errors, malformed output and truncation never retry or use the other
 });
 
 let tick=Date.now();
-async function withRoute(fn,patch={}){
+async function withRoute(fn,patch={},replyText=JSON.stringify({answer:'MA20 follows the last 20 bars.',actions:[{type:'indicator',indicator:'MA20',enabled:true}]})){
  const previous={...process.env},oldFetch=global.fetch,oldNow=Date.now;tick+=61000;Date.now=()=>tick;
  const state=fixture(),user=seed(state),calls=[];
  Object.assign(process.env,{...authEnv,...config,ASAF_WEEKLY_CREDITS_ENABLED:'false',...patch});
  global.fetch=async(url,options)=>{
   if(String(url)==='https://test.upstash.io')return Response.json({result:await state.run(JSON.parse(options.body))});
   assert.equal(String(url),'https://api.openai.com/v1/responses');calls.push(JSON.parse(options.body));
-  return Response.json(completed(JSON.stringify({answer:'MA20 follows the last 20 bars.',actions:[{type:'indicator',indicator:'MA20',enabled:true}]})));
+  return Response.json(completed(replyText));
  };
  try{await fn({state,user,calls})}finally{process.env=previous;global.fetch=oldFetch;Date.now=oldNow}
 }
+test('existing OpenAI route gets reviewed methods in one call and keeps creator names out of chart answers',async()=>withRoute(async({user,calls})=>{
+ const response=await handler(request('free-chat',{message:'Explain MA20 and ATR',language:'he',chartControl:true},user.cookie));
+ assert.equal(response.status,200);const result=await response.json();assert.equal(calls.length,1);
+ assert.match(calls[0].instructions,/ASAF Pro analysis framework/);assert.match(calls[0].input.at(-1).content,/ASAF_EDUCATIONAL_NOTES/);
+ assert.doesNotMatch(calls[0].input.at(-1).content,/מיכה|Micha/i);assert.doesNotMatch(result.answer,/מיכה|Micha/i);
+ assert.equal(result.actions[0].indicator,'MA20');assert.equal(calls[0].max_output_tokens,1800);assert.equal(calls[0].tools,undefined);
+},{},JSON.stringify({answer:'לפי מיכה סטוקס בודקים מגמה.',actions:[{type:'indicator',indicator:'MA20',enabled:true}]})));
 test('authenticated OpenAI chat retains language, history and validated chart actions',async()=>withRoute(async({user,calls})=>{
  const response=await handler(request('free-chat',{message:'Add MA20',language:'es',chartControl:true,history:[{role:'user',content:'Compare moving averages.'}]},user.cookie));
  assert.equal(response.status,200);const body=await response.json();assert.equal(body.provider,'openai');assert.equal(body.model,OPENAI_MODEL);assert.equal(body.actions[0].indicator,'MA20');
