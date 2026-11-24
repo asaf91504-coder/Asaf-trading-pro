@@ -1,4 +1,4 @@
-import {withMichaKnowledge} from '../../server/micha-knowledge.mjs';
+import {withMichaKnowledge,neutralEducationalText} from '../../server/micha-knowledge.mjs';
 import {ownerWebPilotLimit,requestOwnerWebPilot} from '../../server/owner-web-pilot.mjs';
 import {currentUSMarketIntent} from '../../chat-market-intent.mjs';
 import {readUSMarketHeadlines} from '../../server/us-market-headlines.mjs';
@@ -181,7 +181,7 @@ async function handler(request,{requireOwner=false}={}){
    owner_web_unavailable:['שירות החיפוש לא השלים את הבקשה. לא בוצע ניסיון חוזר.','Search did not complete. No automatic retry was made.']
   };
   if(result.status!==200)return reply({error:(copy[result.code]||copy.owner_web_unavailable)[responseLanguage==='he'?0:1],code:result.code},result.status);
-  return reply({answer:result.answer,responseLanguage,ownerChatNoAppCredits:true,analysisContext:null,source:'none',provider:ai.provider,model:ai.model,webSearch:{status:'available',kind:'owner-hosted-search',searchedAt:result.searchedAt,sources:result.sources}});
+  return reply({answer:neutralEducationalText(result.answer,responseLanguage),responseLanguage,ownerChatNoAppCredits:true,analysisContext:null,source:'none',provider:ai.provider,model:ai.model,webSearch:{status:'available',kind:'owner-hosted-search',searchedAt:result.searchedAt,sources:result.sources}});
  }
  const broadMarket=!payload.newsArticleId&&currentUSMarketIntent(question);
  // A market overview does not inherit the visible instrument, licensed data,
@@ -292,11 +292,12 @@ async function handler(request,{requireOwner=false}={}){
   // previously authorized snapshot or inherited derived prices after expiry.
   if(privateTrial&&(twelveRequested||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
   const promptMessages=[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(broadMarket?BROAD_MARKET_SYSTEM:'')+(!broadMarket&&!selectedArticleId&&needsScenario?TECHNICAL_REVIEW_SYSTEM:'')+(meta.source==='Twelve Data'?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(responseLanguage)},...history,{role:'user',content}];
-  const result=await requestAI({signal:controller.signal,messages:ai.provider==='openrouter'?withMichaKnowledge(promptMessages,question):promptMessages});
-  const {answer,truncated}=result;
+  const result=await requestAI({signal:controller.signal,messages:withMichaKnowledge(promptMessages,question)});
+  const {truncated}=result;
+  const answer=neutralEducationalText(result.answer,responseLanguage);
   const ownerState=ownerChat?{ownerChatNoAppCredits:true}:{};
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);
-  if(payload.chartControl===true){const parsed=parseChartToolResponse(answer,{truncated,language:responseLanguage});return reply({...ownerState,...parsed,answer:parsed.answer+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
+  if(payload.chartControl===true){const parsed=parseChartToolResponse(result.answer,{truncated,language:responseLanguage});return reply({...ownerState,...parsed,answer:neutralEducationalText(parsed.answer,responseLanguage)+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ "+assistantReplyCopy(responseLanguage).textTruncated:"");
   return reply({...ownerState,answer:text+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||"none",latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
  }catch(error){if(error instanceof AIProviderError)return error.status===429?throttleReply(error.code,responseLanguage):reply({error:error.message,code:error.code},error.status);return reply({error:error?.name==='AbortError'?'מודל ה-AI לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.':'אין כרגע חיבור למודל ה-AI',code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
