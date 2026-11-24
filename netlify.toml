@@ -9,7 +9,7 @@
   NODE_VERSION = "22"
 
 [functions]
-  included_files = ["server-assets/*.ttf"]
+  included_files = ["server-assets/*.ttf", "server/knowledge/*.json"]
   external_node_modules = ["@resvg/resvg-js"]
 
 [[headers]]
