@@ -49,8 +49,10 @@ const companyMatchers=companies.map(([symbol,aliases])=>({symbol,matchers:aliase
 const normalize=text=>text.normalize('NFKC').replace(/[״“”]/g,'"').replace(/[׳’]/g,"'").replace(/\s+/g,' ').trim();
 // Expand an explicit list of average periods without inferring unsupported values.
 const expandAverageList=text=>text.replace(/ממוצע(?:ים)?(?:\s+נע(?:ים)?)?\s*(?:של\s*)?(\d+(?:\s*(?:,\s*ו?|ו|and)\s*\d+)+)/giu,(_,periods)=>[...periods.matchAll(/\d+/g)].map(match=>'ממוצע '+match[0]).join(' ו'));
-const commandRE=/(?:פתח|תפתח|הצג|תציג|תראה|תביא|תטען|טען|נתח|תנתח|נתחי|סמן|תסמן|שרטט|תשרטט|מתח|תמתח|צייר|תצייר|הוסף|תוסיף|שים|תשים|הפעל|תפעיל|כבה|תכבה|הסר|תסיר|הסתר|תסתיר|הורד|תוריד|מחק|תמחק|נקה|תנקה|מצא|תמצא|זהה|תזהה|חפש|תחפש|בדוק|תבדוק|החלף|תחליף|שנה|תשנה|תעביר|תעשה|עשה|אני רוצה|אפשר (?:לראות|להוסיף|להציג|לסמן)|\b(?:open|show|load|analy[sz]e|draw|mark|add|enable|disable|remove|hide|clear|find|detect|check|switch|set|plot)\b)/iu;
-const explanatoryRE=/^(?:מה (?:זה|הם|היא|אומר)|מה ההבדל|איך (?:מחשבים|מזהים|עובד)|הסבר|תסביר|\b(?:what (?:is|are|does)|explain|how (?:does|do|to))\b)/iu;
+// Hebrew imperatives must be complete words: "איש מפתח" is not "פתח גרף".
+// An attached conjunction is valid, as in "ותוסיף MA20".
+const commandRE=/(?<![\p{L}\p{N}])ו?(?:פתח|תפתח|הצג|תציג|תראה|תביא|תטען|טען|נתח|תנתח|נתחי|סמן|תסמן|שרטט|תשרטט|מתח|תמתח|צייר|תצייר|הוסף|תוסיף|שים|תשים|הפעל|תפעיל|כבה|תכבה|הסר|תסיר|הסתר|תסתיר|הורד|תוריד|מחק|תמחק|נקה|תנקה|מצא|תמצא|זהה|תזהה|חפש|תחפש|בדוק|תבדוק|החלף|תחליף|שנה|תשנה|תעביר|תעשה|עשה|אני רוצה|אפשר (?:לראות|להוסיף|להציג|לסמן))(?![\p{L}\p{N}])|\b(?:open|show|load|analy[sz]e|draw|mark|add|enable|disable|remove|hide|clear|find|detect|check|switch|set|plot)\b/iu;
+const explanatoryRE=/^(?:מה (?:זה|הם|היא|אומר)|מה ה(?:הבדל|סיכון|משמעות|קשר)|למה|איך (?:מחשבים|מזהים|עובד)|הסבר|תסביר|\b(?:what (?:is|are|does)|explain|how (?:does|do|to))\b)/iu;
 const offRE=/(?:הסר|תסיר|הסתר|תסתיר|כבה|תכבה|תוריד|הורד|בלי|ללא|\b(?:remove|hide|disable|off|without)\b)/iu;
 const negatedRE=/(?:אל\s+(?:ת|ל)|לא\s+(?:תוסיף|להוסיף|תסמן|לסמן|תפתח|לפתוח|תשנה|לשנות|תסיר|להסיר)|\b(?:do not|don't|dont|never)\b)/iu;
 // A sourcing constraint is not a chart instruction. In that context, generic
