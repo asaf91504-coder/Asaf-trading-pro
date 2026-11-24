@@ -1,3 +1,4 @@
+import {methodologyTranslations} from './methodology-translations.mjs';
 import {qaI18nTranslations} from "./qa-i18n-translations.mjs";
 import {accessibilityStatementTranslations} from './accessibility-statement-translations.mjs';
 import {catalogAuditTranslations} from './catalog-audit-translations.mjs';
@@ -61,3 +62,5 @@ const marketTermsCopy={
  "ja": "本サービスから市場データやスクリーナーの結果をスクレイピングしたり、自動収集したりしないでください。適切な許可なく、第三者の市場データやそのデータから得たスクリーナーの結果を共有または再配布しないでください。"
 };
 for(const [code,label] of Object.entries(marketTermsCopy))launchTranslations[code][marketTermsKey]=label;
+
+for(const [code,copy] of Object.entries(methodologyTranslations))Object.assign(launchTranslations[code],copy);
