@@ -30,6 +30,13 @@ test('new external notes are retrievable while review counts and provenance rema
  }
 });
 
+test('brief response style survives when a large chart leaves no room for study notes',()=>{
+ const prompt=withMichaKnowledge([{role:'system',content:'base'},{role:'user',content:'x'.repeat(44000)}],'נתח את הגרף');
+ assert.match(prompt[0].content,/at most25 words/);assert.match(prompt[0].content,/RESPONSE DEPTH: BRIEF/);
+ assert.doesNotMatch(prompt.at(-1).content,/ASAF_EDUCATIONAL_NOTES/);
+ assert.ok(prompt.reduce((n,m)=>n+Buffer.byteLength(m.content),0)<=48000);
+});
+
 for(const [q,id] of [
  ['מה הסיכון בתלות באיש מפתח?','fomo-key-person'],
  ['איך מחזורי קריפטו מושפעים מנזילות ורגולציה?','crypto-cycles'],

@@ -1,6 +1,6 @@
 # Short chat answers and supplemental study notes
 
-The default answer now targets 60 words, or three short bullets and 40 words
+The default answer now targets 60 words, or one/two short sentences and 25 words
 for chart review. An explicit request for detail lifts the style limit within
 the unchanged provider output and cost caps. The owner research route shares
 this style policy; it retains factual citations and its isolated search input.
@@ -41,3 +41,7 @@ hypothetical example both returned correctly. A separate live question containin
 now require complete words (with an optional attached conjunction), and ordinary
 risk/meaning questions remain conversational. The complete updated suite passes
 1,734 tests.
+
+The live chart check prompted removal of conflicting long-review instructions
+from the base and technical prompts. Brief style also remains active when the
+input budget cannot fit supplemental notes. The final suite passes 1,735 tests.
