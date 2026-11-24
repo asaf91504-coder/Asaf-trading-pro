@@ -42,7 +42,7 @@ const normSymbol=()=>String(chartSymbol.value||"").trim().toUpperCase().replace(
 // Deterministic calculated levels follow UI switches; model prose keeps its original language.
 const scenarioBubbles=new Map(),analysisReceipts=new Map();
 function renderScenario(section,plan){section.replaceChildren();const main=document.createElement('div');section.append(main);renderChatText(main,compactEntryStopText(plan,document.documentElement.lang));if(plan?.available){const details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('div');summary.textContent=(chatPresentationCopy[languageCode(document.documentElement.lang)]||chatPresentationCopy.en).details;details.append(summary,body);section.append(details);renderChatText(body,entryStopText(plan,document.documentElement.lang))}}
-function appendScenario(bubble,plan){const section=document.createElement('div');section.className='chat-entry-stop';bubble.append(section);scenarioBubbles.set(section,plan);renderScenario(section,plan)}
+function appendScenario(bubble,plan){const section=document.createElement('div');section.className='chat-entry-stop';bubble.prepend(section);scenarioBubbles.set(section,plan);renderScenario(section,plan)}
 window.addEventListener('asaf:language',()=>{for(const [node,source] of analysisReceipts){if(!node.isConnected){analysisReceipts.delete(node);continue}node.textContent=window.asafTranslate?.(source)||source}for(const [section,plan] of scenarioBubbles){if(!section.isConnected){scenarioBubbles.delete(section);continue}renderScenario(section,plan)}});
 function say(role,content){
  const item=document.createElement("div");
@@ -252,14 +252,14 @@ async function ask(q,extra={}){
     setAiStatus(result.changed?'תוצאת כלי הגרף מוצגת בשיחה.':'לא בוצע שינוי בגרף; הפרטים מופיעים בשיחה.');
     return;
    }
-   waiting.textContent+='\n\nמכין תשובה לשאלה שלך…';
+   waiting.textContent='מכין תשובה לשאלה שלך…';
   }
   if(authState.enabled&&!authState.authenticated)throw Object.assign(Error("יש להיכנס לחשבון כדי לקבל תשובת AI. השאלה שלך נשמרה."),{code:'sign_in_required'});
   const analyzeChart=!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(intentQuestion,{command});
   if(analyzeChart){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value)){
     if(commandLoadAttempted)throw Error('אין עדיין נרות תואמים לניתוח. טעינת הנתונים לא הצליחה; לא נשלחה בקשה למודל.');
-    waiting.textContent=(localReceipt?localReceipt+'\n\n':'')+'טוען את נרות הגרף לפני הניתוח…';
+    waiting.textContent='טוען את נרות הגרף לפני הניתוח…';
     await loadMarketData({fromChat:true,signal:activeController.signal,isCurrent:()=>epoch===conversationEpoch});
    }
    if(epoch!==conversationEpoch)return;
