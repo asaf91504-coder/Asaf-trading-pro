@@ -35,8 +35,10 @@ test('verified chart analysis always writes a computed entry/stop section from t
  await scenario(async s=>{
   const response=await s.send({...s.payload,message:'תנתח AAPL'}),data=await response.json();
   assert.equal(response.status,200);assert.equal(data.tradeScenario.available,true);assert.equal(data.tradeScenario.entry,102.75);assert.equal(data.tradeScenario.stop,96.75);
-  assert.match(data.answer,/נקודת כניסה מותנית: 102.75/);assert.match(data.answer,/סטופ־לוס לתרחיש: 96.75/);assert.doesNotMatch(data.answer,/999999/);
+  assert.match(data.answer,/כניסה מותנית: 102.75/);assert.match(data.answer,/סטופ: 96.75/);assert.doesNotMatch(data.answer,/999999|שיטת החישוב|נר בסיס/);
   assert.match(s.models[0].messages.at(-1).content,/entryStopScenario/);
+  const detailed=await (await s.send({...s.payload,message:'תנתח AAPL בהרחבה'})).json();
+  assert.match(detailed.answer,/נקודת כניסה מותנית: 102.75/);assert.match(detailed.answer,/שיטת החישוב/);
  });
 });
 test('client-supplied provenance cannot unlock numeric entry/stop and general conversation stays natural',async()=>{

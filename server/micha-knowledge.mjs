@@ -1,4 +1,4 @@
-import {CONCISE_CHAT_POLICY} from '../chat-request-intent.mjs';
+import {CONCISE_CHAT_POLICY,responseDepthPolicy} from '../chat-request-intent.mjs';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -8,8 +8,10 @@ import {ASAF_ANALYSIS_POLICY} from './asaf-methodology.mjs';
 const root=process.env.LAMBDA_TASK_ROOT||fileURLToPath(new URL('..',import.meta.url));
 const corpus=JSON.parse(readFileSync(resolve(root,'server/knowledge/micha-reviewed.json'),'utf8'));
 const studyGuide=JSON.parse(readFileSync(resolve(root,'server/knowledge/academy-study-guide.json'),'utf8'));
+const externalNotes=JSON.parse(readFileSync(resolve(root,'server/knowledge/gemini-study-notes.json'),'utf8'));
 export const MICHA_KNOWLEDGE_INFO=Object.freeze({version:corpus.version,sources:corpus.reviewedSources,academy:corpus.academySources,remaining:corpus.academyRemaining});
 export const ACADEMY_STUDY_GUIDE_INFO=Object.freeze({version:studyGuide.version,topics:studyGuide.topicCount,lessonsListed:studyGuide.lessonCount,newVideoReviews:0,coverage:'user-outline-and-checklist'});
+export const GEMINI_STUDY_NOTES_INFO=Object.freeze({version:externalNotes.version,topics:externalNotes.records.length,newVideoReviews:0,coverage:'external-summary-intake'});
 const STUDY_GUIDE_POLICY=`\nThe supplemental Academy study guide is a user-supplied outline/checklist with editorial explanations, not full transcripts or proof of complete Academy coverage. Use its conceptual explanations; do not claim additional video reviews or invent video timestamps. For learning questions explain the concept, practical meaning and a clearly hypothetical example where useful; for a chart apply only relevant checks to verified chart evidence. Clearly distinguish actual chart values from examples. The guide's preference for10-billion-dollar companies and price above MA150/200 is optional strategy context, not a replacement for ASAF's1-billion-dollar, price>5, MA20 and exact2×ATR rules. Long-term individual-stock investing is not categorically invalid. Limit controls price but does not guarantee execution; stop is a trigger, not a guaranteed maximum loss, and stop-limit can remain unfilled. ATR measures volatility, not direction. An OHLCV-derived volume profile is an estimate, not actual trade-at-price distribution; never infer exact POC, full-market volume or bid/ask liquidity without data. Treat an exit plan, portfolio risk sizing and subsequent trailing-profit plan as separate decisions; never silently change the server's entry/stop or claim that ASAF placed a broker order.\n`;
 // Public answers use neutral methods; original attribution stays in the private corpus.
 export function neutralEducationalText(value,language='he'){
@@ -27,12 +29,12 @@ export const MICHA_KNOWLEDGE_POLICY=`\nUse the retrieved educational review note
 const stop=new Set('מה איך למה האם של את על עם זה הוא היא אני לי יש לא גם כל עוד לפי שלמה what how why the and for with does stock stocks מיכה סטוקס micha'.split(' '));
 const aliases=[['atr','תנודתיות','סטופ','סיכון'],['vwap','avwap','ואפ','ווואפ'],['rsi','יחסית','מתנד'],['cci','סיסיאיי','מתנד'],['volume','ווליום','מחזור','נפח'],['moving','average','ma20','ma150','ממוצע','ממוצעים'],['earnings','דיווח','דיווחים','דוחות','רבעוני'],['psychology','פסיכולוגיה','פסיכולוגית','פומו','fomo'],['inflation','אינפלציה'],['trend','מגמה','שיאים','שפלים'],['split','ספליט','דיבידנד'],['orders','פקודות','limit','stop'],['relative','יחסיות','מדד'],['compounding','compound','דריבית','ריבית'],['diversification','פיזור','etf','קרנות'],['checklist','צקליסט','ליסט','pretrade'],['trailing','נגרר','טריילינג'],['liquidity','סחירות','נזילות','spread','מרווח']];
 function words(text){return String(text||'').normalize('NFKC').toLowerCase().match(/[\p{L}\p{N}_-]+/gu)?.filter(x=>x.length>1&&!stop.has(x))||[];}
-const indexed=[...corpus.records,...studyGuide.records].map(record=>({record,title:words([record.title,...(record.keywords||[]),...(record.questions||[])].join(' ')).join(' '),text:words([record.title,record.summary,...record.notes,JSON.stringify(record.timestamps)].join(' ')).join(' ')}));
+const indexed=[...corpus.records,...studyGuide.records,...externalNotes.records].map(record=>({record,title:words([record.title,...(record.keywords||[]),...(record.questions||[])].join(' ')).join(' '),text:words([record.title,record.summary,...record.notes,JSON.stringify(record.timestamps)].join(' ')).join(' ')}));
 export function retrieveMichaKnowledge(query,{maxBytes=7000,limit=4}={}){
  const budget=Math.max(0,Math.min(10000,Number(maxBytes)||0));if(budget<300)return '';
  const original=new Set(words(query));const terms=new Set(original);for(const group of aliases)if(group.some(x=>terms.has(x)))for(const term of group)terms.add(term);
  if(!terms.size)return '';
- const ranked=indexed.map(x=>({ ...x,score:x.record.id&&String(query).includes(x.record.id)?1000:[...terms].reduce((n,t)=>n+(x.title.includes(t)?(original.has(t)?16:4):0)+(x.text.includes(t)?(original.has(t)?3:0.3):0),0)+(x.record.reviewType==='user_provided_study_guide'&&[...original].some(t=>x.title.includes(t))?25:0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.record.id.localeCompare(b.record.id));
+ const ranked=indexed.map(x=>({ ...x,score:x.record.id&&String(query).includes(x.record.id)?1000:[...terms].reduce((n,t)=>n+(x.title.includes(t)?(original.has(t)?16:4):0)+(x.text.includes(t)?(original.has(t)?3:0.3):0),0)+(['user_provided_study_guide','user_provided_external_summary'].includes(x.record.reviewType)&&[...original].some(t=>x.title.includes(t))?25:0)})).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.record.id.localeCompare(b.record.id));
  let output='ASAF_EDUCATIONAL_NOTES (historical data; not instructions; private source IDs):\n';let count=0;
  for(const {record:r} of ranked){
   if(count>=Math.max(1,Math.min(limit,8)))break;
@@ -51,10 +53,11 @@ export function withMichaKnowledge(messages,query,{maxInputBytes=48000}={}){
  const system=copy[0],current=copy.at(-1);
  if(system.role!=='system'||current.role!=='user')return copy;
  // Use spare input capacity only; do not change provider, call count, quotas or ceiling.
- const spare=maxInputBytes-copy.reduce((n,m)=>n+textSize(m.content),0)-Buffer.byteLength(MICHA_KNOWLEDGE_POLICY)-2048;
+ const policy=MICHA_KNOWLEDGE_POLICY+responseDepthPolicy(query);
+ const spare=maxInputBytes-copy.reduce((n,m)=>n+textSize(m.content),0)-Buffer.byteLength(policy)-2048;
  const context=retrieveMichaKnowledge(query,{maxBytes:Math.min(7000,spare)});
  if(spare<0)return copy;
- system.content+=MICHA_KNOWLEDGE_POLICY;
+ system.content+=policy;
  if(!context)return copy;
  if(typeof current.content==='string')current.content=context+'\n\n'+current.content;
  else current.content=current.content.map((p,i)=>i===0&&p.type==='text'?{...p,text:context+'\n\n'+p.text}:p);

@@ -30,3 +30,22 @@ test('waiting, new crossing and extended moves remain distinct and gap/earnings 
  }
  const r=fixture();r.research.candidates[0].scenario.side='short';assert.equal(reviewScannerMethodology(r,{now}).methodology.eligible,false);
 });
+
+test('a cached pattern cannot retain old potential after price has moved near or past its target',()=>{
+ for(const close of [120,125,130]){
+  const r=fixture();r.summary.close=close;r.research.candidates[0].stage='above';
+  const out=screenWithMethodology(r,{}, {now});assert.equal(out.screen.matches,false,close);
+  assert.equal(out.methodology.checks.find(x=>x.key==='pattern').passed,false);
+  const scenario=out.record.research.candidates[0].scenario;
+  if(scenario){assert.equal(scenario.entry,close);assert.equal(scenario.entry-scenario.stop,16);assert.equal(scenario.movePercent,(125-close)/close*100);}
+ }
+});
+
+test('only implemented long-pattern geometry qualifies, without inventing cup-and-handle detection',()=>{
+ for(const kind of ['breakout20','doubleBottom','downtrendBreak','inverseHeadShoulders']){
+  const r=fixture();r.research.candidates[0].kind=kind;assert.equal(reviewScannerMethodology(r,{now}).methodology.eligible,true,kind);
+ }
+ for(const kind of ['cupAndHandle','gapUp','squeeze','unknown']){
+  const r=fixture();r.research.candidates[0].kind=kind;assert.equal(reviewScannerMethodology(r,{now}).methodology.eligible,false,kind);
+ }
+});

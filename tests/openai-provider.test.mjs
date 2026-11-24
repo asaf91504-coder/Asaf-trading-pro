@@ -57,9 +57,21 @@ test('existing OpenAI route gets reviewed methods in one call and keeps creator 
  const response=await handler(request('free-chat',{message:'Explain MA20 and ATR',language:'he',chartControl:true},user.cookie));
  assert.equal(response.status,200);const result=await response.json();assert.equal(calls.length,1);
  assert.match(calls[0].instructions,/ASAF Pro analysis framework/);assert.match(calls[0].input.at(-1).content,/ASAF_EDUCATIONAL_NOTES/);
- assert.doesNotMatch(calls[0].input.at(-1).content,/מיכה|Micha/i);assert.doesNotMatch(result.answer,/מיכה|Micha/i);
+ // Creator names are excluded; the ordinary Hebrew word "תמיכה" must remain valid.
+ const creator=/(?<![\p{L}\p{N}])מיכה(?:[\s.\-_־]*סטו[קכ]ס)?(?![\p{L}\p{N}])|\bmicha\b/iu;
+ assert.doesNotMatch(calls[0].input.at(-1).content,creator);assert.doesNotMatch(result.answer,creator);
  assert.equal(result.actions[0].indicator,'MA20');assert.equal(calls[0].max_output_tokens,1800);assert.equal(calls[0].tools,undefined);
 },{},JSON.stringify({answer:'לפי מיכה סטוקס בודקים מגמה.',actions:[{type:'indicator',indicator:'MA20',enabled:true}]})));
+test('Gemini concepts reach the authenticated model request and detail remains opt-in',async()=>withRoute(async({user,calls})=>{
+ for(const [message,detailed] of [['מה הסיכון בתלות באיש מפתח ובפומו?',false],['Explain crypto liquidity and regulation in detail',true]]){
+  const response=await handler(request('free-chat',{message,language:'he'},user.cookie));assert.equal(response.status,200);
+  const sent=calls.at(-1);assert.match(sent.input.at(-1).content,/gemini-guide-/);assert.match(sent.input.at(-1).content,/user_provided_external_summary/);
+  assert.match(sent.input.at(-1).content,/fullVideoReviewed":false/);
+  assert.match(sent.instructions,detailed?/default word and bullet limits do not apply/:/RESPONSE DEPTH: BRIEF/);
+  assert.equal(sent.max_output_tokens,1800);assert.equal(sent.tools,undefined);
+ }
+ assert.equal(calls.length,2);
+}));
 test('supplied Academy guide reaches the authenticated chat without claiming video coverage or changing ASAF rules',async()=>withRoute(async({user,calls})=>{
  const response=await handler(request('free-chat',{message:'תן צ׳ק ליסט לפני כניסה למניה',language:'he'},user.cookie));
  assert.equal(response.status,200);assert.equal(calls.length,1);
