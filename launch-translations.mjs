@@ -1,3 +1,4 @@
+import {scannerOpportunityTranslations} from './scanner-opportunity-copy.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {methodologyTranslations} from './methodology-translations.mjs';
 import {qaI18nTranslations} from "./qa-i18n-translations.mjs";
@@ -30,7 +31,7 @@ ar:['مسودة سجل التداول','راجع تفاصيل الصفقة قب�
 zh:['交易日志草稿','保存前请核对交易信息。未平仓交易请留空退出价格。此操作不会执行交易。','保存到日志和账户','保存到此设备','交易已保存到日志和账户。','交易仅保存到此设备。','打开交易日志','未平仓交易','添加交易','绩效仅统计已平仓交易。退出价格为空表示尚未平仓。','重试保存到账户','副本已保存到此设备。','网络搜索尚未启用','网络搜索已启用','账户已更改或无法验证登录。请重新发送请求。'],
 ja:['取引日誌の下書き','保存前に取引内容を確認してください。未決済の取引は決済価格を空欄にします。注文は実行されません。','日誌とアカウントに保存','この端末に保存','日誌とアカウントに取引を保存しました。','この端末にのみ取引を保存しました。','取引日誌を開く','未決済の取引','取引を追加','成績は決済済みの取引のみで計算します。決済価格が空欄の場合は未決済です。','アカウントへの保存を再試行','この端末に保存しました。','ウェブ検索はまだ有効ではありません','ウェブ検索は有効です','アカウントが変更されたか、ログインを確認できませんでした。もう一度送信してください。']
 };
-export const launchTranslations=Object.fromEntries(Object.entries(rows).map(([code,values])=>[code,{...Object.fromEntries(source.map((key,i)=>[key,values[i]])),...subscriptionTranslations[code],...polishTranslations[code],...catalogAuditTranslations[code],...scannerTranslations[code],...extraTranslations[code],...remainingTranslations[code],...accessibilityStatementTranslations[code],...qaI18nTranslations[code],...setupReviewTranslations[code]}]));
+export const launchTranslations=Object.fromEntries(Object.entries(rows).map(([code,values])=>[code,{...Object.fromEntries(source.map((key,i)=>[key,values[i]])),...subscriptionTranslations[code],...polishTranslations[code],...catalogAuditTranslations[code],...scannerTranslations[code],...extraTranslations[code],...remainingTranslations[code],...accessibilityStatementTranslations[code],...qaI18nTranslations[code],...setupReviewTranslations[code],...scannerOpportunityTranslations[code]}]));
 // Configuration is distinct from the authenticated chart's source and entitlement.
 const marketConfigurationLabels={en:'Data provider configured · Load a chart to verify',es:'Proveedor de datos configurado · Carga un gráfico para verificar',ar:'تم إعداد مزود البيانات · حمّل رسمًا بيانيًا للتحقق',fr:'Fournisseur de données configuré · Chargez un graphique pour vérifier',de:'Datenanbieter eingerichtet · Zur Prüfung einen Chart laden',pt:'Provedor de dados configurado · Carregue um gráfico para verificar',ru:'Поставщик данных настроен · Загрузите график для проверки',zh:'数据提供商已配置 · 请加载图表进行验证',ja:'データプロバイダー設定済み · チャートを読み込んで確認'};
 for(const [code,label] of Object.entries(marketConfigurationLabels))launchTranslations[code]['ספק נתונים מוגדר · טען גרף לאימות']=label;

@@ -30,7 +30,7 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
   const symbols=[...new Set(body.symbols.map(s=>marketSelection(s,'1day',env).symbol))];
   if(body.filters!==undefined&&(!body.filters||Array.isArray(body.filters)||typeof body.filters!=='object'))return reply({error:'Invalid filters'},400);
   const filters=body.filters||{};
-  const project=input=>{const {record,screen,methodology}=screenWithMethodology(input,filters,{now:now()});return ventureScanRecord(record,screen,methodology)};
+  const project=input=>{const {record,screen,methodology,opportunities}=screenWithMethodology(input,filters,{now:now()});return ventureScanRecord(record,screen,methodology,opportunities)};
   if(!shared&&body.cachedOnly!==true&&symbols.length>plan.maxSymbols)return reply({error:`אפשר לסרוק עד ${plan.maxSymbols} מניות בקבוצה לפי מכסת הספק הנוכחית.`,code:'scan_batch_limit',maxSymbols:plan.maxSymbols},422);
   const slot=Math.floor(now()/60000);const quota=await run(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0');if n>="+(shared||body.cachedOnly===true?'12':'2')+" then return 0 end;redis.call('INCR',KEYS[1]);redis.call('EXPIRE',KEYS[1],120);return 1",'1',storageKey('market:scan:'+(body.cachedOnly===true?'filter:':'fetch:')+user.id+':'+slot,env)],{env});if(quota!==1)return reply({error:'מכסת הסריקות או שינויי המסננים בדקה נוצלה. המתן ונסה שוב.'},429);
   if(shared){const scan=await readSharedScan({env,run,now:now(),memberId:user.id,symbols});return reply({records:scan.records.map(r=>project(r)),errors:scan.errors,scope:scan.scope,shared:true,stale:scan.stale,partial:scan.partial,completedAt:scan.completedAt,nextUpdateAt:scan.nextUpdateAt});}

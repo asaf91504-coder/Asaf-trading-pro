@@ -10,4 +10,4 @@ export function scannerSettings(input={}){
  if(result.scanMinRSI>result.scanMaxRSI)throw Error('טווח RSI הפוך');return result;
 }
 export const scannerDefaults=()=>scannerSettings();
-export const asafScannerPreset=()=>scannerSettings({scanMinPrice:5,scanAbove20:true,scanRisingVolume:true,scanMinMeasuredMove:15,scanScenarioSide:'long',scanSort:'atr',scanOnlyMatches:true});
+export const asafScannerPreset=()=>scannerSettings({scanMinPrice:5,scanAbove20:true,scanRisingVolume:true,scanMinMeasuredMove:15,scanScenarioSide:'any',scanSort:'atr',scanOnlyMatches:false});

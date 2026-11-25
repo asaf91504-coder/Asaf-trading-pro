@@ -1,3 +1,4 @@
+import {rankedScannerCandidates} from './scanner-candidates.mjs';
 import {partialVolumeReason,volumeUnavailableReason} from './comparable-volume.mjs';
 const $=id=>document.getElementById(id),pretty=v=>Number.isFinite(v)?Number(v).toLocaleString('en-US',{maximumFractionDigits:2}):'חסר';
 const headers=['מניה / יום בסיס','התאמה למסננים','מעל MA20 / MA150','ATR%','מחזור יחסי EOD','כיוון Supertrend','RSI14','ADX14','תבניות','יעד מדוד (%)','יחס סיכוי / סיכון','כיוון תרחיש','שווי שוק אומת','סיבות / מקור','פעולות'];
@@ -35,11 +36,30 @@ export function mountVentureScanner({filters,openCharts}){
    const values=[r.symbol+' · '+r.asOf,dirty?'נדרש עדכון':r.screen.matches?(r.methodology?.label||'עברה'):r.screen.reasons.some(reason=>reason===volumeUnavailableReason||reason===partialVolumeReason)?'לא ניתן לאמת':'נפסלה',[yes(m.aboveMA20),' / ',yes(m.aboveMA150)],formatted(m.atrPercent,'%'),[m.volumeComparison==='unverifiable'?'מחזור לא מאומת':formatted(m.relativeVolume,'×'),...(m.volumeCoverage==='partial'?[' · ','מחזור חלקי']:[])],[enumLabel(m.supertrendDirection||'חסר')],formatted(m.rsi14),formatted(m.adx14),patterns.length?join(patterns.map(p=>p.label),' | '):'לא נמצאה',patterns.length?join(patterns.map(p=>formatted(p.movePercent)),' / '):'—',patterns.length?join(patterns.map(p=>formatted(p.riskReward)),' / '):'—',patterns.length?join(patterns.map(p=>enumLabel(p.side||'—')),' / '):'—',r.marketCapStatus==='available'?'כן':'לא',dirty?'המסננים השתנו. לחץ עדכן תוצאות.':r.screen.reasons.length?join(r.screen.reasons,' · '):'Twelve Data · נרות יומיים קודמים'];
    const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');if(Array.isArray(value))localized(td,value);else td.textContent=value;row.append(td)}
    const actions=document.createElement('td'),button=document.createElement('button'),inspect=document.createElement('button');button.type=inspect.type='button';button.textContent='פתח תמונת גרף';button.onclick=()=>open(r);inspect.textContent='פרטי מחקר';inspect.onclick=()=>details(r);actions.append(button,inspect);row.append(actions);host.append(row);
-   if(shortlist&&!dirty&&r.screen.matches&&shortlist.children.length<6){const card=document.createElement('article');card.className='scanner-candidate';const title=document.createElement('h4'),text=document.createElement('p'),go=document.createElement('button');localized(title,[r.symbol,' · ',dirty?'נדרש עדכון':r.screen.matches?(r.methodology?.label||'עברה את המסננים'):'לבדיקה נוספת']);const cardSummary='ATR '+(Number.isFinite(m.atrPercent)?pretty(m.atrPercent):'—')+'% · מחזור יחסי EOD '+(Number.isFinite(m.relativeVolume)?pretty(m.relativeVolume):'—')+'× · בסיס '+r.asOf;
-   localized(text,[cardSummary,...(m.volumeComparison==='unverifiable'?[' · ','מחזור לא מאומת']:m.volumeCoverage==='partial'?[' · ','מחזור חלקי']:[])]);go.type='button';go.textContent='פתח תמונת גרף';go.onclick=()=>open(r);card.append(title,text,go);shortlist.append(card)}
+
   }
-  if(!host.children.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=15;cell.textContent=records.size?'אין התאמות במסננים האלה.':'לחץ על מצא לי מניות. נתוני המקור נשארים בשרת.';row.append(cell);host.append(row)}
+  // Watch candidates remain visible even when no stock passes every gate.
+  // They never count as full matches and never conceal the missing conditions.
+  let watchCount=0;
+  if(shortlist&&!dirty){
+   const candidates=rankedScannerCandidates([...records.values()],{side:filters().scenarioSide||'any'});
+   if(candidates.length){const heading=document.createElement('h3');localized(heading,['מניות שנמצאו למחקר']);shortlist.append(heading);}
+   for(const {record:r,opportunity:o} of candidates){
+    const m=r.metrics,full=o.status==='match'&&r.screen.matches;
+    if(!full)watchCount++;
+    const card=document.createElement('article');card.className='scanner-candidate';
+    const title=document.createElement('h4'),text=document.createElement('p'),reason=document.createElement('p'),go=document.createElement('button');
+    localized(title,[r.symbol,' · ',enumLabel(o.side),' · ',full?'התאמה מלאה':'מועמדת למעקב']);
+    localized(text,['ATR '+(Number.isFinite(m.atrPercent)?pretty(m.atrPercent):'—')+'% · מחזור יחסי EOD '+(Number.isFinite(m.relativeVolume)?pretty(m.relativeVolume):'—')+'× · בסיס '+r.asOf]);
+    if(!full){localized(reason,['חסר לאישור: ',...o.reasons.slice(0,3).flatMap((item,i)=>i?[' · ',item]:[item])]);card.append(title,text,reason);}
+    else card.append(title,text);
+    const inspect=document.createElement('button');inspect.type='button';localized(inspect,['פרטי מחקר']);inspect.onclick=()=>details(r);card.append(inspect);
+    go.type='button';localized(go,['פתח תמונת גרף']);go.onclick=()=>open(r);card.append(go);shortlist.append(card);
+   }
+  }
+  if(!host.children.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=15;cell.textContent=records.size?(watchCount?'אין התאמות מלאות; מועמדות למעקב מוצגות למעלה.':'אין התאמות במסננים האלה.'):'לחץ על מצא לי מניות. נתוני המקור נשארים בשרת.';row.append(cell);host.append(row)}
   $('scanSummary').textContent=`נבדקו ${records.size} מניות · ${dirty?'יש לעדכן מסננים':matched+' התאמות'} · מחקר על ימים שהסתיימו`;
+  if(!dirty&&watchCount){const note=document.createElement('p');localized(note,['מועמדות למעקב אינן התאמות מלאות. התנאים החסרים מוצגים בכל מניה.']);shortlist.append(note);}
   $('scanStatus').textContent=dirty&&records.size?'המסננים השתנו. לחץ ״עדכן תוצאות״ לחישוב בשרת.':'תוצאות נגזרות בלבד · Data provided by Twelve Data · ללא מחירי מקור או נתוני נרות להורדה.';
  }
  function details(r){const host=$('scanResearchDetails');host.replaceChildren();host.hidden=false;inspectedSymbol=r.symbol;
@@ -48,7 +68,7 @@ export function mountVentureScanner({filters,openCharts}){
   // sentences before placing them in the template, without translating tickers or dates.
   const coverage=(r.coverage||'').split(/(?<=\.)\s+/).filter(Boolean).map(sentence=>translate(sentence+' ').trim()).join(' ');
   localized(p,['Twelve Data · יום בסיס '+r.asOf+' · '+coverage+' הרמות והגרף מחושבים בשרת. יעד מדוד אינו תחזית.']);
-  host.append(h,p);if(r.methodology){const method=document.createElement('p');localized(method,[r.methodology.label,' · ','סטופ 2×ATR']);host.append(method);for(const check of r.methodology.checks){const item=document.createElement('p');localized(item,[check.passed?'✓ ':'✗ ',check.passed?({closedDaily:'נרות יומיים שהושלמו ו־ATR תקין',marketCap:'שווי שוק מאומת מעל הסף',price:'מחיר מעל $5',ma20:'מחיר מעל MA20',risingClose:'סגירה עולה',volume:'מחזור מאומת מעל הממוצע',pattern:'תבנית לונג עם פוטנציאל מדוד של 15% לפחות'}[check.key]||check.key):check.reason]);host.append(item)}for(const warning of r.methodology.warnings){const item=document.createElement('p');localized(item,[warning]);host.append(item)}}for(const c of r.patterns){const item=document.createElement('p');item.textContent=c.label+' · '+enumLabel(c.stage)+' · יעד מדוד '+(Number.isFinite(c.movePercent)?pretty(c.movePercent):'—')+'% · יחס '+(Number.isFinite(c.riskReward)?pretty(c.riskReward):'—');host.append(item)}
+  host.append(h,p);if(r.screen.reasons.length){const missing=document.createElement('p');localized(missing,['חסר לאישור: ',...r.screen.reasons.flatMap((item,i)=>i?[' · ',item]:[item])]);host.append(missing);}if(r.methodology){const method=document.createElement('p');localized(method,[r.methodology.label,' · ',enumLabel(r.methodology.side||'long'),' · ','סטופ 2×ATR']);host.append(method);for(const check of r.methodology.checks){const item=document.createElement('p');localized(item,[check.passed?'✓ ':'✗ ',check.passed?({closedDaily:'נרות יומיים שהושלמו ו־ATR תקין',marketCap:'שווי שוק מאומת מעל הסף',price:'מחיר מעל $5',ma20:r.methodology.side==='short'?'מחיר מתחת MA20':'מחיר מעל MA20',risingClose:r.methodology.side==='short'?'סגירה יורדת':'סגירה עולה',volume:'מחזור מאומת מעל הממוצע',pattern:r.methodology.side==='short'?'תבנית שורט עם פוטנציאל מדוד של 15% לפחות':'תבנית לונג עם פוטנציאל מדוד של 15% לפחות'}[check.key]||check.key):check.reason]);host.append(item)}for(const warning of r.methodology.warnings){const item=document.createElement('p');localized(item,[warning]);host.append(item)}}for(const c of r.patterns){const item=document.createElement('p');item.textContent=c.label+' · '+enumLabel(c.stage)+' · יעד מדוד '+(Number.isFinite(c.movePercent)?pretty(c.movePercent):'—')+'% · יחס '+(Number.isFinite(c.riskReward)?pretty(c.riskReward):'—');host.append(item)}
   const close=document.createElement('button');close.type='button';close.textContent='סגור פרטי מחקר';close.onclick=()=>{inspectedSymbol=null;host.hidden=true};host.append(close);
  }
  async function scan({discover=false,cachedOnly=false}={}){

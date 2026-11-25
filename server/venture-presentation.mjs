@@ -60,11 +60,12 @@ export async function ventureChart(snapshot,input=[]){
 }
 
 // Explicit allowlist: never spread a scan record, summary or pattern candidate.
-export function ventureScanRecord(record,screen,methodology){
+export function ventureScanRecord(record,screen,methodology,opportunities=[]){
  const s=record.summary;
  return {presentation:'derived-only',source:'Twelve Data',symbol:record.symbol,receivedAt:record.receivedAt,asOf:s.date,coverage:record.coverage,barPolicy:record.barPolicy,
   metrics:{aboveMA20:s.aboveMA20,aboveMA150:s.aboveMA150,atrPercent:s.atrPercent,relativeVolume:record.volumeComparison?.status==='verified'?s.volumeRatio:null,volumeComparison:record.volumeComparison?.status||'unverifiable',volumeCoverage:record.volumeComparison?.coverage||null,rsi14:s.rsi14,adx14:s.adx14,supertrendDirection:s.supertrendDirection},
   marketCapStatus:record.fundamentals?.status==='available'?'available':'unavailable',
   patterns:(record.research?.candidates||[]).map(c=>({kind:c.kind,label:c.label,stage:c.stage,movePercent:c.scenario?.movePercent??null,riskReward:c.scenario?.riskReward??null,side:c.scenario?.side??null})),
-  screen:{matches:screen.matches,reasons:screen.reasons},...(methodology?{methodology:{version:methodology.version,eligible:methodology.eligible,stage:methodology.stage,label:methodology.label,checks:methodology.checks.map(({key,passed,reason})=>({key,passed,reason})),warnings:methodology.warnings,ma150Context:methodology.ma150Context,stopAtrMultiple:2}}:{})};
+  opportunities:opportunities.map(({side,status,eligible,rank,reasons})=>({side,status,eligible,rank,reasons})),
+  screen:{matches:screen.matches,reasons:screen.reasons},...(methodology?{methodology:{version:methodology.version,side:methodology.side,eligible:methodology.eligible,stage:methodology.stage,label:methodology.label,checks:methodology.checks.map(({key,passed,reason})=>({key,passed,reason})),warnings:methodology.warnings,ma150Context:methodology.ma150Context,stopAtrMultiple:2}}:{})};
 }

@@ -12,11 +12,11 @@ const discover=document.createElement('section');discover.className='scanner-dis
 const basic=document.createElement('section');basic.className='scanner-basic';basic.setAttribute('aria-labelledby','scannerBasicTitle');basic.innerHTML='<h3 id="scannerBasicTitle">2 · תנאים עיקריים</h3><p>אפשר להתחיל עם ההגדרות הקיימות. לאחר שינוי תנאי לחץ על ״עדכן תוצאות לפי המסננים״. החישוב מתבצע בשרת.</p><div class="scanner-fields"></div>';
 const advanced=document.createElement('details');advanced.className='scanner-advanced';advanced.innerHTML='<summary>מסננים מתקדמים</summary><p>תנופה, תנודתיות ותבניות טכניות. תנאים שסומנו ממשיכים לפעול גם כשהאזור סגור.</p><div class="scanner-fields"></div>';
 const filterRow=$('scanMinPrice').closest('.row');filterRow.before(basic,advanced);
-const simple=new Set(['scanMinMarketCap','scanMinPrice','scanMinVolume','scanAbove20','scanRisingVolume']);
+const simple=new Set(['scanMinMarketCap','scanMinPrice','scanMinVolume','scanAbove20','scanRisingVolume','scanScenarioSide']);
 for(const label of [...filterRow.querySelectorAll('label')]){const field=label.querySelector('input,select');(simple.has(field?.id)?basic:advanced).querySelector('.scanner-fields').append(label);if(field?.type==='checkbox')label.classList.add('scanner-check')}
 filterRow.remove();
 function rename(id,text,help){const input=$(id),label=input.closest('label');for(const node of [...label.childNodes])if(node.nodeType===3)node.remove();const title=document.createElement('span');title.textContent=text;label.prepend(title);if(help){const note=document.createElement('small');note.textContent=help;label.append(note)}}
-rename('scanMinPrice','מחיר מניה מינימלי ($)');rename('scanMinVolume','מחזור ביחס לממוצע','1 = המחזור הממוצע; 1.5 = פי אחד וחצי.');rename('scanAbove20','מחיר מעל ממוצע 20 ימים');rename('scanRisingVolume','יום של עלייה עם מחזור גבוה');
+rename('scanMinPrice','מחיר מניה מינימלי ($)');rename('scanMinVolume','מחזור ביחס לממוצע','1 = המחזור הממוצע; 1.5 = פי אחד וחצי.');rename('scanAbove20','מעל MA20 ללונג, מתחת MA20 לשורט');rename('scanRisingVolume','תנועה בכיוון התרחיש עם מחזור גבוה');
 const count=document.createElement('p');count.className='scanner-active-filters';count.setAttribute('role','status');basic.append(count);
 function updateCount(){const checked=advanced.querySelectorAll('input[type=checkbox]:checked').length;count.textContent=checked?'בנוסף: '+checked+' מסנני סימון מתקדמים פעילים. פתח את המסננים המתקדמים לבדיקת כל הערכים.':'אפשרויות נוספות נמצאות במסננים המתקדמים.'}
 scanner.addEventListener('input',updateCount);scanner.addEventListener('change',updateCount);updateCount();
@@ -39,5 +39,5 @@ function applyCoreRules(){
 applyCoreRules();
 $('scanAsafRules').onclick=()=>{
  applyCoreRules();
- $('scanDiscoverStatus').textContent='הוחלו: שווי שוק מיליארד דולר, מחיר מעל $5, מעל MA20, יום עולה עם מחזור מעל הממוצע ותרחיש לונג עם יעד מדוד של 15% לפחות. יעד מדוד אינו תחזית. יתר המסננים נשארו כפי שהגדרת.';
+ $('scanDiscoverStatus').textContent='הוחלו כללי הסריקה ללונג ולשורט. מועמדות למעקב אינן התאמות מלאות.';
 };

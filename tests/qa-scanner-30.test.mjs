@@ -70,6 +70,20 @@ ui('manual scanner strips whitespace and posts only chosen symbols',undefined,as
 ui('over-limit manual selection rejects before network',undefined,async f=>{f.$('scanProviderSymbols').value=Array.from({length:11},(_,i)=>'QA'+i).join(',');await f.scan();assert.equal(f.calls.length,0);assert.match(f.status(),/1 עד 10/);assert.equal(f.$('scanProvider').disabled,false);});
 ui('ignores unexpected raw provider row rather than rendering it',async()=>json({records:[{...derived('RAW'),presentation:'raw'},derived('QA')]}),async f=>{await f.scan();assert.equal(f.rows().length,1);assert.match(f.rows()[0].children[0].textContent,/^QA /);});
 ui('match-only view hides rejected results and explains empty selection',async()=>json({records:[derived('QA',false)]}),async f=>{f.$('scanOnlyMatches').checked=true;await f.scan();assert.match(f.rows()[0].children[0].textContent,/אין התאמות/);assert.match(f.$('scanSummary').textContent,/0 התאמות/);});
+ui('zero full matches still shows labelled long and short watch candidates',async()=>json({records:[
+ {...derived('BULL',false),opportunities:[{side:'long',status:'watch',eligible:true,rank:60,reasons:['שווי שוק של מיליארד דולר לפחות לא אומת']}]},
+ {...derived('BEAR',false),opportunities:[{side:'short',status:'watch',eligible:true,rank:55,reasons:['נדרש מחזור שוק מאוחד ומאומת מעל ממוצע 20 הימים']}]}
+]}),async f=>{
+ f.$('scanOnlyMatches').checked=true;await f.scan();
+ const cards=f.$('scanShortlist').children.filter(n=>n.tagName==='article');assert.equal(cards.length,2);
+ assert.match(cards[0].children[0].textContent,/BULL.*לונג.*מועמדת למעקב/);
+ assert.match(cards[1].children[0].textContent,/BEAR.*שורט.*מועמדת למעקב/);
+ assert.match(cards[0].children[2].textContent,/חסר לאישור.*שווי שוק/);
+ assert.match(f.$('scanSummary').textContent,/0 התאמות/);
+ assert.match(f.rows()[0].children[0].textContent,/מועמדות למעקב מוצגות למעלה/);
+ cards[1].children.at(-1).click();assert.deepEqual(f.open,['chart','BEAR']);
+ f.filters({scenarioSide:'long'});assert.equal(f.$('scanShortlist').children.length,0);
+});
 ui('relative-volume sort ranks results rather than arrival order',async()=>json({records:[derived('LOW',true,{relativeVolume:1}),derived('HIGH',true,{relativeVolume:8})]}),async f=>{f.$('scanSort').value='volume';await f.scan();assert.match(f.rows()[0].children[0].textContent,/^HIGH /);});
 ui('selected scanner result opens its exact symbol in chart',undefined,async f=>{await f.scan();f.rows()[0].children.at(-1).children[0].click();assert.deepEqual(f.open,['chart','QA']);});
 ui('manual request failure re-enables controls and the next run succeeds',async(q,n)=>n===1?json({error:'OFFLINE'},false):json({records:[derived()]}),async f=>{await f.scan();assert.equal(f.status(),'OFFLINE');assert.equal(f.$('scanProvider').disabled,false);await f.scan();assert.match(f.status(),/1 תוצאות/);});
