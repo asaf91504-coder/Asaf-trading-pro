@@ -1,3 +1,4 @@
+import {chatAnswerText} from './chat-answer-presentation.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {languageCode} from './interface-language.mjs';
 import {renderChatText} from './chat-text.mjs';
@@ -8,7 +9,7 @@ function renderParts(body,parts){
  const translate=globalThis.window?.asafTranslate|| (x=>x),doc=body.ownerDocument;
  body.replaceChildren();
  const answer=doc.createElement('div');body.append(answer);
- renderChatText(answer,(parts.answer||'')+(parts.after?translate(parts.after):''),doc,parts.citationSources);
+ renderChatText(answer,chatAnswerText(parts.answer)+(parts.after?translate(parts.after):''),doc,parts.citationSources);
  if(parts.before){
   if(!parts.answer){const brief=doc.createElement('p');brief.textContent=translate(parts.before.split('\n')[0]);body.append(brief)}
   const details=doc.createElement('details'),summary=doc.createElement('summary'),content=doc.createElement('div');

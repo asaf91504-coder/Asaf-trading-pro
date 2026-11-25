@@ -1,3 +1,4 @@
+import {chatAnswerText} from '../chat-answer-presentation.mjs';
 import {isLearningQuestion} from '../chat-request-intent.mjs';
 import {currentUSMarketIntent} from '../chat-market-intent.mjs';
 import {chatThrottleCopy,chatThrottleDisplay} from '../chat-throttle-copy.mjs';
@@ -23,7 +24,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
+ ctx.chatAnswerText=chatAnswerText;ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -416,26 +417,14 @@ for(const locale of replyLocales){
   assert.doesNotMatch(rendered,/INTERNAL ERROR|שגיאת מערכת/);
   checkedCopy(rendered,'לא ניתן לבצע את פעולות הגרף. נסה שוב.',s.ctx.window.asafTranslate);
  });
- test(`client chat ${locale}: search labels and linked-news fallback are localized, but source titles are unchanged`,async()=>{
-  const s=setupLocalizedReply(locale), originalWindow=globalThis.window;
-  globalThis.window=s.ctx.window;
-  try{
-   s.ctx.URL=URL;s.ctx.labelChatSource=labelChatSource;s.ctx.document.createElement=()=>({textContent:'',children:[],attributes:{},setAttribute(k,v){this.attributes[k]=v},append(n){this.children.push(n)}});
-   s.ctx.renderSearchSources=(parent,data)=>renderSearchSources(parent,data,s.ctx.document);
-   const source={id:'SMOKE_1',title:'Reuters — כותרת שלא מתרגמים',url:'https://example.test/market'};
-   s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:reviewModel,webSearch:{status:'available',searchedAt:'2026-11-19T13:00:00Z',sources:[source]},newsArticle:{url:'https://example.test/news',source:'Reuters'}})});
-   await s.ctx.ask('Can you check market research?');
-   const [sources,article]=s.bubbles[1].children;
-   assert.ok(s.bubbles[1].textContent.startsWith(reviewModel));
-   const [heading,row]=sources.children;
-   checkedCopy(heading.textContent,'מקורות מהחיפוש באינטרנט',s.ctx.window.asafTranslate);
-   assert.equal(sources.attributes['aria-label'],heading.textContent);
-   assert.equal(row.children[0].textContent,'[SMOKE_1] '+source.title);
-   checkedCopy(article.children[0].textContent,'כותרת המקור',s.ctx.window.asafTranslate);
-   const saved=s.ctx.conversation.at(-1).content;
-   checkedCopy(saved,'מקורות שנמצאו בחיפוש:',s.ctx.window.asafTranslate);
-   assert.ok(saved.includes(source.title));assert.ok(saved.includes(source.url));
-  }finally{globalThis.window=originalWindow}
+ test(`client chat ${locale}: search metadata stays out of the visible and saved answer`,async()=>{
+  const s=setupLocalizedReply(locale);
+  const source={id:1,title:'INTERNAL_SOURCE_TITLE',url:'https://example.test/market'};
+  s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:reviewModel+' [1]',webSearch:{status:'available',sources:[source]},newsArticle:{url:'https://example.test/news',source:'Reuters'}})});
+  await s.ctx.ask('Can you check market research?');
+  assert.equal(s.bubbles[1].textContent,reviewModel);
+  assert.equal(s.ctx.conversation.at(-1).content,reviewModel);
+  assert.equal(s.bubbles[1].children.length,0);
  });
 }
 

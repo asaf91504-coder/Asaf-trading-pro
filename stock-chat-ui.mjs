@@ -1,3 +1,4 @@
+import {chatAnswerText} from './chat-answer-presentation.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {isLearningQuestion,mergeResearchActions} from './chat-request-intent.mjs';
 import {currentUSMarketIntent} from './chat-market-intent.mjs';
@@ -10,7 +11,6 @@ import {showCreditPlans} from './exhausted-credits-ui.mjs';
 import {createMarketFeedClient} from './market-feed-client.mjs';
 import {journalIntent} from './journal-chat-core.mjs';
 import {mountJournalDraft} from './journal-chat-ui.mjs';
-import {labelChatSource,renderSearchSources} from './web-search-ui.mjs';
 import {marketSnapshotMetadata} from './market-quality.mjs';
 import {dataFreshness,quoteSummary} from './data-freshness.mjs';
 import {analysisReceipt} from './chart-analysis-context.mjs';
@@ -322,7 +322,7 @@ async function ask(q,extra={}){
   clearTimeout(requestTimeout);
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
   if(broadMarket){
-   preparedPayload={message:question,language:requestLanguage,webSearch:preparedPayload.webSearch===true};
+   preparedPayload={message:question,language:requestLanguage,webSearch:false};
    localReceipt='';
   }
   if(requestState)requestState.textContent=preparedPayload.webSearch?'מחפש מקורות באינטרנט ומכין תשובה…':'הנתונים נשלחו — ממתין לניתוח…';
@@ -360,17 +360,14 @@ async function ask(q,extra={}){
    else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;localReceipt=[localReceipt,...execution.messages].filter(Boolean).join('\n');}catch(error){if(error.name==='AbortError')throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
   }
   const scenarioText=data.tradeScenario?compactEntryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
-  const modelAnswer=withoutScenarioText(data.answer,data.tradeScenario,data.responseLanguage||preparedPayload.language);
-  const replyParts={before:localReceipt,answer:modelAnswer,after:suffix,...(data.webSearch?.kind==='owner-hosted-search'?{citationSources:data.webSearch.sources}:{})};
+  const modelAnswer=chatAnswerText(withoutScenarioText(data.answer,data.tradeScenario,data.responseLanguage||preparedPayload.language));
+  const replyParts={before:localReceipt,answer:modelAnswer,after:suffix};
   const translate=window.asafTranslate|| (text=>text);
-  const completedAnswer=localizedChatReply({...replyParts,before:''},translate)+(scenarioText?'\n\n'+scenarioText:'')+(data.webSearch?.status==='available'&&data.webSearch.sources?.length?'\n\n'+translate('מקורות שנמצאו בחיפוש:')+'\n'+data.webSearch.sources.map(s=>'['+s.id+'] '+s.title+' — '+s.url).join('\n'):'');
+  const completedAnswer=localizedChatReply({...replyParts,before:''},translate)+(scenarioText?'\n\n'+scenarioText:'');
   renderChatReply(waiting,replyParts);
   if(data.tradeScenario)appendScenario(waiting,data.tradeScenario);
-  renderSearchSources(waiting,data.webSearch);
 
-  if(data.newsArticle){const article=data.newsArticle;try{const url=new URL(article.url);if(url.protocol==='https:'&&!url.username&&!url.password){const card=document.createElement('p'),link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';if(article.title)link.textContent=String(article.title);else labelChatSource(link,'כותרת המקור');card.append(link);const meta=document.createElement('small');meta.textContent=' · '+String(article.source||'')+' · '+String(article.publishedAt||'');card.append(meta);waiting.append(card)}}catch{}}
-
-  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(localReceipt?{toolReceipt:localReceipt}:{}),...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
+  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:broadMarket?data.source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(localReceipt?{toolReceipt:localReceipt}:{}),...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:broadMarket?data.source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   chatHistory.complete(conversation);conversation=conversation.slice(-400);
   if(data.analysisContext){const sourceDetails=document.createElement('details'),sourceSummary=document.createElement('summary');sourceSummary.textContent=(chatPresentationCopy[languageCode(document.documentElement.lang)]||chatPresentationCopy.en).details;sourceDetails.append(sourceSummary);waiting.append(sourceDetails);const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);sourceDetails.append(receipt);
    const volume=data.analysisContext.volumeComparison;
