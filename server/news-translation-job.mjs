@@ -6,8 +6,9 @@ export function validTranslationJob(body,signature,secret,now=Date.now()){
  if(!secret||!/^[a-f0-9]{64}$/.test(signature||''))return false;
  try{const value=JSON.parse(body);return Object.hasOwn(languageNames,value.language)&&Number.isFinite(value.at)&&Math.abs(now-value.at)<60000&&timingSafeEqual(Buffer.from(signature,'hex'),Buffer.from(signTranslationJob(body,secret),'hex'))}catch{return false}
 }
+export const translationJobKey=(language,env=process.env)=>storageKey('news:translation:job:v2:'+language,env);
 export async function queueTranslationJob(language,origin,{env=process.env,run=command,fetcher=fetch}={}){
- const key=storageKey('news:translation:job:'+language,env);
+ const key=translationJobKey(language,env);
  const state=await run(['GET',key],{env});if(state)return state==='running'?'pending':'unavailable';
  if(!env.OPENROUTER_API_KEY)return 'unavailable';
  if(await run(['SET',key,'running','NX','EX','840'],{env})!=='OK')return 'pending';

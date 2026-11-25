@@ -1,4 +1,4 @@
-import {queueTranslationJob} from '../../server/news-translation-job.mjs';
+import {queueTranslationJob,translationJobKey} from '../../server/news-translation-job.mjs';
 import {translateNews} from '../../server/news-language.mjs';
 import {languageNames} from '../../interface-language.mjs';
 import {publicNewsEnabled} from '../../server/public-news.mjs';
@@ -24,7 +24,7 @@ export default async function handler(request){
  if(lang==='en')return respond({...data,language:'en',translation:'original'});
  const translated=await translateNews(data.articles,lang,{cacheOnly:true});
  if(translated.translation==='pending'){
-  try{translated.translation=await queueTranslationJob(lang,process.env.URL||'https://joyful-seahorse-967889.netlify.app');if(translated.translation==='unavailable'){const state=await command(['GET',storageKey('news:translation:job:'+lang)]);if(typeof state==='string'&&state.startsWith('failed:'))translated.translationReason=state.slice(7)}}catch{translated.translation='unavailable'}
+  try{translated.translation=await queueTranslationJob(lang,process.env.URL||'https://joyful-seahorse-967889.netlify.app');if(translated.translation==='unavailable'){const state=await command(['GET',translationJobKey(lang)]);if(typeof state==='string'&&state.startsWith('failed:'))translated.translationReason=state.slice(7)}}catch{translated.translation='unavailable'}
  }
  return respond({...data,...translated});
 }

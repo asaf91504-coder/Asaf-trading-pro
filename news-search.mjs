@@ -4,7 +4,7 @@ export function filterCachedNews(articles,{query='',symbol=''}={}){
  const ticker=String(symbol).split(':').at(-1).toUpperCase();
  return (Array.isArray(articles)?articles:[]).filter(item=>{
   if(ticker&&!(item.symbols||[]).some(s=>String(s).toUpperCase()===ticker))return false;
-  const text=[item.title,item.source,...(item.symbols||[])].join(' ').normalize('NFKC').toLocaleLowerCase();
+  const text=[item.title,item.originalTitle,item.source,...(item.symbols||[])].join(' ').normalize('NFKC').toLocaleLowerCase();
   return terms.every(term=>text.includes(term));
  });
 }

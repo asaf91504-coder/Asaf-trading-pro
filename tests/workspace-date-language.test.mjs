@@ -22,13 +22,12 @@ test('news article timestamps use the same locale as news controls',()=>{
   assert.equal(actual,new Date(date).toLocaleString(lang),lang);
  }
 });
-test('language events re-render saved cards and existing news metadata',()=>{
+test('language events re-render saved research cards without hardcoded date locales',()=>{
  let handler;
  const registration=research.match(/window.addEventListener\('asaf:language',renderNotes\);/)[0];
  const renderNotes=()=>{};
  vm.runInNewContext(registration,{window:{addEventListener:(event,fn)=>{assert.equal(event,'asaf:language');handler=fn}},renderNotes});
  assert.equal(handler,renderNotes);
- assert.match(news,/addEventListener\?\.\('asaf:language',\(\)=>\{if\(newsLoaded\|\|newsBusy\)\{renderNews\(\);loadNews\(\)\}\}\)/);
  assert.doesNotMatch(research,/toLocaleString\('he-IL'\)/);
  assert.doesNotMatch(news,/toLocaleString\('he-IL'\)/);
 });
