@@ -7,10 +7,11 @@ import {command,storageKey} from './storage.mjs';
 import {comparableDailyVolume,sameVolumeBasis} from '../comparable-volume.mjs';
 import {previousDailyBars,marketCoverage} from '../market-quality.mjs';
 import {validateBar} from '../netlify/functions/market.mjs';
+import {scannerUniverse} from './scanner-universe.mjs';
 export const marketIntervals=twelveIntervals;
 export const configuredMarketIntervals=(env=process.env)=>twelveSettings(env).intervals;
 const settingsValid=env=>{try{twelveSettings(env);return true}catch{return false}};
-export function approvedMarketSymbols(env=process.env){const symbols=[...new Set((env.ASAF_MARKET_ALLOWED_SYMBOLS||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))];return symbols.length>0&&symbols.length<=50&&symbols.every(s=>/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(s))?symbols:[]}
+export const approvedMarketSymbols=(env=process.env)=>scannerUniverse(env);
 // Additional chart symbols do not expand the scheduled scanner universe.
 export function approvedChartSymbols(env=process.env){
  const extra=[...new Set((env.ASAF_MARKET_CHART_SYMBOLS||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean))];
@@ -66,22 +67,24 @@ export async function reserveMarketCredits({env=process.env,run=command,now=Date
  if(!Number.isInteger(cost)||cost<1||!Number.isInteger(min)||min<1||min>10000||!Number.isInteger(daily)||daily<1||daily>10000000)throw new MarketError('הגדרות מכסת ספק הנתונים אינן תקינות.');
  if(await run(['EVAL',MARKET_CREDIT_QUOTA,'2',storageKey('market:provider-minute:'+minute,env),storageKey('market:provider-day:'+day,env),String(min),String(daily),'120','172800',String(cost)],{env})!==1)throw new MarketError('מכסת הקרדיטים של ספק הנתונים אינה מספיקה לבקשה.',429);
 }
-export async function readMarketSnapshot({selected,interval='1day',env=process.env,run=command,fetcher=fetch,now=Date.now(),cachedOnly=false,maxAgeMs=60000,memberId=null}={}){
+export async function readMarketSnapshot({selected,interval='1day',env=process.env,run=command,fetcher=fetch,now=Date.now(),cachedOnly=false,maxAgeMs=60000,memberId=null,unadjustedVolume=false}={}){
  if(!marketAccessAllowed(memberId,env,now))throw new MarketError('נתוני השוק ממתינים למנוי, רישוי והפעלה.');
- const {symbol}=marketSelection(selected,interval,env),cacheKey=marketSnapshotKey(symbol,interval,env),raw=await run(['GET',cacheKey],{env});
+ if(unadjustedVolume&&interval!=='1day')throw new MarketError('Unadjusted volume requires daily bars.',400);
+ const {symbol}=marketSelection(selected,interval,env),cacheKey=marketSnapshotKey(symbol,interval,env)+(unadjustedVolume?':unadjusted-volume-v1':''),raw=await run(['GET',cacheKey],{env});
  if(raw){try{const data=JSON.parse(raw),age=now-Date.parse(data.receivedAt);if(data.symbol===symbol&&data.interval===interval&&Array.isArray(data.bars)&&data.bars.length>=21&&age>=0&&age<maxAgeMs)return {...data,cached:true}}catch{/* An invalid cache entry is never sent to the chart or AI. */}}
  if(cachedOnly)throw new MarketError('אין נתוני ספק טריים במטמון. רענן את הגרף.',409);
  const lock=cacheKey+':lock',token=randomUUID();if(await run(['SET',lock,token,'NX','EX','15'],{env})!=='OK')throw new MarketError('הנתונים מתעדכנים כרגע. נסה בעוד כמה שניות.',429);
  try{
   await reserveMarketCredits({env,run,now});
   const url=new URL('https://api.twelvedata.com/time_series');url.search=new URLSearchParams({apikey:env.TWELVE_DATA_API_KEY,symbol,interval,outputsize:String(twelveSettings(env).historyBars+(interval==='1day'?1:0)),prepost:'false',format:'JSON',timezone:'UTC',country:'United States'}).toString();
+  url.searchParams.set('adjust',unadjustedVolume?'none':'splits');
   const response=await fetcher(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(10000)});if(!response.ok)throw new MarketError(response.status===429?'מכסת הספק נוצלה.':'ספק הנתונים אינו זמין כרגע.',response.status===429?429:502);
   const data=await response.json();if(data.status==='error'||!Array.isArray(data.values))throw new MarketError(Number(data.code)===429?'מכסת הספק נוצלה.':'הספק אינו מאפשר גישה לנתונים.',Number(data.code)===429?429:422);
   if(data.meta?.symbol&&String(data.meta.symbol).toUpperCase()!==symbol)throw new MarketError('הספק החזיר סימול שאינו תואם לבקשה.',502);
   if(data.meta?.interval&&data.meta.interval!==interval)throw new MarketError('הספק החזיר טווח זמן שאינו תואם לבקשה.',502);
   const parsed=data.values.map(validateBar);
   if(parsed.some(b=>!b))throw new MarketError('הספק החזיר נרות לא תקינים. הגרף הקיים לא שונה.',502);
-  const settings=twelveSettings(env),daily=interval==='1day',volumeBasis=daily?settings.dailyVolumeBasis:null;
+  const settings=twelveSettings(env),daily=interval==='1day',volumeBasis=daily&&!unadjustedVolume?settings.dailyVolumeBasis:null;
  const unique=new Map(),conflicts=new Set();
  for(const [i,bar] of parsed.entries()){
   const rawBar=data.values[i],prior=unique.get(bar.date);
@@ -98,7 +101,7 @@ export async function readMarketSnapshot({selected,interval='1day',env=process.e
   const volumeCoverage=daily?(comparableDailyVolume(bars,{interval,barPolicy:'previous-daily-sessions',latestBarMayBePartial:false,
     volumeBasis,volumeConflictDates,receivedAt}).coverage||'unconfirmed'):settings.volumeCoverage;
   const coverage=marketCoverage(interval,volumeCoverage);
-  const result={source:'Twelve Data',symbol,interval,bars,currency:typeof data.meta?.currency==='string'?data.meta.currency:null,exchange:typeof data.meta?.exchange==='string'?data.meta.exchange:null,exchangeTimezone:['1day','1week'].includes(interval)?(data.meta?.exchange_timezone||'America/New_York'):'UTC',barPolicy:daily?'previous-daily-sessions':'may-include-open-candle',latestBarMayBePartial:!daily,excludedCurrentBars:ordered.length-eligible.length,receivedAt,latestBarTime:bars.at(-1).date,delayMinutes:Number(env.ASAF_MARKET_DELAY_MINUTES),expires:now+60000,coverage,volumeCoverage,volumeBasis,volumeConflictDates,priceAdjustment:['1day','1week'].includes(interval)?'splits':'unadjusted',extendedHours:false,disclaimer:'רענון עד דקה; זמן הנר אינו זמן הקבלה. בנרות יומיים יום המסחר הנוכחי מוחרג; נתוני הספק עשויים להתעדכן בדיעבד. השימוש הוא להצגה באתר, ללא הפצת נתונים גולמיים.'};
+  const result={source:'Twelve Data',symbol,interval,bars,currency:typeof data.meta?.currency==='string'?data.meta.currency:null,exchange:typeof data.meta?.exchange==='string'?data.meta.exchange:null,exchangeTimezone:['1day','1week'].includes(interval)?(data.meta?.exchange_timezone||'America/New_York'):'UTC',barPolicy:daily?'previous-daily-sessions':'may-include-open-candle',latestBarMayBePartial:!daily,excludedCurrentBars:ordered.length-eligible.length,receivedAt,latestBarTime:bars.at(-1).date,delayMinutes:Number(env.ASAF_MARKET_DELAY_MINUTES),expires:now+60000,coverage,volumeCoverage,volumeBasis,volumeConflictDates,priceAdjustment:!unadjustedVolume&&['1day','1week'].includes(interval)?'splits':'unadjusted',extendedHours:false,disclaimer:'רענון עד דקה; זמן הנר אינו זמן הקבלה. בנרות יומיים יום המסחר הנוכחי מוחרג; נתוני הספק עשויים להתעדכן בדיעבד. השימוש הוא להצגה באתר, ללא הפצת נתונים גולמיים.'};
   await run(['SET',cacheKey,JSON.stringify(result),'EX',String(privateMarketTrial(env)?Math.max(1,Math.min(172800,Math.floor((Date.parse(env.ASAF_TWELVE_TRIAL_ENDS_AT)-now)/1000))):172800)],{env});return {...result,cached:false};
  }finally{try{await run(['EVAL',"if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0",'1',lock,token],{env})}catch{}}
 }

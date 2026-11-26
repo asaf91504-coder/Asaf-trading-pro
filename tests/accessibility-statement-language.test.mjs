@@ -20,7 +20,7 @@ test('accessibility statement separates local Canvas capabilities from server im
  // Scope remains accurate to the implementation, without exposing raw provider data.
  const raster=readFileSync(new URL('venture-chart-view.mjs',root),'utf8');
  assert.match(raster,/panel.hidden=true/);
- assert.match(raster,/אין זום, גלילה או טבלת נתוני נרות/);
+ assert.match(keys[1],/תמונה רחבה עם גלילה אופקית/);
 });
 for(const code of ['en','es','fr','de','pt','ru','ar','zh','ja'])test(`${code}: conditional chart accessibility claims are translated completely`,()=>{
  const catalog={...JSON.parse(readFileSync(new URL(`locales/${code}.json`,root),'utf8')),...launchTranslations[code]};

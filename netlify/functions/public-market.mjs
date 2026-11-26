@@ -1,4 +1,5 @@
 import {ventureChart} from '../../server/venture-presentation.mjs';
+import {scannerChartContext} from '../../server/scanner-chart.mjs';
 import {validateChartActions} from '../../chat-chart-actions.mjs';
 import {currentUser} from '../../server/auth-core.mjs';
 import {aiProviderConfig,openaiDataAllowed} from '../../server/ai-provider.mjs';
@@ -17,6 +18,12 @@ export function createPublicMarketHandler({env=process.env,run=command,fetcher=f
   let actions;try{actions=validateChartActions(body.actions||[])}catch{return reply({error:'Invalid chart actions'},400)}
   const billingBlock=await subscriptionGuard(user,{env,run,now:now()});if(billingBlock)return billingBlock;
   const minute=Math.floor(now()/60000);if(await run(['EVAL',QUOTA,'2',storageKey('market:requests:'+minute,env),storageKey('market:member:'+user.id+':'+minute,env),'120','12','120','120'],{env})!==1)return reply({error:'יותר מדי בקשות לנתוני שוק.'},429);
+  if(body.scannerContext!==undefined){
+   if((body.interval||'1day')!=='1day')throw new MarketError('גרף הסריקה משתמש בנרות יומיים.',400);
+   const chart=await scannerChartContext({selected:body.symbol,context:body.scannerContext,memberId:user.id,env,run,fetcher,now:now()});
+   const selectedActions=body.scannerContext.autoAnnotate===false?actions:chart.actions;
+   return reply({...await ventureChart(chart.snapshot,selectedActions,{scanner:true,tradeScenario:chart.tradeScenario,visibleCandles:200}),scannerContext:chart.context,researchActions:selectedActions});
+  }
   const snapshot=await readMarketSnapshot({selected:body?.symbol,interval:body?.interval||'1day',memberId:user.id,env,run,fetcher,now:now(),cachedOnly:body.cachedOnly===true,maxAgeMs:body.cachedOnly===true?15*60000:60000});
   return reply(await ventureChart(snapshot,actions));
  }catch(e){return reply({error:e instanceof MarketError?e.message:'חיבור הנתונים אינו זמין. הגרף הקיים לא שונה.'},e instanceof MarketError?e.status:503)}

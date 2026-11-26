@@ -36,7 +36,7 @@ export function setupCandidates(scan){return scan.records.flatMap(r=>{
   // Version the candidate identity so an old visible card cannot approve
   // a scenario after a release changes its underlying stop.
   const id=createHash('sha256').update(JSON.stringify(['atr14-exact-2:v2',scan.startedAt,r.symbol,c.kind,scenario,atr14])).digest('hex');
-  return [{id,symbol:r.symbol,pattern:c.label||c.kind,stage:c.stage,scenario,atr14,candleDate:r.summary.date,source:r.source,receivedAt:r.receivedAt,scanAt:scan.completedAt}];
+  return [{id,symbol:r.symbol,pattern:c.label||c.kind,stage:c.stage,scenario,atr14,candleDate:r.summary.date,source:r.source,receivedAt:r.receivedAt,scanAt:scan.progress?r.receivedAt:scan.completedAt}];
  });
 }).slice(0,200)}
 export const REVIEW_COMMIT=`-- setup-review-cas
@@ -48,7 +48,7 @@ export async function setupReviewContext({env,run,now,memberId}){
  const scan=await readSharedScan({env,run,now,memberId});
  const key=sharedScannerKey(env),snapshot=await run(['GET',key+':snapshot'],{env});
  // Do not approve an entry from a scan that was replaced between reads.
- if(!snapshot||JSON.parse(snapshot).completedAt!==scan.completedAt)throw new MarketError('הסריקה עודכנה. רענן את העמוד.',409);
+ if(!snapshot||(JSON.parse(snapshot).updatedAt||JSON.parse(snapshot).completedAt)!==(scan.updatedAt||scan.completedAt))throw new MarketError('הסריקה עודכנה. רענן את העמוד.',409);
  const raw=await run(['GET',key+':reviews'],{env})||'';
  const book=raw?JSON.parse(raw):{};
  return {scan,key,snapshot,raw,book,candidates:setupCandidates(scan)};

@@ -50,7 +50,7 @@ const json=(data,ok=true)=>({ok,json:async()=>data});
 const derived=(symbol='QA',matches=true,metrics={})=>({symbol,asOf:'2026-11-18',presentation:'derived-only',metrics:{atrPercent:4,relativeVolume:2,aboveMA20:true,...metrics},patterns:[],screen:{matches,reasons:matches?[]:['filtered']},marketCapStatus:'available'});
 function fixture(fetcher=async()=>json({records:[derived()]})){
  const elements=new Map();const calls=[],open=[];
- const $=id=>{if(!elements.has(id))elements.set(id,new Elem(id));return elements.get(id);};
+ const $=id=>{if(!elements.has(id)){const node=new Elem(id);node.id=id;elements.set(id,node);}return elements.get(id);};
  const document=new EventTarget();document.getElementById=$;document.createElement=tag=>new Elem(tag);
  document.documentElement={lang:'he'};
  const headings=Array.from({length:15},()=>new Elem('th'));
@@ -78,7 +78,7 @@ ui('zero full matches still shows labelled long and short watch candidates',asyn
  const cards=f.$('scanShortlist').children.filter(n=>n.tagName==='article');assert.equal(cards.length,2);
  assert.match(cards[0].children[0].textContent,/BULL.*לונג.*מועמדת למעקב/);
  assert.match(cards[1].children[0].textContent,/BEAR.*שורט.*מועמדת למעקב/);
- assert.match(cards[0].children[2].textContent,/חסר לאישור.*שווי שוק/);
+ assert.ok(cards[0].children.some(n=>/חסר לאישור.*שווי שוק/.test(n.textContent)));
  assert.match(f.$('scanSummary').textContent,/0 התאמות/);
  assert.match(f.rows()[0].children[0].textContent,/מועמדות למעקב מוצגות למעלה/);
  cards[1].children.at(-1).click();assert.deepEqual(f.open,['chart','BEAR']);
@@ -124,4 +124,22 @@ for(const code of Object.keys(languageNames))ui('rendered states use production 
   for(const sample of samples)assert.doesNotMatch(sample,/[\u0590-\u05ff]/,code+': '+sample);
   f.setLanguage('he',createTranslator());assert.equal(liveText(f.rows()[0].children[2]),'כן / לא');assert.match(details.children[1].textContent,/כיסוי נפח המסחר/);
  }
+});
+
+ui('numeric company size appears in each table row and research card',async()=>json({records:[{...derived('CAP',false),marketCapStatus:'available',company:{marketCapUsd:450000000000,receivedAt:'2026-11-26T12:00:00Z'},opportunities:[{side:'long',status:'watch',eligible:true,rank:60,reasons:[]}]}]}),async f=>{
+ await f.scan();assert.equal(f.rows()[0].children[12].textContent,'450B');
+ const card=f.$('scanShortlist').children.find(n=>n.tagName==='article');assert.ok(card.children.some(n=>/שווי שוק.*450B/.test(n.textContent)));
+});
+
+ui('discovers all 1,000 stocks, loads ten cached groups and pages the table',async q=>{
+ if(!q.body)return json({enabled:true,shared:true,maxSymbols:100,symbols:Array.from({length:1000},(_,i)=>'STOCK'+i)});
+ return json({shared:true,records:q.body.symbols.map(s=>derived(s)),completedAt:'2026-11-26T12:00:00Z',nextUpdateAt:Date.parse('2026-11-26T15:00:00Z')});
+},async f=>{
+ const done=new Promise((resolve,reject)=>{let ticks=0;const timer=setInterval(()=>{if(f.calls.length===11&&!f.$('scanProvider').disabled){clearInterval(timer);resolve();}else if(++ticks>2000){clearInterval(timer);reject(Error(f.status()+'; calls='+f.calls.length));}},1)});
+ f.clickDoc('scanDiscover');await done;
+ assert.equal(f.calls.length,11);assert.equal(f.calls.filter(q=>q.body).length,10);assert.ok(f.calls.filter(q=>q.body).every(q=>q.body.symbols.length===100));
+ assert.match(f.$('scanSummary').textContent,/נבדקו 1000 מניות/);assert.equal(f.rows().length,100);
+ const pager=f.$('scanRows').closest('table').previous;assert.equal(pager.hidden,false);assert.equal(pager.children[0].disabled,true);assert.match(pager.children[1].textContent,/עמוד 1 מתוך 10/);
+ for(let i=0;i<9;i++)pager.children[2].click();assert.match(pager.children[1].textContent,/עמוד 10 מתוך 10/);assert.equal(pager.children[2].disabled,true);assert.match(f.rows()[0].children[0].textContent,/STOCK900/);
+ await f.update();assert.equal(f.calls.length,21);assert.ok(f.calls.slice(11).every(q=>q.body.cachedOnly&&q.body.symbols.length===100));assert.equal(f.rows().length,100);
 });

@@ -1,6 +1,21 @@
 // Complete scanner messages; do not translate user or provider data.
 export const scannerTranslations = {
   "en": {
+    "פתח גרף מסומן": "Open marked chart",
+    "גרף מסומן מהסורק": "Marked screener chart",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Marks are calculated automatically from the scan data. Patterns and trendlines appear only when detected.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "Server research image. Ask for marks in chat or open the wide view.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "No trendline meeting the analysis criteria was detected.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "No pattern meeting the analysis criteria was detected.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "Background update: {processed} of {total} stocks",
+    "הקודם": "Previous",
+    "הבא": "Next",
+    "עמוד ": "Page ",
+    " מתוך ": " of ",
+
+    "שווי שוק ($)": "Market cap ($)",
+    "התקבל: ": "Received: ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Partial-market volume alone cannot verify the volume rule",
     "מחזור לא מאומת": "Unverified volume",
     "מחזור חלקי": "Partial-market volume",
@@ -105,6 +120,21 @@ export const scannerTranslations = {
     "down": "Down"
   },
   "es": {
+    "פתח גרף מסומן": "Abrir gráfico marcado",
+    "גרף מסומן מהסורק": "Gráfico marcado del escáner",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Las marcas se calculan automáticamente a partir del análisis. Los patrones y las líneas de tendencia aparecen solo cuando se detectan.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "Imagen de análisis del servidor. Solicita marcas en el chat o abre la vista amplia.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "No se detectó ninguna línea de tendencia que cumpla los criterios.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "No se detectó ningún patrón que cumpla los criterios.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "Actualización en segundo plano: {processed} de {total} acciones",
+    "הקודם": "Anterior",
+    "הבא": "Siguiente",
+    "עמוד ": "Página ",
+    " מתוך ": " de ",
+
+    "שווי שוק ($)": "Capitalización ($)",
+    "התקבל: ": "Recibido: ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "El volumen parcial del mercado no basta para verificar la regla de volumen",
     "מחזור לא מאומת": "Volumen no verificado",
     "מחזור חלקי": "Volumen de mercado parcial",
@@ -209,6 +239,21 @@ export const scannerTranslations = {
     "down": "Bajista"
   },
   "fr": {
+    "פתח גרף מסומן": "Ouvrir le graphique annoté",
+    "גרף מסומן מהסורק": "Graphique annoté du scanner",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Les annotations sont calculées automatiquement à partir des données du scan. Les figures et les tendances ne sont affichées que si elles sont détectées.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "Image d’analyse du serveur. Demandez des annotations dans le chat ou ouvrez la vue élargie.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "Aucune tendance répondant aux critères n’a été détectée.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "Aucune figure répondant aux critères n’a été détectée.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "Mise à jour en arrière-plan : {processed} sur {total} actions",
+    "הקודם": "Précédent",
+    "הבא": "Suivant",
+    "עמוד ": "Page ",
+    " מתוך ": " sur ",
+
+    "שווי שוק ($)": "Capitalisation ($)",
+    "התקבל: ": "Reçu : ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Le volume partiel du marché ne suffit pas à vérifier le critère de volume",
     "מחזור לא מאומת": "Volume non vérifié",
     "מחזור חלקי": "Volume de marché partiel",
@@ -313,6 +358,21 @@ export const scannerTranslations = {
     "down": "Baissier"
   },
   "de": {
+    "פתח גרף מסומן": "Markiertes Chart öffnen",
+    "גרף מסומן מהסורק": "Markiertes Screener-Chart",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Markierungen werden automatisch aus den Scan-Daten berechnet. Muster und Trendlinien erscheinen nur, wenn sie erkannt werden.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "Analysebild vom Server. Markierungen im Chat anfordern oder die breite Ansicht öffnen.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "Keine Trendlinie erfüllt die Analysekriterien.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "Kein Muster erfüllt die Analysekriterien.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "Hintergrundaktualisierung: {processed} von {total} Aktien",
+    "הקודם": "Zurück",
+    "הבא": "Weiter",
+    "עמוד ": "Seite ",
+    " מתוך ": " von ",
+
+    "שווי שוק ($)": "Marktkapitalisierung ($)",
+    "התקבל: ": "Empfangen: ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Teilmarktvolumen reicht nicht aus, um die Volumenregel zu bestätigen",
     "מחזור לא מאומת": "Nicht verifiziertes Volumen",
     "מחזור חלקי": "Teilmarktvolumen",
@@ -417,6 +477,21 @@ export const scannerTranslations = {
     "down": "Abwärts"
   },
   "pt": {
+    "פתח גרף מסומן": "Abrir gráfico marcado",
+    "גרף מסומן מהסורק": "Gráfico marcado do scanner",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "As marcações são calculadas automaticamente a partir dos dados da análise. Padrões e linhas de tendência aparecem apenas quando detetados.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "Imagem de análise do servidor. Peça marcações no chat ou abra a vista ampla.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "Nenhuma linha de tendência cumpre os critérios.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "Nenhum padrão cumpre os critérios.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "Atualização em segundo plano: {processed} de {total} ações",
+    "הקודם": "Anterior",
+    "הבא": "Seguinte",
+    "עמוד ": "Página ",
+    " מתוך ": " de ",
+
+    "שווי שוק ($)": "Capitalização ($)",
+    "התקבל: ": "Recebido: ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "O volume parcial do mercado não basta para confirmar a regra de volume",
     "מחזור לא מאומת": "Volume não verificado",
     "מחזור חלקי": "Volume parcial de mercado",
@@ -521,6 +596,21 @@ export const scannerTranslations = {
     "down": "Baixa"
   },
   "ru": {
+    "פתח גרף מסומן": "Открыть график с отметками",
+    "גרף מסומן מהסורק": "График сканера с отметками",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Отметки рассчитываются автоматически по данным сканирования. Фигуры и линии тренда отображаются только при обнаружении.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "Изображение анализа с сервера. Запросите отметки в чате или откройте широкий вид.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "Линия тренда, соответствующая критериям, не найдена.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "Фигура, соответствующая критериям, не найдена.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "Фоновое обновление: {processed} из {total} акций",
+    "הקודם": "Назад",
+    "הבא": "Далее",
+    "עמוד ": "Страница ",
+    " מתוך ": " из ",
+
+    "שווי שוק ($)": "Капитализация ($)",
+    "התקבל: ": "Получено: ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "Объёма части рынка недостаточно для подтверждения правила по объёму",
     "מחזור לא מאומת": "Непроверенный объём",
     "מחזור חלקי": "Объём части рынка",
@@ -625,6 +715,21 @@ export const scannerTranslations = {
     "down": "Вниз"
   },
   "ar": {
+    "פתח גרף מסומן": "افتح الرسم مع العلامات",
+    "גרף מסומן מהסורק": "رسم الماسح مع العلامات",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "تُحسب العلامات تلقائياً من بيانات الفحص. تظهر الأنماط وخطوط الاتجاه فقط عند اكتشافها.",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "صورة تحليل من الخادم. اطلب علامات عبر الدردشة أو افتح العرض الواسع.",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "لم يُكتشف خط اتجاه يستوفي معايير التحليل.",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "لم يُكتشف نمط يستوفي معايير التحليل.",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "تحديث في الخلفية: {processed} من {total} سهم",
+    "הקודם": "السابق",
+    "הבא": "التالي",
+    "עמוד ": "صفحة ",
+    " מתוך ": " من ",
+
+    "שווי שוק ($)": "القيمة السوقية ($)",
+    "התקבל: ": "تم الاستلام: ",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "حجم التداول الجزئي للسوق لا يكفي للتحقق من شرط الحجم",
     "מחזור לא מאומת": "حجم تداول غير متحقق منه",
     "מחזור חלקי": "حجم تداول جزئي للسوق",
@@ -729,6 +834,21 @@ export const scannerTranslations = {
     "down": "هابط"
   },
   "zh": {
+    "פתח גרף מסומן": "打开标注图表",
+    "גרף מסומן מהסורק": "筛选器标注图表",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "标注根据扫描数据自动计算。仅显示检测到的形态和趋势线。",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "服务器分析图像。可在聊天中请求标注或打开宽屏视图。",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "未检测到符合分析条件的趋势线。",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "未检测到符合分析条件的形态。",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "后台更新：{processed} / {total} 只股票",
+    "הקודם": "上一页",
+    "הבא": "下一页",
+    "עמוד ": "页 ",
+    " מתוך ": " / ",
+
+    "שווי שוק ($)": "市值（美元）",
+    "התקבל: ": "接收时间：",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "仅凭部分市场成交量无法验证成交量条件",
     "מחזור לא מאומת": "未核实的成交量",
     "מחזור חלקי": "部分市场成交量",
@@ -833,6 +953,21 @@ export const scannerTranslations = {
     "down": "下跌"
   },
   "ja": {
+    "פתח גרף מסומן": "注釈付きチャートを開く",
+    "גרף מסומן מהסורק": "スクリーナーの注釈付きチャート",
+    "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "注釈はスキャンデータから自動計算されます。パターンとトレンドラインは検出された場合のみ表示されます。",
+    "תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.": "サーバーの分析画像です。チャットで注釈を依頼するか、拡大表示を開けます。",
+    "לא זוהה קו מגמה שעומד בתנאי הניתוח.": "分析条件を満たすトレンドラインは検出されませんでした。",
+    "לא זוהתה תבנית שעומדת בתנאי הניתוח.": "分析条件を満たすパターンは検出されませんでした。",
+
+    "עדכון ברקע: {processed} מתוך {total} מניות": "バックグラウンド更新：{processed} / {total} 銘柄",
+    "הקודם": "前へ",
+    "הבא": "次へ",
+    "עמוד ": "ページ ",
+    " מתוך ": " / ",
+
+    "שווי שוק ($)": "時価総額（米ドル）",
+    "התקבל: ": "受信日時：",
     "מחזור חלקי בלבד; אינו מספיק לאימות תנאי המחזור": "一部市場の出来高だけでは出来高条件を確認できません",
     "מחזור לא מאומת": "未確認の出来高",
     "מחזור חלקי": "一部市場の出来高",

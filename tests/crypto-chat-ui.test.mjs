@@ -117,3 +117,24 @@ test('licensed public stock feed takes priority over owner-only trial, including
  assert.equal(f.requests[0].url,'/.netlify/functions/public-market');
  assert.equal(f.context.loaded.source,'Twelve Data');assert.equal(f.rendered.length,1);
 });
+
+test('scanner chart preserves its receipt and automatic actions while bypassing provider refresh throttling',async()=>{
+ const scannerContext={asOf:'2026-11-25',receivedAt:'2026-11-26T12:00:00Z',side:'short'};
+ const actions=[{type:'levels',kind:'both'},{type:'trendlines'}];
+ const f=fixture({symbol:'AMD',resultPatch:{symbol:'AMD',source:'Twelve Data',presentation:'server-raster',interval:'1day',candleCount:200,image:'data:image/png;base64,AAAA',chartSettings:{indicators:['MA20','MA150']},scannerContext,researchActions:actions}});
+ f.context.publicFeed=Promise.resolve({enabled:true});f.context.lastFetchBySymbol.set('AMD|1day',Date.now());
+ await f.context.loadMarketData({fromChat:true,scannerContext});
+ assert.deepEqual(f.requests[0].body.scannerContext,scannerContext);assert.equal(f.requests[0].body.cachedOnly,true);assert.equal(f.requests[0].body.bars,undefined);
+ assert.deepEqual(f.context.loaded.scannerContext,scannerContext);assert.deepEqual(f.context.ventureActions,actions);assert.equal(f.context.loaded.bars,undefined);
+});
+
+test('two overlapping marked chart loads for the same ticker cannot let the older image win',async()=>{
+ const scannerContext={asOf:'2026-11-25',receivedAt:'2026-11-26T12:00:00Z',side:'long'};
+ const f=fixture({symbol:'AMD'});f.context.publicFeed=Promise.resolve({enabled:true});const pending=[];
+ f.context.fetch=()=>new Promise(resolve=>pending.push(resolve));
+ const response=image=>({ok:true,json:async()=>({symbol:'AMD',source:'Twelve Data',presentation:'server-raster',interval:'1day',candleCount:200,image,latestBarTime:'2026-11-25',scannerContext})});
+ const older=f.context.loadMarketData({fromChat:true,scannerContext});await new Promise(r=>setImmediate(r));
+ const newer=f.context.loadMarketData({fromChat:true,scannerContext});await new Promise(r=>setImmediate(r));
+ pending[1](response('NEW'));await newer;pending[0](response('OLD'));await assert.rejects(older,{name:'AbortError'});
+ assert.equal(f.rendered.length,1);assert.equal(f.rendered[0].image,'NEW');
+});

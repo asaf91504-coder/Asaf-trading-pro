@@ -9,6 +9,15 @@ function configuredMarketLabel(data){
 }
 const status=document.getElementById("healthStatus");
 const button=document.getElementById("healthCheck");
+// Separate owner-only live check. The ordinary health button stays offline.
+if(button){
+ const panel=document.createElement('details'),heading=document.createElement('summary'),probe=document.createElement('button'),result=document.createElement('pre');
+ heading.textContent='בדיקת נתוני הסורק למנהל';probe.textContent='בדוק חיבור נתוני סורק';probe.type='button';panel.hidden=true;result.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere';panel.append(heading,probe,result);button.after(panel);
+ let revision=0;
+ const discover=async()=>{const current=++revision;panel.hidden=true;result.textContent='';if(!authState.authenticated)return;try{const r=await fetch('/.netlify/functions/scanner-capacity',{credentials:'same-origin',cache:'no-store'}),data=await r.json();if(current===revision&&authState.authenticated)panel.hidden=data.enabled!==true;}catch{}};
+ probe.onclick=async()=>{const current=revision;probe.disabled=true;result.textContent='בודק את המכסה ואת זמינות שווי השוק…';try{const r=await fetch('/.netlify/functions/scanner-capacity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'}),data=await r.json();if(current===revision&&authState.authenticated)result.textContent=JSON.stringify(data,null,2);}catch{if(current===revision)result.textContent='לא ניתן להשלים את הבדיקה.';}finally{probe.disabled=false;}};
+ window.addEventListener('asaf:auth',discover);discover();
+}
 button?.addEventListener("click",async()=>{
  button.disabled=true;
  status.textContent="בודק את שרת הפריסה ללא API בתשלום...";

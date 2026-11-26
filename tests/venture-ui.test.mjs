@@ -24,3 +24,10 @@ test('late image/tool results cannot replace a new symbol or a cancelled convers
 test('opening crypto from a stock chart preserves the separate owner-only crypto implementation',async()=>{
  const f=fixture();const result=await f.c.runChatActions([{type:'symbol',symbol:'COINLORE:BTCUSD'}],{epoch:0});assert.equal(result.messages[0],'native-crypto');assert.equal(f.requests.length,0);assert.equal(f.images.length,0);
 });
+
+test('chat changes to a scanner chart keep the same scan receipt and respect explicit annotation clearing',async()=>{
+ const f=fixture(),context={asOf:'2026-11-16',receivedAt:f.image.receivedAt,side:'long'};
+ f.c.installVentureSnapshot(f.image,'AAPL');f.c.loaded.scannerContext=context;
+ await f.c.runChatActions([{type:'clear_annotations'}],{epoch:0});
+ assert.deepEqual(f.requests[0].body.scannerContext,{...context,autoAnnotate:false});assert.deepEqual(f.requests[0].body.actions,[{type:'clear_annotations'}]);
+});
