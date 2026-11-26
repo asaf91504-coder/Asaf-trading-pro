@@ -57,3 +57,9 @@ test('a fresh cache becomes numbered, dated sources while leaving interface lang
   assert.equal(chartOrPaidSearch,false);
  }finally{process.env=oldEnv;globalThis.fetch=oldFetch;}
 });
+
+
+test('market overview accepts a second sentence requesting index changes and technical zones',()=>{
+ for(const q of ['מה קורה בשוק היום? תן שינוי באחוזים במדדים, תמיכות והתנגדויות בקצרה.','מה אתה חושב על השוק היום? הצג תמיכות והתנגדויות'])assert.equal(currentUSMarketIntent(q),true);
+ for(const q of ['מה קורה בשוק היום? תן ניתוח AAPL','מה קורה בשוק היום? תן שינוי באחוזים ביפן','מה קורה בשוק היום? תן שינוי באחוזים במדדים ותוסיף MA20'])assert.equal(currentUSMarketIntent(q),false);
+});

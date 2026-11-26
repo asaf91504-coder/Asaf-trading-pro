@@ -18,6 +18,8 @@ const broadMarketPatterns=[
 ];
 export function currentUSMarketIntent(value){
  if(typeof value!=='string'||value.length>220)return false;
- const q=normalizeMarketQuestion(value);
+ // Accept a bounded request for the same market metrics after the question.
+ // Keep ticker, chart-control and regional follow-ups out of this route.
+ const q=normalizeMarketQuestion(normalizeMarketQuestion(value).replace(/(?:[?!.]\s*|[,،]\s*)(?:תן|הצג|תציג)(?: לי)? (?:שינוי באחוזים(?: במדדים)?|עליות וירידות|תמיכות והתנגדויות)(?:[,،] תמיכות והתנגדויות)?(?: בקצרה)?$/u,''));
  return localizedStarter.has(q)||broadMarketPatterns.some(pattern=>pattern.test(q));
 }
