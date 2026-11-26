@@ -308,6 +308,7 @@ async function ask(q,extra={}){
     interval:activeData?.interval||$('marketInterval').value||"1day",
     receivedAt:activeData?.receivedAt||null,
     useServerMarket:activeData?.source==="Twelve Data",
+    ...(activeData?.scannerContext?{scannerContext:activeData.scannerContext}:{}),
     useServerCrypto:activeData?.source==="CoinLore",
     useServerIntrinio:activeData?.source==="Intrinio",
     includeNews:extra.newsArticleId?true:$("chatIncludeNews")?.checked===true,

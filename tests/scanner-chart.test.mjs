@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {analysisMarket} from '../server/analysis-sources.mjs';
 import {createPublicMarketHandler} from '../netlify/functions/public-market.mjs';
 import {sharedScannerKey} from '../server/shared-scanner.mjs';
 import {marketSnapshotKey} from '../server/market-feed.mjs';
@@ -54,4 +55,16 @@ test('short chart marks the server-derived entry, exact two-ATR stop and measure
  const {h,user,context}=setup();const body=await(await h(request('public-market',{symbol:'AMD',scannerContext:{...context,side:'short'}},user.cookie))).json();
  for(const kind of ['entry','stop','target'])assert.ok(body.researchLegend.some(m=>m.kind===kind));
  assert.equal(body.scannerContext.side,'short');
+});
+
+
+test('AI analysis of an opened scanner chart uses the same guarded scan receipt after the ordinary chart cache expires',async()=>{
+ const configured={...env,ASAF_MARKET_AI_LICENSE_CONFIRMED:'true'},x=setup(configured);
+ const payload={symbol:'AMD',interval:'1day',receivedAt:x.context.receivedAt,scannerContext:x.context};
+ const options={env:configured,run:x.f.run,memberId:owner,now:now+2*3600000};
+ const resolved=await analysisMarket(payload,options);assert.deepEqual(resolved.bars,bars);assert.equal(resolved.meta.receivedAt,x.context.receivedAt);
+ await assert.rejects(analysisMarket({...payload,scannerContext:undefined},options));
+ await assert.rejects(analysisMarket({...payload,scannerContext:{...x.context,asOf:'2026-01-01'}},options),e=>e.status===409);
+ await assert.rejects(analysisMarket(payload,{...options,memberId:null}));
+ await assert.rejects(analysisMarket(payload,{...options,env:{...configured,ASAF_MARKET_AI_LICENSE_CONFIRMED:'false'}}));
 });

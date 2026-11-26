@@ -1,13 +1,15 @@
 import {publicNewsEnabled} from './public-news.mjs';
 import {aiProviderConfig,openaiDataAllowed} from './ai-provider.mjs';
 import {readPublicNews} from './public-news-service.mjs';
+import {scannerChartContext} from './scanner-chart.mjs';
 import {readMarketSnapshot,MarketError} from './market-feed.mjs';
 import {command,storageKey,storeConfigured} from './storage.mjs';
 import {newsConfigured,snapshotState} from './news-core.mjs';
 export async function analysisMarket(payload,{env=process.env,run=command,now=Date.now(),memberId=null}={}){
  if(env.ASAF_MARKET_AI_LICENSE_CONFIRMED!=='true')throw new MarketError('ניתוח נתוני ספק ממתין לאישור רישוי AI ולהפעלת החיבור.');
  if(aiProviderConfig(env).provider==='openai'&&!openaiDataAllowed('Twelve Data',env))throw new MarketError('ניתוח נתוני Twelve Data ב-OpenAI ממתין לאישור הספק.',403);
- const snapshot=await readMarketSnapshot({selected:payload.symbol,interval:payload.interval||'1day',env,run,now,cachedOnly:true,maxAgeMs:15*60000,memberId});
+ if(payload.scannerContext&&(payload.interval||'1day')!=='1day')throw new MarketError('גרף הסריקה משתמש בנרות יומיים.',400);
+ const snapshot=payload.scannerContext?(await scannerChartContext({selected:payload.symbol,context:payload.scannerContext,env,run,now,memberId})).snapshot:await readMarketSnapshot({selected:payload.symbol,interval:payload.interval||'1day',env,run,now,cachedOnly:true,maxAgeMs:15*60000,memberId});
  if(typeof payload.receivedAt!=='string'||payload.receivedAt!==snapshot.receivedAt)throw new MarketError('עותק הנתונים בשרת השתנה. טען מחדש את הגרף לפני הניתוח.',409);
  return {bars:snapshot.bars,meta:{source:'Twelve Data',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,volumeCoverage:snapshot.volumeCoverage||'unconfirmed',volumeBasis:snapshot.volumeBasis||null,volumeConflictDates:snapshot.volumeConflictDates||[],priceAdjustment:snapshot.priceAdjustment||'unconfirmed',extendedHours:snapshot.extendedHours===true,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,exchangeTimezone:snapshot.exchangeTimezone,delayMinutes:snapshot.delayMinutes,provenance:'server-provider-cache'}};
 }
