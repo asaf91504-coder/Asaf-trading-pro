@@ -501,11 +501,11 @@ test('a scanner request drops the selected chart, its receipt and history withou
  assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,undefined);assert.equal(p.history,undefined);assert.equal(p.useServerMarket,undefined);assert.equal(p.scannerContext,undefined);assert.ok(s.ctx.conversation.length>=1);
 });
 test('switching named stocks loads the new asset and preserves the same conversation',async()=>{
- const s=setup();s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;
+ const s=setup();let stayedInChat=false;s.ctx.document.querySelector=selector=>{assert.equal(selector,'[data-tab="chat"]');return {click(){stayedInChat=true}}};s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;
  s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;
  s.ctx.conversation=[{role:'user',content:'על ACMR',chartContext:{symbol:'ACMR',source:'Twelve Data'}}];
  await s.ctx.ask('מה דעתך על טסלה?');
- assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,'NASDAQ:TSLA');assert.equal(p.useServerMarket,true);assert.equal(s.ctx.loaded.symbol,'NASDAQ:TSLA');assert.ok(p.history.some(m=>m.content==='על ACMR'));
+ assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,'NASDAQ:TSLA');assert.equal(p.useServerMarket,true);assert.equal(s.ctx.loaded.symbol,'NASDAQ:TSLA');assert.equal(stayedInChat,true);assert.ok(p.history.some(m=>m.content==='על ACMR'));
 });
 test('failed stock switching never sends the previous asset to the model',async()=>{
  const s=setup();s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;s.ctx.loaded=analysisData('ACMR');s.ctx.loadMarketData=async()=>{throw Error('new asset unavailable')};

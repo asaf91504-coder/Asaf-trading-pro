@@ -244,6 +244,7 @@ async function ask(q,extra={}){
    localReceipt=switched.messages?.join('\n')||'';
    if(epoch!==conversationEpoch)return;
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))throw Error('לא התקבלו נתונים למניה שהתבקשה; לא ייעשה שימוש בנתוני המניה הקודמת.');
+   document.querySelector?.('[data-tab="chat"]')?.click();
   }
   if(command?.unresolvedSymbol||command?.recognized&&!command.actions.length&&/לא לבצע פעולה/.test(command.message||'')){waiting.textContent=command.message||'לא בוצע שינוי בגרף.';return;}
   if(command?.recognized&&command.actions.length){
