@@ -1,3 +1,4 @@
+import {questionAsset,sameChatAsset,stockDiscoveryIntent} from './chat-asset-intent.mjs';
 import {chatAnswerText} from './chat-answer-presentation.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {isLearningQuestion,mergeResearchActions} from './chat-request-intent.mjs';
@@ -224,8 +225,9 @@ async function ask(q,extra={}){
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
   const intentQuestion=window.asafCanonicalPrompt?.(question)||question;
   const ownerWeb=authState.ownerHostedSearch===true&&(preparedPayload?preparedPayload.webSearch===true:$("chatWebSearch")?.checked===true);
+  const discovery=!extra.newsArticleId&&stockDiscoveryIntent(intentQuestion);
   const broadMarket=ownerWeb||!extra.newsArticleId&&currentUSMarketIntent(question);
-  if(!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
+  if(!broadMarket&&!discovery&&!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
    waiting.textContent='טיוטה ליומן המסחר';
    const answer='נפתחה טיוטת עסקה לבדיקה. השמירה מתבצעת רק בכפתור השמירה בטיוטה.';
    conversation.push({role:'user',content:question},{role:'assistant',content:answer});chatHistory.complete(conversation);conversation=conversation.slice(-400);
@@ -233,7 +235,16 @@ async function ask(q,extra={}){
    return;
   }
 
-  const command=!broadMarket&&!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
+  const command=!discovery&&!broadMarket&&!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
+  const requestedAsset=!broadMarket&&!discovery&&!extra.newsArticleId&&!extra.retryPayload?questionAsset(intentQuestion):null;
+  const assetChanged=requestedAsset&&!sameChatAsset(requestedAsset,normSymbol());
+  if(!command?.actions?.some(a=>a.type==='symbol')&&(assetChanged||requestedAsset&&!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))){
+   waiting.textContent='טוען נתונים של '+requestedAsset+' לשאלה הנוכחית…';
+   const switched=await runChatActions([{type:'symbol',symbol:requestedAsset}],{signal:activeController.signal,epoch});
+   localReceipt=switched.messages?.join('\n')||'';
+   if(epoch!==conversationEpoch)return;
+   if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))throw Error('לא התקבלו נתונים למניה שהתבקשה; לא ייעשה שימוש בנתוני המניה הקודמת.');
+  }
   if(command?.unresolvedSymbol||command?.recognized&&!command.actions.length&&/לא לבצע פעולה/.test(command.message||'')){waiting.textContent=command.message||'לא בוצע שינוי בגרף.';return;}
   if(command?.recognized&&command.actions.length){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
@@ -255,7 +266,7 @@ async function ask(q,extra={}){
    waiting.textContent='מכין תשובה לשאלה שלך…';
   }
   if(authState.enabled&&!authState.authenticated)throw Object.assign(Error("יש להיכנס לחשבון כדי לקבל תשובת AI. השאלה שלך נשמרה."),{code:'sign_in_required'});
-  const analyzeChart=!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(intentQuestion,{command});
+  const analyzeChart=!discovery&&!broadMarket&&!extra.retryPayload&&!extra.newsArticleId&&requestsChartAnalysis(intentQuestion,{command});
   if(analyzeChart){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value)){
     if(commandLoadAttempted)throw Error('אין עדיין נרות תואמים לניתוח. טעינת הנתונים לא הצליחה; לא נשלחה בקשה למודל.');
@@ -268,7 +279,7 @@ async function ask(q,extra={}){
    localReceipt=[localReceipt,'הגרף של '+loaded.symbol+' מוכן: '+(loaded.context.bars||loaded.bars?.length)+' נרות בשרת · '+loaded.source+' · '+loaded.interval+' · נר אחרון: '+loaded.context.date+'.'].filter(Boolean).join('\n');
   }
   const learningQuestion=isLearningQuestion(intentQuestion);
-  const context=broadMarket||learningQuestion?null:currentContext();
+  const context=broadMarket||discovery||learningQuestion?null:currentContext();
   const activeData=context&&loaded?.symbol===normSymbol()?loaded:null;
   let allowIntrinioHistory=false;
   // The server independently enforces this gate. Check before screenshots or
@@ -293,17 +304,17 @@ async function ask(q,extra={}){
   }
   if(!authState.enabled&&code.length<24)throw Error("קוד הגישה הפרטי ל-AI חייב לכלול לפחות 24 תווים");
   let image=null;
-  const candidate=broadMarket?null:chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if(activeData?.presentation==='server-raster')return localChart.snapshot();if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
+  const candidate=broadMarket||discovery?null:chartAttachment({manual:extra.image||null,auto:$('chatAutoChart')?.checked===true&&/(?:תמונה|צילום|מה רואים|\b(?:image|screenshot|visual)\b)/iu.test(question),hasMatchingData:!!activeData,snapshot:()=>{if(activeData?.presentation==='server-raster')return localChart.snapshot();if($('localChartCanvas').getBoundingClientRect().width<1)return lastVisibleChart?.symbol===activeData.symbol&&lastVisibleChart?.bars===activeData.bars?lastVisibleChart.image:null;return localChart.snapshot()}});
   if(candidate)image=await shrinkImage(candidate);
   if(epoch!==conversationEpoch)return;
   if(activeController.signal.aborted)throw new DOMException('Cancelled','AbortError');
   preparedPayload=preparedPayload||{
     message:question,
     language:requestLanguage,
-    chartControl:!broadMarket&&!extra.newsArticleId&&!localReceipt&&requestsChartControl(intentQuestion),
+    chartControl:!discovery&&!broadMarket&&!extra.newsArticleId&&!localReceipt&&requestsChartControl(intentQuestion),
     chartRevision,
     chartToolReceipt:localReceipt,
-    symbol:broadMarket?'':activeData?.symbol||normSymbol(),
+    symbol:broadMarket||discovery?'':activeData?.symbol||normSymbol(),
     source:activeData?.source||"none",
     interval:activeData?.interval||$('marketInterval').value||"1day",
     receivedAt:activeData?.receivedAt||null,
@@ -322,7 +333,7 @@ async function ask(q,extra={}){
   // Model time starts only after authentication and chart preparation finish.
   clearTimeout(requestTimeout);
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
-  if(broadMarket){
+  if(broadMarket||discovery){
    preparedPayload={message:question,language:requestLanguage,webSearch:false};
    localReceipt='';
   }

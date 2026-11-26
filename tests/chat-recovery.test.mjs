@@ -1,3 +1,4 @@
+import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../chat-asset-intent.mjs';
 import {chatAnswerText} from '../chat-answer-presentation.mjs';
 import {isLearningQuestion} from '../chat-request-intent.mjs';
 import {currentUSMarketIntent} from '../chat-market-intent.mjs';
@@ -24,10 +25,12 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.chatAnswerText=chatAnswerText;ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
+ ctx.questionAsset=questionAsset;ctx.sameChatAsset=sameChatAsset;ctx.stockDiscoveryIntent=stockDiscoveryIntent;ctx.chatAnswerText=chatAnswerText;ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
+ ctx.chartSymbol=ctx.$('symbol');ctx.chartSymbol.value='AAPL';
+ ctx.runChatActions=async actions=>{ctx.chartSymbol.value=actions[0].symbol;await ctx.loadMarketData();return {changed:true,messages:[]}};
  ctx.$('marketInterval').value='1day';ctx.window.dispatchEvent=()=>{};
  ctx.intrinioFeed=Promise.resolve({enabled:false,aiAnalysisEnabled:false});
  ctx.providerFeed={get:async()=>({intrinio:await ctx.intrinioFeed})};
@@ -489,4 +492,22 @@ test('hypothetical scanner and compounding lessons reach chat without an inciden
   assert.equal(sent.source,'none');assert.equal(sent.useServerMarket,false);assert.equal(sent.chartToolReceipt,'');assert.equal(sent.bars,null);
   assert.doesNotMatch(s.bubbles[1].textContent,/הבקשה כוללת הוראה לא לבצע פעולה/);
  }
+});
+
+test('a scanner request drops the selected chart, its receipt and history without deleting the conversation',async()=>{
+ const s=setup();s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;
+ s.ctx.conversation=[{role:'user',content:'ACMR old levels',chartContext:{symbol:'ACMR',source:'Twelve Data'}}];
+ await s.ctx.ask('אני רוצה שתתן לי שלוש מניות לשורט או לונג');
+ assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,undefined);assert.equal(p.history,undefined);assert.equal(p.useServerMarket,undefined);assert.equal(p.scannerContext,undefined);assert.ok(s.ctx.conversation.length>=1);
+});
+test('switching named stocks loads the new asset and preserves the same conversation',async()=>{
+ const s=setup();s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;
+ s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;
+ s.ctx.conversation=[{role:'user',content:'על ACMR',chartContext:{symbol:'ACMR',source:'Twelve Data'}}];
+ await s.ctx.ask('מה דעתך על טסלה?');
+ assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,'NASDAQ:TSLA');assert.equal(p.useServerMarket,true);assert.equal(s.ctx.loaded.symbol,'NASDAQ:TSLA');assert.ok(p.history.some(m=>m.content==='על ACMR'));
+});
+test('failed stock switching never sends the previous asset to the model',async()=>{
+ const s=setup();s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;s.ctx.loaded=analysisData('ACMR');s.ctx.loadMarketData=async()=>{throw Error('new asset unavailable')};
+ await s.ctx.ask('מה דעתך על TSLA');assert.equal(s.payloads.length,0);assert.match(s.bubbles[1].textContent,/new asset unavailable/);
 });

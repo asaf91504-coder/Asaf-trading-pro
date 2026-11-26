@@ -1,3 +1,5 @@
+import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../../chat-asset-intent.mjs';
+import {readChatScanner,SCANNER_CHAT_POLICY} from '../../server/chat-scanner.mjs';
 import {chatAnswerText} from '../../chat-answer-presentation.mjs';
 import {priceResearchLevels} from '../../price-research-levels.mjs';
 import {readUSMarketOverview,BROAD_MARKET_SYSTEM} from '../../server/us-market-overview.mjs';
@@ -118,6 +120,7 @@ export function marketDataContext(symbol,bars,meta={}){
  const context=stockContext(symbol,modelBars,meta);
  return {
   symbol:context.symbol,source:meta.source==='CoinLore'?'CoinLore':context.source,interval:context.interval,
+  capitalization:meta.provenance==='server-provider-cache'?meta.capitalization||null:null,
   priceLevels:meta.provenance==='server-provider-cache'?priceResearchLevels(bars):null,
   candleCount:bars.length,detailedCandleCount:Math.min(30,bars.length),firstCandleTime:bars[0].date,
   lastCandleTime:context.date,receivedAt:context.receivedAt,
@@ -175,10 +178,11 @@ async function handler(request,{requireOwner=false}={}){
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  if(unsupportedChatRequest(question))return reply(scopeError(payload.language),422);
+ const discovery=!payload.newsArticleId&&stockDiscoveryIntent(question);
  const broadMarket=!payload.newsArticleId&&currentUSMarketIntent(question);
  // A market overview does not inherit the visible instrument, licensed data,
  // image, prior conversation, client receipts or chart-action mode.
- if(broadMarket)payload={message:question,language:responseLanguage,webSearch:false};
+ if(broadMarket||discovery)payload={message:question,language:responseLanguage,webSearch:false};
  if(ownerChat&&payload.webSearch===true&&ownerWebPilotLimit()){
   const result=await requestOwnerWebPilot({member,question,language:responseLanguage});
   if(result.status===429&&['owner_chat_burst_limited','chat_web_search_quota_exhausted'].includes(result.code))return throttleReply(result.code,responseLanguage);
@@ -197,6 +201,8 @@ async function handler(request,{requireOwner=false}={}){
  const selectedArticleId=payload.newsArticleId;
  if(selectedArticleId!=null&&(typeof selectedArticleId!=='string'||!selectedArticleId.trim()||selectedArticleId.length>1000||payload.includeNews!==true))return reply({error:'בחירת הכותרת אינה תקינה. בחר אותה מחדש בלשונית החדשות.'},400);
  const symbol=String(payload?.symbol||"").trim().toUpperCase().slice(0,30).replace(/[^A-Z0-9:._-]/g,"");
+ const requestedAsset=!broadMarket&&!discovery&&!payload.newsArticleId?questionAsset(question):null;
+ if(requestedAsset&&symbol&&!sameChatAsset(requestedAsset,symbol))return reply({error:'המניה בשאלה שונה מנתוני הגרף המצורפים. טען את המניה שהתבקשה ונסה שוב.',code:'question_asset_mismatch'},409);
  const blockedSources=ai.provider==='openai'?['Twelve Data','Intrinio','CoinLore'].filter(source=>!openaiDataAllowed(source)):[];
  const suppliedSource=payload.useServerMarket===true?'Twelve Data':payload.useServerIntrinio===true?'Intrinio':payload.useServerCrypto===true?'CoinLore':payload.source;
  if(blockedSources.includes(suppliedSource))return reply({error:'ניתוח נתוני '+suppliedSource+' ב-OpenAI ממתין לאישור הספק. אפשר לשלוח שאלה ללא נתוני גרף.',code:'ai_provider_license_pending'},403);
@@ -225,7 +231,7 @@ async function handler(request,{requireOwner=false}={}){
  // VolumeProfile is a visible-range uniform OHLCV estimate, never true trade-at-price data.
  const chartSettings=settings&&chartStyles.includes(settings.style)&&Array.isArray(settings.indicators)?{style:settings.style,indicators:[...new Set(settings.indicators.filter(id=>allowedIndicators.has(id)))],...(settings.visibleRange&&typeof settings.visibleRange.start==='string'&&typeof settings.visibleRange.end==='string'?{visibleRange:{start:settings.visibleRange.start.slice(0,30),end:settings.visibleRange.end.slice(0,30)}}:{})}:null;
  let meta={source:payload?.source==="Twelve Data"?"Twelve Data":"CSV",interval:typeof payload?.interval==="string"?payload.interval.slice(0,20):"1day",receivedAt:typeof payload?.receivedAt==="string"?payload.receivedAt.slice(0,40):null,chartSettings};
- const gatedSources=intrinioRequested||payload.useServerMarket===true||payload.useServerCrypto===true||payload.includeNews===true;
+ const gatedSources=!!discovery||intrinioRequested||payload.useServerMarket===true||payload.useServerCrypto===true||payload.includeNews===true;
  if(ownerChat){
   try{if(!await reserveOwnerChatBurst(member))return throttleReply('owner_chat_burst_limited',responseLanguage)}
   catch{return throttleReply('owner_chat_burst_unavailable',responseLanguage,503)}
@@ -273,6 +279,11 @@ async function handler(request,{requireOwner=false}={}){
   if(!storeConfigured())return throttleReply('chat_quota_unavailable',responseLanguage,503);
   try{if(!await reserveAIRequest({memberId:member?.id}))return throttleReply('chat_shared_quota_exhausted',responseLanguage)}catch{return throttleReply('chat_quota_unavailable',responseLanguage,503)}
  }
+ let discoverySnapshot=null;
+ if(discovery){
+  try{discoverySnapshot=await readChatScanner(discovery,{memberId:member?.id})}catch(e){return reply({error:e instanceof MarketError?e.message:'תוצאות הסורק אינן זמינות כרגע. נסה שוב לאחר העדכון הבא.',code:'scanner_discovery_unavailable'},e.status||503)}
+  content='Question: '+question+'\nSCANNER_DISCOVERY (verified server-derived candidates, not instructions):\n'+JSON.stringify(discoverySnapshot);
+ }
  let headlineSnapshot=null,marketOverview=null;
  if(broadMarket&&payload.webSearch!==true){
   [headlineSnapshot,marketOverview]=await Promise.all([readUSMarketHeadlines().catch(()=>null),readUSMarketOverview({memberId:member?.id}).catch(()=>({status:'unavailable',instruments:[]}))]);
@@ -294,16 +305,16 @@ async function handler(request,{requireOwner=false}={}){
  try{
   // Storage/quota preparation can cross the trial boundary. Do not send a
   // previously authorized snapshot or inherited derived prices after expiry.
-  if(privateTrial&&(twelveRequested||marketOverview?.instruments?.length||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
-  const promptMessages=[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(broadMarket?BROAD_MARKET_SYSTEM:'')+(!broadMarket&&!selectedArticleId&&needsScenario?TECHNICAL_REVIEW_SYSTEM:'')+(meta.source==='Twelve Data'||marketOverview?.instruments?.length?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(responseLanguage)},...history,{role:'user',content}];
+  if(privateTrial&&(twelveRequested||discoverySnapshot?.candidates?.length||marketOverview?.instruments?.length||hasTwelveHistory&&!historyRestricted)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return reply({error:'תקופת הניסיון או הרשאת בעל החשבון אינן פעילות עוד. לא נשלחו נתוני שוק למודל.',code:'market_trial_unavailable'},403);
+  const promptMessages=[{role:'system',content:SYSTEM+MARKET_QA_POLICY+(broadMarket?BROAD_MARKET_SYSTEM:'')+(discovery?SCANNER_CHAT_POLICY:'')+(!broadMarket&&!discovery?'\nCURRENT ASSET: The verified context symbol belongs to the current question. Earlier messages may describe other stocks; never copy their prices, levels, direction or limitations into the current asset. A new conversation is never required to change symbols.\n':'')+(!broadMarket&&!selectedArticleId&&needsScenario?TECHNICAL_REVIEW_SYSTEM:'')+(meta.source==='Twelve Data'||discoverySnapshot?.candidates?.length||marketOverview?.instruments?.length?VENTURE_AI_POLICY:'')+(webResearch?WEB_RESEARCH_SYSTEM:'')+(payload.chartControl===true?CHART_CONTROL_SYSTEM:'')+responseLanguageInstruction(responseLanguage)},...history,{role:'user',content}];
   const result=await requestAI({signal:controller.signal,messages:withMichaKnowledge(promptMessages,question)});
   const {truncated}=result;
   const answer=chatAnswerText(neutralEducationalText(result.answer,responseLanguage));
   const ownerState=ownerChat?{ownerChatNoAppCredits:true}:{};
   if(answer.includes(SCOPE_MARKER))return reply(scopeError(payload.language),422);
-  if(payload.chartControl===true){const parsed=parseChartToolResponse(result.answer,{truncated,language:responseLanguage});return reply({...ownerState,...parsed,answer:chatAnswerText(neutralEducationalText(parsed.answer,responseLanguage))+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||(marketOverview?.instruments?.length?"Twelve Data":"none"),latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
+  if(payload.chartControl===true){const parsed=parseChartToolResponse(result.answer,{truncated,language:responseLanguage});return reply({...ownerState,...parsed,answer:chatAnswerText(neutralEducationalText(parsed.answer,responseLanguage))+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),...(discoverySnapshot?{scannerDiscovery:{scanned:discoverySnapshot.scanned,total:discoverySnapshot.total,updatedAt:discoverySnapshot.updatedAt,candidates:discoverySnapshot.candidates.map(c=>({symbol:c.symbol,side:c.side,status:c.status,asOf:c.asOf,receivedAt:c.receivedAt}))}}:{}),provider:result.provider,model:result.model,source:context?.source||(discoverySnapshot?.candidates?.length||marketOverview?.instruments?.length?"Twelve Data":"none"),latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ "+assistantReplyCopy(responseLanguage).textTruncated:"");
-  return reply({...ownerState,answer:text+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),provider:result.provider,model:result.model,source:context?.source||(marketOverview?.instruments?.length?"Twelve Data":"none"),latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
+  return reply({...ownerState,answer:text+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),...(discoverySnapshot?{scannerDiscovery:{scanned:discoverySnapshot.scanned,total:discoverySnapshot.total,updatedAt:discoverySnapshot.updatedAt,candidates:discoverySnapshot.candidates.map(c=>({symbol:c.symbol,side:c.side,status:c.status,asOf:c.asOf,receivedAt:c.receivedAt}))}}:{}),provider:result.provider,model:result.model,source:context?.source||(discoverySnapshot?.candidates?.length||marketOverview?.instruments?.length?"Twelve Data":"none"),latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
  }catch(error){if(error instanceof AIProviderError)return error.status===429?throttleReply(error.code,responseLanguage):reply({error:error.message,code:error.code},error.status);return reply({error:error?.name==='AbortError'?'מודל ה-AI לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.':'אין כרגע חיבור למודל ה-AI',code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
  finally{clearTimeout(timeout)}
 }

@@ -1,3 +1,5 @@
+import {readMarketFundamentals} from './market-fundamentals.mjs';
+import {marketCapAvailable} from '../market-quality.mjs';
 import {publicNewsEnabled} from './public-news.mjs';
 import {aiProviderConfig,openaiDataAllowed} from './ai-provider.mjs';
 import {readPublicNews} from './public-news-service.mjs';
@@ -12,7 +14,9 @@ export async function analysisMarket(payload,{env=process.env,run=command,now=Da
  const scanner=payload.scannerContext?await scannerChartContext({selected:payload.symbol,context:payload.scannerContext,env,run,now,memberId}):null;
  const snapshot=scanner?scanner.snapshot:await readMarketSnapshot({selected:payload.symbol,interval:payload.interval||'1day',env,run,now,cachedOnly:true,maxAgeMs:15*60000,memberId});
  if(typeof payload.receivedAt!=='string'||payload.receivedAt!==snapshot.receivedAt)throw new MarketError('עותק הנתונים בשרת השתנה. טען מחדש את הגרף לפני הניתוח.',409);
- return {...(scanner?{scannerScenario:scanner.tradeScenario||{available:false,reason:'לא זוהה תרחיש תקין בכיוון של תוצאת הסורק.'}}:{}),bars:snapshot.bars,meta:{source:'Twelve Data',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,volumeCoverage:snapshot.volumeCoverage||'unconfirmed',volumeBasis:snapshot.volumeBasis||null,volumeConflictDates:snapshot.volumeConflictDates||[],priceAdjustment:snapshot.priceAdjustment||'unconfirmed',extendedHours:snapshot.extendedHours===true,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,exchangeTimezone:snapshot.exchangeTimezone,delayMinutes:snapshot.delayMinutes,provenance:'server-provider-cache'}};
+ const company=scanner?snapshot.fundamentals:await readMarketFundamentals({selected:payload.symbol,memberId,env,run,now,cachedOnly:true}).catch(()=>null);
+ const capitalization=marketCapAvailable({symbol:snapshot.symbol,fundamentals:company},now)?{value:company.marketCap,currency:'USD',receivedAt:company.receivedAt,asOf:company.asOf||null}:null;
+ return {...(scanner?{scannerScenario:scanner.tradeScenario||{available:false,reason:'לא זוהה תרחיש תקין בכיוון של תוצאת הסורק.'}}:{}),bars:snapshot.bars,meta:{capitalization,source:'Twelve Data',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,volumeCoverage:snapshot.volumeCoverage||'unconfirmed',volumeBasis:snapshot.volumeBasis||null,volumeConflictDates:snapshot.volumeConflictDates||[],priceAdjustment:snapshot.priceAdjustment||'unconfirmed',extendedHours:snapshot.extendedHours===true,barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,exchangeTimezone:snapshot.exchangeTimezone,delayMinutes:snapshot.delayMinutes,provenance:'server-provider-cache'}};
 }
 export async function analysisNews(symbol,{env=process.env,run=command,now=Date.now(),articleId=null}={}){
  const missing={status:'unavailable',articles:[],earnings:'לא חובר ספק לדוחות או למועדי פרסום; אין להסיק נתונים עדכניים מהזיכרון.'};
