@@ -1,5 +1,5 @@
 import {approvedMarketSymbols} from '../../server/market-feed.mjs';
-import {previousScannerSymbols} from '../../chat-discovery-context.mjs';
+import {previousScannerSymbols,resolveDiscoveryContext} from '../../chat-discovery-context.mjs';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../../chat-asset-intent.mjs';
 import {readChatScanner,SCANNER_CHAT_POLICY} from '../../server/chat-scanner.mjs';
 import {chatAnswerText} from '../../chat-answer-presentation.mjs';
@@ -180,9 +180,10 @@ async function handler(request,{requireOwner=false}={}){
  const question=typeof payload?.message==="string"?payload.message.trim():"";
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  if(unsupportedChatRequest(question))return reply(scopeError(payload.language),422);
- const discovery=!payload.newsArticleId&&stockDiscoveryIntent(question);
+ let discovery=!payload.newsArticleId&&stockDiscoveryIntent(question);
  if(discovery?.side==='invalid')return reply({error:'יש לבחור כיוון לונג או שורט.',code:'scanner_direction_invalid'},422);
  if(discovery?.unsupportedCriteria)return reply({error:'הבקשה כוללת מסננים שעדיין אינם נתמכים בצ׳אט. אפשר להגדיר אותם בסורק המניות.',code:'scanner_criteria_unsupported'},422);
+ discovery=resolveDiscoveryContext(discovery,payload.history,question);
  const excludedSymbols=discovery?.more?previousScannerSymbols(payload.history,approvedMarketSymbols()):[];
  const broadMarket=!payload.newsArticleId&&currentUSMarketIntent(question);
  // A market overview does not inherit the visible instrument, licensed data,
