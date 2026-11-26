@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../chat-asset-intent.mjs';
 test('current question selects explicit stock or crypto independently of chart/history',()=>{
- for(const [q,s] of [['מה דעתך על TSLA','TSLA'],['מה קורה עם מניית ACMR','ACMR'],['ומה עם IREN?','IREN'],['מה דעתך על טסלה','TSLA'],['תנתח את אנבידיה','NVDA'],['מה דעתך על ביטקוין','BTCUSD'],['ומה עם אתריום?','ETHUSD'],['what about $ZZZZ?','ZZZZ'],['מה דעתך על iren','IREN']])assert.equal(questionAsset(q)?.split(':').at(-1),s,q);
+ for(const [q,s] of [['מה דעתך על TSLA','TSLA'],['מה קורה עם מניית ACMR','ACMR'],['ומה עם IREN?','IREN'],['מה דעתך על טסלה','TSLA'],['תנתח את אנבידיה','NVDA'],['מה דעתך על ביטקוין','BTCUSD'],['ומה עם אתריום?','ETHUSD'],['what about $ZZZZ?','ZZZZ'],['מה דעתך על iren','IREN'],['מה דעתך על ZZZZ','ZZZZ']])assert.equal(questionAsset(q)?.split(':').at(-1),s,q);
  for(const q of ['מה זה ATR?','מה ההבדל בין RSI ל-MACD?','מה דעתך על TSLA ו-AMD','תרגיל היפותטי: נתח TSLA','מה קורה בשוק היום'])assert.equal(questionAsset(q),null,q);
  assert.equal(sameChatAsset('NASDAQ:TSLA','TSLA'),true);assert.equal(sameChatAsset('TSLA','AMD'),false);
 });

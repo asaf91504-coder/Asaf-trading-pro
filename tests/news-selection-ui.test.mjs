@@ -1,3 +1,4 @@
+import {newsRefreshInterval} from '../news-refresh-policy.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -11,7 +12,7 @@ function fixture({responses=[]}={}){
  function element(){const events={};return {children:[],value:'',checked:false,textContent:'',append(...items){this.children.push(...items)},before(){},replaceChildren(){this.children=[]},setAttribute(){},addEventListener(type,fn){(events[type]??=[]).push(fn)},emit(type){return Promise.all((events[type]||[]).map(fn=>fn()))}}}
  const $=id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)};
  const tab=element(),doc=element(),win=element();tab.active=true;tab.getAttribute=()=>String(tab.active);doc.hidden=false;$('symbol').value='NASDAQ:AAPL';$('newsForSymbol').checked=true;
- const ctx={$,normalizeSymbol,filterCachedNews,document:Object.assign(doc,{documentElement:{lang:'he'},createElement:element,querySelector:()=>tab}),window:Object.assign(win,{dispatchEvent(){}}),URL,AbortSignal,AbortController,Date:FakeDate,setTimeout:(fn,ms)=>{const id=++nextTimer;if(![18000,55000].includes(ms)){timer=fn;interval=ms;timerId=id}return id},clearTimeout:id=>{if(id===timerId)timer=null},location:{href:'https://example.test/'},fetch:async(url,options)=>{requestOptions.push({url,options});const next=responses[requests++];if(next)return next;return {ok:true,json:async()=>({enabled:true,updatedAt:'2026-11-10T08:00:00Z',articles:[{id:'apple',title:'Apple headline',url:'https://example.test/apple',symbols:['AAPL'],source:'Test',publishedAt:'2026-11-10T07:00:00Z'},{id:'nvidia',title:'Nvidia headline',url:'https://example.test/nvidia',symbols:['NVDA'],source:'Test',publishedAt:'2026-11-10T07:00:00Z'}]})}}};
+ const ctx={$,normalizeSymbol,filterCachedNews,newsRefreshInterval,document:Object.assign(doc,{documentElement:{lang:'he'},createElement:element,querySelector:()=>tab}),window:Object.assign(win,{dispatchEvent(){}}),URL,AbortSignal,AbortController,Date:FakeDate,setTimeout:(fn,ms)=>{const id=++nextTimer;if(![18000,55000].includes(ms)){timer=fn;interval=ms;timerId=id}return id},clearTimeout:id=>{if(id===timerId)timer=null},location:{href:'https://example.test/'},fetch:async(url,options)=>{requestOptions.push({url,options});const next=responses[requests++];if(next)return next;return {ok:true,json:async()=>({enabled:true,updatedAt:'2026-11-10T08:00:00Z',articles:[{id:'apple',title:'Apple headline',url:'https://example.test/apple',symbols:['AAPL'],source:'Test',publishedAt:'2026-11-10T07:00:00Z'},{id:'nvidia',title:'Nvidia headline',url:'https://example.test/nvidia',symbols:['NVDA'],source:'Test',publishedAt:'2026-11-10T07:00:00Z'}]})}}};
  vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('let newsLoaded='),source.indexOf('// Explicit account copies:')),ctx);
  return {ctx,$,tab,doc,requestOptions,advance:ms=>{now+=ms},tick:()=>{const due=timer;timer=null;return due?.()},delay:()=>interval,requests:()=>requests,titles:()=> $('newsFeed').children.map(card=>card.children[0]?.textContent)};
 }
@@ -93,4 +94,11 @@ test('refresh retains the selected language and translated headlines',async()=>{
  const s=fixture({responses:[translatedResponse('רווחי אפל עולים','he'),translatedResponse('מניית אפל עולה','he')]});
  await s.ctx.loadNews();await s.$('newsRefresh').onclick();assert.deepEqual(s.titles(),['מניית אפל עולה']);
  assert.ok(s.requestOptions.every(r=>r.url.endsWith('lang=he')));
+});
+
+
+test('temporary translation failures recover automatically after 45 seconds rather than waiting 15 minutes',async()=>{
+ const failed={ok:true,json:async()=>({enabled:true,translation:'unavailable',translationReason:'provider_400',articles:[{id:'apple',title:'Apple earnings rise',symbols:['AAPL'],url:'https://example.test/apple',source:'Fixture',publishedAt:'2026-11-10T07:00:00Z'}]})};
+ const s=fixture({responses:[failed,translatedResponse('רווחי אפל עולים','he')]});await s.ctx.loadNews();assert.equal(s.delay(),45000);
+ s.advance(45000);await s.tick();assert.deepEqual(s.titles(),['רווחי אפל עולים']);assert.equal(s.delay(),900000);assert.equal(s.requests(),2);
 });

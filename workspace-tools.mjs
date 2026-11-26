@@ -1,3 +1,4 @@
+import {newsRefreshInterval} from './news-refresh-policy.mjs';
 import {toggleKeyboardHelp} from './workspace-navigation.mjs';
 import {filterCachedNews} from './news-search.mjs';
 import {authState,refreshAuth} from './auth-ui.mjs';
@@ -27,7 +28,6 @@ $('symbol').addEventListener('input',()=>{$('activeSymbol').textContent=normaliz
 // Keyboard shortcuts never intercept text entry or browser modifier shortcuts.
 document.addEventListener('keydown',e=>{if(document.querySelector('dialog[open]')||document.documentElement.dataset.disableShortcuts==='true'||e.ctrlKey||e.metaKey||e.altKey||e.target.closest('input,textarea,select,[contenteditable="true"]'))return;if(e.key==='/'){e.preventDefault();document.querySelector('[data-tab="charts"]').click();$('symbol').focus();$('symbol').select()}else if(e.key==='?'){e.preventDefault();toggleKeyboardHelp($('keyboardHelp'))}});
 let newsLoaded=false,newsBusy=false,newsSnapshot=null,newsLastAttempt=-Infinity,newsTimer=null,newsEpoch=0,newsController=null;
-const NEWS_REFRESH_MS=15*60*1000;
 const newsLabels={"he": ["הכותרות תורגמו אוטומטית לשפה שבחרת.", "תרגום הכותרות בהכנה. מוצגות כותרות המקור; אפשר לרענן בעוד רגע.", "התרגום אינו זמין כרגע. מוצגות כותרות המקור.", "כותרת מקורית", "לכתבה המלאה ↗"], "ar": ["تُرجمت العناوين تلقائيًا إلى اللغة التي اخترتها.", "الترجمة قيد الإعداد. تظهر العناوين الأصلية؛ حدّث الصفحة بعد قليل.", "الترجمة غير متاحة حاليًا. تظهر العناوين الأصلية.", "العنوان الأصلي", "قراءة المقال الكامل ↗"], "de": ["Die Schlagzeilen wurden automatisch in die gewählte Sprache übersetzt.", "Übersetzung läuft. Originaltitel werden angezeigt; bitte gleich aktualisieren.", "Übersetzung nicht verfügbar. Originaltitel werden angezeigt.", "Originaltitel", "Vollständigen Artikel lesen ↗"], "en": ["Headlines are automatically translated into your selected language.", "Translation is in progress. Original headlines are shown; refresh shortly.", "Translation is unavailable. Original headlines are shown.", "Original headline", "Read full article ↗"], "es": ["Los titulares se traducen automáticamente al idioma elegido.", "Traducción en curso. Se muestran los titulares originales; actualiza en un momento.", "Traducción no disponible. Se muestran los titulares originales.", "Titular original", "Leer artículo completo ↗"], "fr": ["Les titres sont traduits automatiquement dans la langue choisie.", "Traduction en cours. Les titres originaux sont affichés ; actualisez dans un instant.", "Traduction indisponible. Les titres originaux sont affichés.", "Titre original", "Lire l’article complet ↗"], "ja": ["見出しは選択した言語に自動翻訳されています。", "翻訳中です。元の見出しを表示しています。しばらくして更新してください。", "翻訳を利用できません。元の見出しを表示しています。", "元の見出し", "記事全文を読む ↗"], "pt": ["Os títulos foram traduzidos automaticamente para o idioma escolhido.", "Tradução em andamento. Os títulos originais são exibidos; atualize em breve.", "Tradução indisponível. Os títulos originais são exibidos.", "Título original", "Ler artigo completo ↗"], "ru": ["Заголовки автоматически переведены на выбранный язык.", "Идёт перевод. Показаны оригинальные заголовки; обновите страницу чуть позже.", "Перевод недоступен. Показаны оригинальные заголовки.", "Оригинальный заголовок", "Читать статью полностью ↗"], "zh": ["标题已自动翻译为您选择的语言。", "正在翻译。当前显示原标题，请稍后刷新。", "暂时无法翻译，显示原标题。", "原标题", "阅读全文 ↗"]};
 
 const newsText=i=>(newsLabels[newsLanguage()]||newsLabels.he)[i];
@@ -54,19 +54,19 @@ const labels=statusLabels[requestedLanguage]||statusLabels.he;const formatted=va
 $('newsFeedStatus').setAttribute('translate','no');$('newsFeedStatus').textContent=data.enabled?[data.updatedAt?labels[0]+': '+formatted(data.updatedAt):labels[3],data.stale?labels[4]:'',data.lastScheduledAt?labels[1]+': '+formatted(data.lastScheduledAt):'',data.mode==='public-rss'?labels[2]:''].filter(Boolean).join(' · '):labels[3];newsSnapshot=data;renderNews();newsLoaded=true;
 if(data.enabled&&data.articles?.length&&data.mode==='public-rss'&&['pending','partial'].includes(data.translation)&&!data.translationReason){
  newsSnapshot={...data,translation:'pending'};renderNews();
- try{for(let attempt=0;attempt<60;attempt++){const result=await newsJson('/.netlify/functions/news?lang='+encodeURIComponent(requestedLanguage),signal,55000);if(epoch===newsEpoch&&!signal.aborted&&requestedLanguage===newsLanguage()){newsSnapshot=result;renderNews()}if(epoch!==newsEpoch||signal.aborted||requestedLanguage!==newsLanguage()||!['pending','partial'].includes(result.translation)||result.translationReason)break;if(['pending','partial'].includes(result.translation))await new Promise(resolve=>setTimeout(resolve,3000));}}catch{if(epoch===newsEpoch&&!signal.aborted&&requestedLanguage===newsLanguage()){newsSnapshot={...data,translation:'unavailable'};renderNews()}}
+ try{for(let attempt=0;attempt<60;attempt++){const result=await newsJson('/.netlify/functions/news?lang='+encodeURIComponent(requestedLanguage),signal,55000);if(epoch===newsEpoch&&!signal.aborted&&requestedLanguage===newsLanguage()){newsSnapshot=result;renderNews()}if(epoch!==newsEpoch||signal.aborted||requestedLanguage!==newsLanguage()||!['pending','partial'].includes(result.translation)||result.translationReason)break;if(['pending','partial'].includes(result.translation))await new Promise(resolve=>setTimeout(resolve,3000));}}catch{if(epoch===newsEpoch&&!signal.aborted&&requestedLanguage===newsLanguage()){newsSnapshot={...(newsSnapshot||data),translation:'unavailable'};renderNews()}}
 }
-}catch(err){if(epoch===newsEpoch&&!signal.aborted)$('newsFeedStatus').textContent=err.message}finally{if(epoch===newsEpoch){newsBusy=false;newsController=null;$('newsRefresh').disabled=false;if(requestedLanguage!==newsLanguage())loadNews()}}}
+}catch(err){if(epoch===newsEpoch&&!signal.aborted)$('newsFeedStatus').textContent=err.message}finally{if(epoch===newsEpoch){newsBusy=false;newsController=null;$('newsRefresh').disabled=false;scheduleNewsRefresh();if(requestedLanguage!==newsLanguage())loadNews()}}}
 function scheduleNewsRefresh(){
  if(newsTimer!==null)clearTimeout(newsTimer);
- newsTimer=setTimeout(()=>{newsTimer=null;return refreshVisibleNews()},Math.max(0,NEWS_REFRESH_MS-(Date.now()-newsLastAttempt)));
+ newsTimer=setTimeout(()=>{newsTimer=null;return refreshVisibleNews()},Math.max(0,newsRefreshInterval(newsSnapshot)-(Date.now()-newsLastAttempt)));
 }
 function refreshVisibleNews(){
  if(document.hidden||document.querySelector('[data-tab="news"]')?.getAttribute('aria-selected')!=='true')return;
- if(Date.now()-newsLastAttempt>=NEWS_REFRESH_MS)return loadNews();
+ if(Date.now()-newsLastAttempt>=newsRefreshInterval(newsSnapshot))return loadNews();
  if(newsTimer===null)scheduleNewsRefresh();
 }
-$('newsRefresh').onclick=loadNews;document.querySelector('[data-tab="news"]').addEventListener('click',()=>{if(!newsLoaded)return loadNews();renderNews();if(!document.hidden&&Date.now()-newsLastAttempt>=NEWS_REFRESH_MS)return loadNews()});
+$('newsRefresh').onclick=loadNews;document.querySelector('[data-tab="news"]').addEventListener('click',()=>{if(!newsLoaded)return loadNews();renderNews();if(!document.hidden&&Date.now()-newsLastAttempt>=newsRefreshInterval(newsSnapshot))return loadNews()});
 document.addEventListener('visibilitychange',refreshVisibleNews);
 if(new URL(location.href).searchParams.get('tab')==='news')loadNews();
 

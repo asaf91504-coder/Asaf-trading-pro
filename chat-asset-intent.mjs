@@ -18,7 +18,7 @@ export function questionAsset(value){
   if(s.includes(':')||m[0].startsWith('$')||known.has(t))add(known.get(t)||s);
  }
  for(const m of text.matchAll(/(?:על|מניית|מנית|מניה|מנייה|סימול|\babout\b|\bstock\b)\s+\$?([a-z][a-z0-9.-]{1,13})(?![\p{L}\p{N}_])/giu)){
-  const s=m[1].toUpperCase();if(known.has(s)&&!ignored.has(s))add(known.get(s));
+  const s=m[1].toUpperCase();if(!ignored.has(s)&&(known.has(s)||m[1]===s))add(known.get(s)||s);
  }
  return found.size===1?[...found.values()][0]:null;
 }

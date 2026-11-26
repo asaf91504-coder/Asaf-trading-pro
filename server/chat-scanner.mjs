@@ -4,6 +4,7 @@ import {marketCapAvailable} from '../market-quality.mjs';
 import {aiProviderConfig,openaiDataAllowed} from './ai-provider.mjs';
 import {MarketError} from './market-feed.mjs';
 
+const rounded=value=>Number.isFinite(value)?Number(value.toFixed(2)):null;
 export async function readChatScanner(intent,{env=process.env,memberId=null,now=Date.now(),readScan=readSharedScan,...options}={}){
  if(env.ASAF_MARKET_AI_LICENSE_CONFIRMED!=='true'||aiProviderConfig(env).provider==='openai'&&!openaiDataAllowed('Twelve Data',env))throw new MarketError('ניתוח הסורק אינו פעיל לחשבון זה.',403);
  const scan=await readScan({...options,env,memberId,now});
@@ -16,12 +17,12 @@ export async function readChatScanner(intent,{env=process.env,memberId=null,now=
   const scenario=setup?.scenario,prior=record.bars.at(-2)?.close;
   ranked.push({rank:best.rank,symbol:record.symbol,side:best.side,status:best.status,
    asOf:s.date,interval:'1day',receivedAt:record.receivedAt,
-   changePercent:Number.isFinite(prior)&&prior>0?(s.close/prior-1)*100:null,
-   aboveMA20:s.aboveMA20,aboveMA150:s.aboveMA150,atrPercent:s.atrPercent,
+   changePercent:Number.isFinite(prior)&&prior>0?rounded((s.close/prior-1)*100):null,
+   aboveMA20:s.aboveMA20,aboveMA150:s.aboveMA150,atrPercent:rounded(s.atrPercent),
    marketCapUsd:marketCapAvailable(record,now)?record.fundamentals.marketCap:null,
-   relativeVolume:record.volumeComparison?.status==='verified'?record.volumeComparison.ratio:null,
+   relativeVolume:record.volumeComparison?.status==='verified'?rounded(record.volumeComparison.ratio):null,
    pattern:setup?{kind:setup.kind,stage:setup.stage}:null,
-   scenario:scenario?{entry:scenario.entry,stop:scenario.stop,target:scenario.target,movePercent:scenario.movePercent,riskReward:scenario.riskReward,side:scenario.side}:null,
+   scenario:scenario?{entry:rounded(scenario.entry),stop:rounded(scenario.stop),target:rounded(scenario.target),movePercent:rounded(scenario.movePercent),riskReward:rounded(scenario.riskReward),side:scenario.side}:null,
    missingConditions:best.reasons,checks:methodology.checks.map(({key,passed})=>({key,passed}))});
  }
  ranked.sort((a,b)=>b.rank-a.rank||a.symbol.localeCompare(b.symbol));

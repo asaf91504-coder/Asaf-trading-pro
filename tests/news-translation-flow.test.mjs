@@ -32,7 +32,7 @@ test('a public headline set queues one signed free translation and subsequent re
   const request=language=>new Request('https://example.test/.netlify/functions/news?lang='+language);
   const first=await(await news(request('he'))).json();assert.equal(first.translation,'pending');assert.equal(inference,0);assert.equal(queued.length,1);
   await news(request('he'));assert.equal(queued.length,1);
-  assert.match(translationJobKey('he'),/:job:v2:he$/);
+  assert.match(translationJobKey('he'),/:job:v3:he$/);
   await background(queued[0]);assert.equal(inference,1);
   const result=await(await news(request('he'))).json();assert.equal(result.translation,'translated');
   for(const item of result.articles){const original=articles.find(a=>a.id===item.id);assert.equal(item.title,translations[original.title]);assert.equal(item.titleLanguage,'he');assert.equal(item.originalTitle,original.title);for(const key of ['id','url','source','publishedAt'])assert.equal(item[key],original[key]);}

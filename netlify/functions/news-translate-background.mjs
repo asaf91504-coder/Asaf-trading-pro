@@ -1,10 +1,10 @@
-import {validTranslationJob,translationJobKey} from '../../server/news-translation-job.mjs';
+import {validTranslationJob,translationJobKey,newsTranslationSecret} from '../../server/news-translation-job.mjs';
 import {readPublicNews} from '../../server/public-news-service.mjs';
 import {translateNews} from '../../server/news-language.mjs';
 import {command} from '../../server/storage.mjs';
 export default async function handler(request){
  if(request.method!=='POST')return;
- const body=await request.text();if(body.length>1000||!validTranslationJob(body,request.headers.get('X-ASAF-Job-Signature'),process.env.OPENROUTER_API_KEY))return;
+ const body=await request.text();if(body.length>1000||!validTranslationJob(body,request.headers.get('X-ASAF-Job-Signature'),newsTranslationSecret()))return;
  const {language}=JSON.parse(body),key=translationJobKey(language);
  let failure='unavailable';
  try{const snapshot=await readPublicNews();for(let i=0;i<7;i++){
