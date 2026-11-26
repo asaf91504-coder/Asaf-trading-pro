@@ -105,4 +105,20 @@ const unsupportedFilters={
 };
 source.push(unsupportedFilterKey);
 for(const [code,copy] of Object.entries(unsupportedFilters))messages[code].push(copy);
+// Exact source variants also translate when the UI prepends a warning icon.
+const providerApprovalCopy={
+ en:'Provider approval is pending for analysis of {source} data in OpenAI. You can ask a question without chart data.',
+ es:'El análisis de datos de {source} en OpenAI está pendiente de la autorización del proveedor. Puedes hacer una pregunta sin datos del gráfico.',
+ ar:'تحليل بيانات {source} في OpenAI بانتظار موافقة مزود البيانات. يمكنك طرح سؤال من دون بيانات الرسم البياني.',
+ fr:'L’analyse des données de {source} dans OpenAI attend l’autorisation du fournisseur. Vous pouvez poser une question sans données de graphique.',
+ de:'Die Analyse von {source}-Daten in OpenAI wartet auf die Freigabe des Anbieters. Du kannst eine Frage ohne Chartdaten stellen.',
+ pt:'A análise dos dados de {source} no OpenAI aguarda a aprovação do provedor. Você pode fazer uma pergunta sem dados do gráfico.',
+ ru:'Для анализа данных {source} в OpenAI ожидается разрешение поставщика. Вы можете задать вопрос без данных графика.',
+ zh:'通过 OpenAI 分析 {source} 数据尚待数据提供商批准。你可以提出不附带图表数据的问题。',
+ ja:'OpenAI による {source} データの分析は、データ提供元の承認待ちです。チャートデータなしで質問できます。'
+};
+for(const provider of ['CoinLore','Twelve Data','Intrinio']){
+ source.push('ניתוח נתוני '+provider+' ב-OpenAI ממתין לאישור הספק. אפשר לשלוח שאלה ללא נתוני גרף.');
+ for(const [code,copy] of Object.entries(providerApprovalCopy))messages[code].push(copy.replace('{source}',provider));
+}
 export const chatRoutingTranslations=Object.fromEntries(Object.entries(messages).map(([code,values])=>[code,Object.fromEntries(source.map((key,i)=>[key,values[i]]))]));
