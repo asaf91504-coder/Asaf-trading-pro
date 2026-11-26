@@ -62,9 +62,15 @@ test('AI analysis of an opened scanner chart uses the same guarded scan receipt 
  const configured={...env,ASAF_MARKET_AI_LICENSE_CONFIRMED:'true'},x=setup(configured);
  const payload={symbol:'AMD',interval:'1day',receivedAt:x.context.receivedAt,scannerContext:x.context};
  const options={env:configured,run:x.f.run,memberId:owner,now:now+2*3600000};
- const resolved=await analysisMarket(payload,options);assert.deepEqual(resolved.bars,bars);assert.equal(resolved.meta.receivedAt,x.context.receivedAt);
+ const resolved=await analysisMarket(payload,options);assert.deepEqual(resolved.bars,bars);assert.equal(resolved.meta.receivedAt,x.context.receivedAt);assert.deepEqual(resolved.scannerScenario,x.tradeScenario||{available:false,reason:'לא זוהה תרחיש תקין בכיוון של תוצאת הסורק.'});
  await assert.rejects(analysisMarket({...payload,scannerContext:undefined},options));
  await assert.rejects(analysisMarket({...payload,scannerContext:{...x.context,asOf:'2026-01-01'}},options),e=>e.status===409);
  await assert.rejects(analysisMarket(payload,{...options,memberId:null}));
  await assert.rejects(analysisMarket(payload,{...options,env:{...configured,ASAF_MARKET_AI_LICENSE_CONFIRMED:'false'}}));
+});
+
+test('generic chart analysis preserves the scanner short scenario instead of defaulting to long',async()=>{
+ const configured={...env,ASAF_MARKET_AI_LICENSE_CONFIRMED:'true'},x=setup(configured);
+ const resolved=await analysisMarket({symbol:'AMD',interval:'1day',receivedAt:x.context.receivedAt,scannerContext:{...x.context,side:'short'}},{env:configured,run:x.f.run,memberId:owner,now});
+ const plan=resolved.scannerScenario;assert.equal(plan.available,true);assert.equal(plan.side,'short');assert.ok(plan.stop>plan.entry);assert.ok(plan.target<plan.entry);
 });

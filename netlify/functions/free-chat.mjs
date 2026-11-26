@@ -231,7 +231,7 @@ async function handler(request,{requireOwner=false}={}){
   catch{return throttleReply('owner_chat_burst_unavailable',responseLanguage,503)}
  }
  if(!ownerChat&&gatedSources&&!rateLimit())return throttleReply('chat_rate_limited',responseLanguage);
- let bars,image;
+ let bars,image,scannerScenario;
  try{
   if(intrinioRequested){
    const snapshot=await readIntrinioSnapshot({selected:symbol,interval:payload.interval||'1day',cachedOnly:true});
@@ -242,7 +242,7 @@ async function handler(request,{requireOwner=false}={}){
    if(typeof payload.receivedAt!=='string'||payload.receivedAt!==snapshot.receivedAt)return reply({error:'עותק נתוני הקריפטו בשרת השתנה. טען מחדש את הגרף לפני הניתוח.'},409);
    bars=validateBars(snapshot.bars);
    meta={...meta,source:'CoinLore',interval:snapshot.interval,receivedAt:snapshot.receivedAt,coverage:snapshot.coverage,quote:snapshot.quote||null,delayMinutes:null,exchangeTimezone:'UTC',provenance:'server-crypto-cache',internalResearchOnly:true,latestBarMayBePartial:true};
-  }else if(payload.useServerMarket===true){const verified=await analysisMarket({...payload,symbol},{memberId:member?.id});bars=validateBars(verified.bars);meta={...meta,...verified.meta}}
+  }else if(payload.useServerMarket===true){const verified=await analysisMarket({...payload,symbol},{memberId:member?.id});bars=validateBars(verified.bars);meta={...meta,...verified.meta};scannerScenario=verified.scannerScenario}
   else bars=validateBars(payload?.bars);
   image=validatedImage(payload?.image);
  }catch(e){const known=e instanceof MarketError||e instanceof CryptoResearchError||e instanceof IntrinioError;return known&&e.status===429?throttleReply('chat_market_rate_limited',responseLanguage):reply({error:known?e.message:'נתוני הגרף או המקור אינם תקינים.'},known?e.status:cryptoRequested?503:400)}
@@ -255,7 +255,7 @@ async function handler(request,{requireOwner=false}={}){
  const history=conversationHistory(payload.history,{allowIntrinio:intrinioAllowed,blockedSources:historyBlockedSources,isolateBlockedHistory:isolateHistory,question});
  const context=marketDataContext(symbol,bars,meta);
  const needsScenario=requestsChartAnalysis(question,{command:parseChartCommand(question,{currentSymbol:symbol})});
- const tradeScenario=needsScenario?entryStopScenario(bars,meta,scenarioSide(question)):null;
+ const tradeScenario=needsScenario?(scannerScenario??entryStopScenario(bars,meta,scenarioSide(question))):null;
  if(context&&tradeScenario)context.entryStopScenario=tradeScenario;
  const scenarioSuffix=tradeScenario?'\n\n'+(requestsDetailedAnswer(question)?entryStopText:compactEntryStopText)(tradeScenario,responseLanguage):'';
  const analysisContext=context?{symbol:context.symbol,source:context.source,interval:context.interval,lastCandleTime:context.lastCandleTime,candleCount:context.candleCount,provenance:context.provenance,visibleChart:context.visibleChart,volumeComparison:context.volumeComparison}:null;
