@@ -363,7 +363,7 @@ async function ask(q,extra={}){
   if(!authState.enabled)sessionStorage.setItem(freeAiAccessKey,code);
   const followAnswer=isChatNearBottom(log);
   waiting.translate=false;waiting.dir='auto';
-  const chartChanged=!broadMarket&&(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision);
+  const chartChanged=!broadMarket&&!discovery&&(preparedPayload.symbol!==normSymbol()||preparedPayload.chartRevision!==chartRevision);
   let suffix='';
   if(data.historyRestricted)suffix+='\n\nהשיחה הקודמת לא צורפה לתשובה זו כי היא כוללת נתוני ספק שטרם אושרו לשימוש ב-OpenAI. אפשר לפתוח שיחה חדשה.';
   if(chartChanged)suffix+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
@@ -379,7 +379,7 @@ async function ask(q,extra={}){
   renderChatReply(waiting,replyParts);
   if(data.tradeScenario)appendScenario(waiting,data.tradeScenario);
 
-  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:broadMarket?data.source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(localReceipt?{toolReceipt:localReceipt}:{}),...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:broadMarket?data.source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
+  conversation.push({role:"user",content:question,chartContext:{symbol:preparedPayload.symbol,source:broadMarket||discovery?data.source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}},{role:"assistant",content:completedAnswer,responseLanguage:data.responseLanguage||preparedPayload.language,...(localReceipt?{toolReceipt:localReceipt}:{}),...(data.tradeScenario?{tradeScenario:data.tradeScenario}:{}),chartContext:{symbol:preparedPayload.symbol,source:broadMarket||discovery?data.source:preparedPayload.source,interval:preparedPayload.interval,receivedAt:preparedPayload.receivedAt}});
   chatHistory.complete(conversation);conversation=conversation.slice(-400);
   if(data.analysisContext){const sourceDetails=document.createElement('details'),sourceSummary=document.createElement('summary');sourceSummary.textContent=(chatPresentationCopy[languageCode(document.documentElement.lang)]||chatPresentationCopy.en).details;sourceDetails.append(sourceSummary);waiting.append(sourceDetails);const receipt=document.createElement('p');receipt.className='chat-analysis-receipt';receipt.dir='auto';const source=analysisReceipt(data.analysisContext);receipt.textContent=window.asafTranslate?.(source)||source;analysisReceipts.set(receipt,source);sourceDetails.append(receipt);
    const volume=data.analysisContext.volumeComparison;

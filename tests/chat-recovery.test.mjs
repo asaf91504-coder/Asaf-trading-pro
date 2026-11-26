@@ -511,3 +511,11 @@ test('failed stock switching never sends the previous asset to the model',async(
  const s=setup();s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;s.ctx.loaded=analysisData('ACMR');s.ctx.loadMarketData=async()=>{throw Error('new asset unavailable')};
  await s.ctx.ask('מה דעתך על TSLA');assert.equal(s.payloads.length,0);assert.match(s.bubbles[1].textContent,/new asset unavailable/);
 });
+
+
+test('scanner answers do not show stale-chart warnings and retain licensed history provenance',async()=>{
+ const s=setup();s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;
+ s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:'AMD, TSLA, ACMR — מועמדות למעקב.',source:'Twelve Data'})});
+ await s.ctx.ask('תן לי שלוש מניות ללונג או שורט');
+ assert.equal(s.ctx.lastReplyParts.after,'');assert.equal(s.ctx.conversation.at(-1).chartContext.source,'Twelve Data');assert.doesNotMatch(s.bubbles[1].textContent,/הגרף השתנה/);
+});
