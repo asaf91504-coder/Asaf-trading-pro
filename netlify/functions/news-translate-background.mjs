@@ -10,7 +10,7 @@ export default async function handler(request){
  try{const snapshot=await readPublicNews();for(let i=0;i<7;i++){
   const result=await translateNews(snapshot.articles,language,{timeoutMs:90000});
   if(result.translation==='translated'){await command(['DEL',key]);return}
-  if(result.translationReason||!['partial','pending'].includes(result.translation)){failure=result.translationReason||'unavailable';break;}
+  if(result.translationReason||!['partial','pending'].includes(result.translation)){failure=result.translationReason||'unavailable';console.warn('News translation failed',JSON.stringify({reason:failure,detail:result.translationDetail||null}));break;}
   if(result.translation==='pending')break;
  }}catch{}
  await command(['SET',key,'failed:'+failure,'EX','90']);
