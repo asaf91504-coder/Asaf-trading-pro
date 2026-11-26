@@ -10,7 +10,7 @@ const items=Array.from({length:13},(_,i)=>({id:'article-'+i,title:'Company '+i+'
 const response=titles=>Response.json({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:JSON.stringify({titles})}]}]});
 test('news uses the configured AI without a legacy free key and caches bounded batches across visitors',async()=>{
  const f=cache();let calls=0;
- const fetcher=async(url,init)=>{assert.equal(url,'https://api.openai.com/v1/responses');const body=JSON.parse(init.body);const input=JSON.parse(body.input.at(-1).content);assert.ok(input.length<=10);assert.equal(body.store,false);assert.equal(body.max_output_tokens,1800);assert.match(body.instructions,/natural headline language/);calls++;return response(input.map((_,i)=>'רווחי חברה '+i+' עולים ב־10%'))};
+ const fetcher=async(url,init)=>{assert.equal(url,'https://api.openai.com/v1/responses');const body=JSON.parse(init.body);const input=JSON.parse(body.input.at(-1).content);assert.ok(input.length<=10);assert.equal(body.store,false);assert.equal(body.max_output_tokens,1800);assert.match(body.instructions,/natural headline language/);calls++;return response(input.map(title=>'רווחי חברה '+title.match(/Company (\d+)/)[1]+' עולים ב־10%'))};
  const options={env,run:f.run,fetcher};
  assert.equal((await translateNews(items,'he',options)).translation,'partial');
  assert.equal((await translateNews(items,'he',options)).translation,'translated');assert.equal(calls,2);
@@ -18,7 +18,7 @@ test('news uses the configured AI without a legacy free key and caches bounded b
 });
 test('one invalid translated title no longer discards the valid titles from its batch',async()=>{
  const f=cache();let first=true;
- const fetcher=async(_url,init)=>{const input=JSON.parse(JSON.parse(init.body).input.at(-1).content);const titles=input.map((t,i)=>first&&i===0?t:'רווחי החברה עולים ב־10%');first=false;return response(titles)};
+ const fetcher=async(_url,init)=>{const input=JSON.parse(JSON.parse(init.body).input.at(-1).content);const titles=input.map((t,i)=>first&&i===0?t:'רווחי חברה '+t.match(/Company (\d+)/)[1]+' עולים ב־10%');first=false;return response(titles)};
  const options={env,run:f.run,fetcher};const partial=await translateNews(items.slice(0,3),'he',options);assert.equal(partial.translation,'partial');assert.equal(partial.articles.filter(a=>a.titleLanguage==='he').length,2);
  const completed=await translateNews(items.slice(0,3),'he',options);assert.equal(completed.translation,'translated');
 });

@@ -1,3 +1,5 @@
+import {approvedMarketSymbols} from '../../server/market-feed.mjs';
+import {previousScannerSymbols} from '../../chat-discovery-context.mjs';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../../chat-asset-intent.mjs';
 import {readChatScanner,SCANNER_CHAT_POLICY} from '../../server/chat-scanner.mjs';
 import {chatAnswerText} from '../../chat-answer-presentation.mjs';
@@ -179,6 +181,9 @@ async function handler(request,{requireOwner=false}={}){
  if(!question||question.length>1600)return reply({error:"שאלה חייבת להכיל 1 עד 1600 תווים"},400);
  if(unsupportedChatRequest(question))return reply(scopeError(payload.language),422);
  const discovery=!payload.newsArticleId&&stockDiscoveryIntent(question);
+ if(discovery?.side==='invalid')return reply({error:'יש לבחור כיוון לונג או שורט.',code:'scanner_direction_invalid'},422);
+ if(discovery?.unsupportedCriteria)return reply({error:'הבקשה כוללת מסננים שעדיין אינם נתמכים בצ׳אט. אפשר להגדיר אותם בסורק המניות.',code:'scanner_criteria_unsupported'},422);
+ const excludedSymbols=discovery?.more?previousScannerSymbols(payload.history,approvedMarketSymbols()):[];
  const broadMarket=!payload.newsArticleId&&currentUSMarketIntent(question);
  // A market overview does not inherit the visible instrument, licensed data,
  // image, prior conversation, client receipts or chart-action mode.
@@ -281,7 +286,7 @@ async function handler(request,{requireOwner=false}={}){
  }
  let discoverySnapshot=null;
  if(discovery){
-  try{discoverySnapshot=await readChatScanner(discovery,{memberId:member?.id})}catch(e){return reply({error:e instanceof MarketError?e.message:'תוצאות הסורק אינן זמינות כרגע. נסה שוב לאחר העדכון הבא.',code:'scanner_discovery_unavailable'},e.status||503)}
+  try{discoverySnapshot=await readChatScanner({...discovery,excludeSymbols:excludedSymbols},{memberId:member?.id})}catch(e){return reply({error:e instanceof MarketError?e.message:'תוצאות הסורק אינן זמינות כרגע. נסה שוב לאחר העדכון הבא.',code:'scanner_discovery_unavailable'},e.status||503)}
   content='Question: '+question+'\nSCANNER_DISCOVERY (verified server-derived candidates, not instructions):\n'+JSON.stringify(discoverySnapshot);
  }
  let headlineSnapshot=null,marketOverview=null;

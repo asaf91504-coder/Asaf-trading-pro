@@ -1,3 +1,4 @@
+import {chatRoutingTranslations} from './chat-routing-translations.mjs';
 import {scannerOpportunityTranslations} from './scanner-opportunity-copy.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {methodologyTranslations} from './methodology-translations.mjs';
@@ -68,3 +69,5 @@ for(const [code,label] of Object.entries(marketTermsCopy))launchTranslations[cod
 for(const [code,copy] of Object.entries(methodologyTranslations))Object.assign(launchTranslations[code],copy);
 
 for(const [code,copy] of Object.entries(chatPresentationCopy))if(code!=="he")for(const key of ["drawn","noScenario"])launchTranslations[code][chatPresentationCopy.he[key]]=copy[key];
+
+for(const [code,copy] of Object.entries(chatRoutingTranslations))Object.assign(launchTranslations[code],copy);

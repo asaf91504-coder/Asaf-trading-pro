@@ -96,3 +96,12 @@ test('new rolling batches retire only rows superseded by a committed manifest',a
  const cleanup=f.commands.find(a=>a[1]?.includes('scanner-expire-superseded'));assert.ok(cleanup);assert.equal(Number(cleanup[2]),10);assert.deepEqual(cleanup.slice(3),first.rows.slice(0,10).map(r=>r.key));
  const rolling=await readSharedScan({env:small,run:f.run,now:now+3*3600000,memberId:owner});assert.equal(rolling.records.length,60);assert.equal(rolling.partial,true);assert.equal(rolling.progress.processed,10);
 });
+
+test('a transient refresh error preserves a previous valid scanner row and reports partial coverage',async()=>{
+ const f=setup(),small={...env,ASAF_MARKET_ALLOWED_SYMBOLS:symbols.slice(0,60).join(',')},options={env:small,run:f.run,readBars:sample,readFundamentals:company};
+ for(let i=0;i<6;i++)await refreshSharedScan({...options,now:now+i*60000});
+ const prior=await readSharedScan({env:small,run:f.run,now:now+6*60000,memberId:owner});assert.equal(prior.records.length,60);
+ await refreshSharedScan({...options,now:now+3*3600000,readBars:async()=>{throw new MarketError('temporary outage',503)}});
+ const retained=await readSharedScan({env:small,run:f.run,now:now+3*3600000,memberId:owner});assert.equal(retained.records.length,60);assert.equal(retained.partial,true);assert.equal(retained.errors.length,10);assert.equal(retained.records[0].receivedAt,prior.records[0].receivedAt);
+ const expired=await readSharedScan({env:small,run:f.run,now:now+25*3600000,memberId:owner});assert.equal(expired.records.length,0);
+});

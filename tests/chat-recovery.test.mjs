@@ -519,3 +519,13 @@ test('scanner answers do not show stale-chart warnings and retain licensed histo
  await s.ctx.ask('תן לי שלוש מניות ללונג או שורט');
  assert.equal(s.ctx.lastReplyParts.after,'');assert.equal(s.ctx.conversation.at(-1).chartContext.source,'Twelve Data');assert.doesNotMatch(s.bubbles[1].textContent,/הגרף השתנה/);
 });
+
+test('ambiguous or negated asset requests do not switch the chart before clarification',async()=>{
+ for(const question of ['מה דעתך על אפל לעומת TSLA?','אל תנתח TSLA']){
+  const s=setup();s.ctx.parseChartCommand=parseChartCommand;s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='AAPL';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;s.ctx.loaded=analysisData('AAPL');let switched=0;s.ctx.runChatActions=async()=>{switched++;throw Error('must not switch')};
+  await s.ctx.ask(question);assert.equal(switched,0);assert.equal(s.ctx.chartSymbol.value,'AAPL');assert.equal(s.calls(),0);
+ }
+});
+test('more-candidate requests send bounded prior context for exclusions while ordinary discovery stays isolated',async()=>{
+ const s=setup();s.ctx.conversation=[{role:'assistant',content:'AMD, ACMR, TSLA',chartContext:{source:'Twelve Data'}}];await s.ctx.ask('תן לי עוד שלוש מניות אחרות');assert.equal(s.payloads.length,1);assert.ok(s.payloads[0].history.some(m=>m.content==='AMD, ACMR, TSLA'));assert.equal(s.payloads[0].symbol,undefined);
+});

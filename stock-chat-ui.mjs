@@ -236,6 +236,7 @@ async function ask(q,extra={}){
   }
 
   const command=!discovery&&!broadMarket&&!extra.retryPayload&&!extra.newsArticleId?parseChartCommand(intentQuestion,{currentSymbol:normSymbol()}):null;
+  if(command?.unresolvedSymbol||command?.recognized&&!command.actions.length&&/לא לבצע פעולה/.test(command.message||'')){waiting.textContent=command.message||'לא בוצע שינוי בגרף.';return;}
   const requestedAsset=!broadMarket&&!discovery&&!extra.newsArticleId&&!extra.retryPayload?questionAsset(intentQuestion):null;
   const assetChanged=requestedAsset&&!sameChatAsset(requestedAsset,normSymbol());
   if(!command?.actions?.some(a=>a.type==='symbol')&&(assetChanged||requestedAsset&&!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))){
@@ -246,7 +247,6 @@ async function ask(q,extra={}){
    if(!hasAnalysisCandles(loaded,normSymbol(),$('marketInterval').value))throw Error('לא התקבלו נתונים למניה שהתבקשה; לא ייעשה שימוש בנתוני המניה הקודמת.');
    document.querySelector?.('[data-tab="chat"]')?.click();
   }
-  if(command?.unresolvedSymbol||command?.recognized&&!command.actions.length&&/לא לבצע פעולה/.test(command.message||'')){waiting.textContent=command.message||'לא בוצע שינוי בגרף.';return;}
   if(command?.recognized&&command.actions.length){
    const result=command.actions.length?await runChatActions(command.actions,{signal:activeController.signal,epoch}):{messages:[]};
    commandLoadAttempted=result.dataLoadAttempted===true;
@@ -335,7 +335,7 @@ async function ask(q,extra={}){
   clearTimeout(requestTimeout);
   requestTimeout=setTimeout(()=>{timedOut=true;activeController.abort()},65000);
   if(broadMarket||discovery){
-   preparedPayload={message:question,language:requestLanguage,webSearch:false};
+   preparedPayload={message:question,language:requestLanguage,webSearch:false,...(discovery?.more?{history:selectConversationMessages(historyForModel(conversation),question)}:{})};
    localReceipt='';
   }
   if(requestState)requestState.textContent=preparedPayload.webSearch?'מחפש מקורות באינטרנט ומכין תשובה…':'הנתונים נשלחו — ממתין לניתוח…';

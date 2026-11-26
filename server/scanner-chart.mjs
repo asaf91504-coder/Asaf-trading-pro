@@ -2,7 +2,7 @@ import {marketSelection,MarketError} from './market-feed.mjs';
 import {readSharedScan,sharedScannerEnabled} from './shared-scanner.mjs';
 import {readScannerSnapshot} from './scanner-market-data.mjs';
 import {scanBars} from '../scanner-core.mjs';
-import {screenWithMethodology,reviewScannerMethodology} from './asaf-methodology.mjs';
+import {screenWithMethodology,reviewScannerMethodology,selectMethodologyCandidate} from './asaf-methodology.mjs';
 
 export async function scannerChartContext({selected,context,env,run,fetcher,now,memberId}){
  if(!context||typeof context!=='object'||Array.isArray(context)||Object.keys(context).some(k=>!['asOf','receivedAt','side','autoAnnotate'].includes(k))||
@@ -19,9 +19,8 @@ export async function scannerChartContext({selected,context,env,run,fetcher,now,
  if(!record||record.summary?.date!==context.asOf||record.receivedAt!==context.receivedAt)throw new MarketError('תוצאת הסריקה עודכנה. רענן את הסורק ופתח שוב את הגרף.',409);
  const reviewed=context.side?reviewScannerMethodology(record,{side:context.side,now}):screenWithMethodology(record,{scenarioSide:'any'},{now});
  const side=reviewed.methodology.side;
- const candidate=reviewed.record.research?.candidates?.filter(c=>c.scenario?.side===side&&Number.isFinite(c.scenario.entry)&&Number.isFinite(c.scenario.stop)&&Number.isFinite(c.scenario.target))
-  .sort((a,b)=>(b.scenario.riskReward||0)-(a.scenario.riskReward||0))[0];
- const tradeScenario=candidate?{...candidate.scenario,available:true,asOf:context.asOf}:null;
+ const selection=selectMethodologyCandidate(reviewed.record,{side,fullMatch:reviewed.methodology.eligible}),candidate=selection.candidate;
+ const tradeScenario=candidate?{...candidate.scenario,available:true,asOf:context.asOf,watchOnly:selection.watchOnly,methodologyQualified:selection.qualified}:null;
  const actions=[{type:'indicator',indicator:'MA20',enabled:true},{type:'indicator',indicator:'MA150',enabled:true},
   {type:'pattern',pattern:'all'},{type:'levels',kind:'both'},{type:'trendlines'},...(tradeScenario?[{type:'tradelevels',side}]:[])];
  return {snapshot:{...record,latestBarTime:context.asOf,cached:true,delayMinutes:Number(env.ASAF_MARKET_DELAY_MINUTES)},

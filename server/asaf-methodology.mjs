@@ -8,6 +8,19 @@ export const ASAF_ANALYSIS_POLICY=`\nApply the ASAF Pro analysis framework: firs
 
 const supported={long:new Set(['breakout20','doubleBottom','downtrendBreak','inverseHeadShoulders']),short:new Set(['breakdown20','doubleTop','headShoulders'])};
 const stages={long:['waiting','crossed','above'],short:['waiting','crossed','below']};
+const candidateQualifies=(candidate,side)=>supported[side]?.has(candidate.kind)&&stages[side]?.includes(candidate.stage)&&candidate.scenario?.side===side&&candidate.scenario.movePercent>=15;
+
+// Bind every presentation to the same candidate that justifies the pattern
+// check. A more attractive RR from a different, failing setup is not that match.
+export function selectMethodologyCandidate(record,{side='long',fullMatch=false}={}){
+ const candidates=(record.research?.candidates||[]).filter(c=>
+  supported[side]?.has(c.kind)&&stages[side]?.includes(c.stage)&&c.scenario?.side===side&&
+  [c.scenario.entry,c.scenario.stop,c.scenario.target].every(v=>Number.isFinite(v)&&v>0)&&
+  (side==='long'?c.scenario.stop<c.scenario.entry&&c.scenario.target>c.scenario.entry:c.scenario.stop>c.scenario.entry&&c.scenario.target<c.scenario.entry));
+ const ordered=candidates.sort((a,b)=>(b.scenario.riskReward||0)-(a.scenario.riskReward||0));
+ const candidate=ordered.find(c=>candidateQualifies(c,side))||(!fullMatch?ordered[0]:null)||null;
+ return {candidate,qualified:!!candidate&&candidateQualifies(candidate,side),watchOnly:!fullMatch};
+}
 export function reviewScannerMethodology(record,{now=Date.now(),side='long'}={}){
  const atr=closedSetupAtr14(record),s=record.summary||{},prior=record.bars?.at(-2),short=side==='short';
  const candidates=(record.research?.candidates||[]).map(c=>{
@@ -19,7 +32,7 @@ export function reviewScannerMethodology(record,{now=Date.now(),side='long'}={})
   if(!Number.isFinite(reward)||reward<=0)return {...c,scenario:null};
   return {...c,scenario:{...scenario,movePercent:reward/scenario.entry*100,riskReward:reward/risk,method:'Conditional measured target; stop exactly 2× daily ATR14. No fill or return guarantee.'}};
  });
- const directional=candidates.filter(c=>supported[side]?.has(c.kind)&&stages[side].includes(c.stage)&&c.scenario?.side===side&&c.scenario.movePercent>=15);
+ const directional=candidates.filter(c=>candidateQualifies(c,side));
  const volume=record.volumeComparison;
  const checks=[
   ['closedDaily',atr!==null,'נדרשים נרות יומיים שהושלמו ו־ATR14 תקין'],

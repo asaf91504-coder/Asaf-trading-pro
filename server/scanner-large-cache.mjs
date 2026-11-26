@@ -55,7 +55,7 @@ export async function refreshLargeScanner({env,run,fetcher,now,key,symbols,plan,
   }));
   const rows=new Map(manifest.rows.map(r=>[r.symbol,r])),errors=new Map(manifest.errors.map(e=>[e.symbol,e]));
   const superseded=results.filter(r=>r.row&&rows.has(r.symbol)).map(r=>rows.get(r.symbol).key);
-  for(const result of results){if(result.row){rows.set(result.symbol,result.row);errors.delete(result.symbol);}else if(result.error){rows.delete(result.symbol);errors.set(result.symbol,{symbol:result.symbol,error:result.error});}}
+  for(const result of results){if(result.row){rows.set(result.symbol,result.row);errors.delete(result.symbol);}else if(result.error){errors.set(result.symbol,{symbol:result.symbol,error:result.error});}}
   const paused=results.findIndex(r=>r.retry);
   state.cursor+=paused<0?batch.length:paused;state.done=state.cursor>=symbols.length;
   state.nextUpdateAt=state.done?(Math.floor(now/periodMs)+1)*periodMs:now+60000;
