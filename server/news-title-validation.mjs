@@ -39,7 +39,20 @@ function parsedNumber(raw,language){
  if(!/^[+-]?\d+$/.test(integer))return [NaN];
  return [Number(integer+(split[1]!==undefined?'.'+split[1]:''))];
 }
-const monthGroups=[['jan','january','ינואר'],['feb','february','פברואר'],['mar','march','מרץ'],['apr','april','אפריל'],['may','מאי'],['jun','june','יוני'],['jul','july','יולי'],['aug','august','אוגוסט'],['sep','sept','september','ספטמבר'],['oct','october','אוקטובר'],['nov','november','נובמבר'],['dec','december','דצמבר']];
+const currencyTerms=[
+ ['usd|米ドル|美元|us\\$|u\\.s\\. dollars?|דולר(?:ים)? אמריקאי(?:ים)?',['USD']],['cad|c\\$|ca\\$|canadian dollars?|דולר(?:ים)? קנדי(?:ים)?',['CAD']],['aud|a\\$|au\\$|australian dollars?|דולר(?:ים)? אוסטרלי(?:ים)?',['AUD']],['hkd|hk\\$|hong kong dollars?',['HKD']],
+ ['eur|€|euros?|אירו|יורו|ユーロ|欧元|歐元|евро|يورو',['EUR']],['gbp|£|pounds?(?: sterling)?|ליש["״]?ט',['GBP']],['jpy|yen|ין יפני|日元|日圓',['JPY']],['cny|rmb|yuan|יואן|人民币|人民幣',['CNY']],['ils|₪|shekels?|שקל(?:ים)?',['ILS']],
+ ['\\$|dollars?|dolares|דולר(?:ים)?|ドル|доллар(?:а|ов)?|دولار(?:ات)?',['USD','CAD','AUD','HKD','SGD','NZD']],['¥|￥',['JPY','CNY']]
+];
+const currencyPattern=currencyTerms.map(([p])=>'(?:'+normalized(p)+')').join('|');
+function currencyForNumber(text,start,end){
+ const before=text.slice(Math.max(0,start-48),start),after=text.slice(end,end+48);
+ const prefix=new RegExp('(?<![\\p{L}\\p{N}])('+currencyPattern+')\\s*$','iu').exec(before);
+ const suffix=new RegExp('^\\s*(?:(?:de|of)\\s+)?('+currencyPattern+')(?![\\p{L}\\p{N}])','iu').exec(after);
+ const token=prefix?.[1]||suffix?.[1];
+ return token?currencyTerms.find(([pattern])=>new RegExp('^(?:'+normalized(pattern)+')$','iu').test(token))?.[1]:null;
+}
+const monthGroups=[['jan','january','januar','enero','janvier','janeiro','января','ינואר'],['feb','february','februar','febrero','février','fevrier','fevereiro','февраля','פברואר'],['mar','march','märz','marz','marzo','mars','março','marco','марта','מרץ'],['apr','april','abril','avril','апреля','אפריל'],['may','mai','mayo','maio','мая','מאי'],['jun','june','juni','junio','juin','junho','июня','יוני'],['jul','july','juli','julio','juillet','julho','июля','יולי'],['aug','august','agosto','août','aout','августа','אוגוסט'],['sep','sept','september','septiembre','septembre','setembro','сентября','ספטמבר'],['oct','october','oktober','octubre','octobre','outubro','октября','אוקטובר'],['nov','november','noviembre','novembre','novembro','ноября','נובמבר'],['dec','december','dezember','diciembre','décembre','decembre','dezembro','декабря','דצמבר']];
 const monthNames=monthGroups.flat().sort((a,b)=>b.length-a.length).join('|');
 function extractDates(text,language){
  const found=[];let value=text;
@@ -48,7 +61,7 @@ function extractDates(text,language){
  value=value.replace(/(?<!\d)(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/gu,(all,y,m,d)=>add(y,m,d)?' ':all);
  value=value.replace(/(?<!\d)(\d{1,2})([-/.])(\d{1,2})\2(\d{4})(?!\d)/gu,(all,a,sep,b,y)=>{const us=language==='en'&&sep==='/'&&Number(a)<=12;return add(y,us?a:b,us?b:a)?' ':all});
  const monthIndex=name=>monthGroups.findIndex(group=>group.includes(name.toLowerCase()))+1;
- const textual=new RegExp('(?<![\\p{L}\\p{N}])(?:(\\d{1,2})\\s*(?:ב)?('+monthNames+')|('+monthNames+')\\.?\\s*(\\d{1,2}))(?:,?\\s+(\\d{4}))?(?![\\p{L}\\p{N}])','giu');
+ const textual=new RegExp('(?<![\\p{L}\\p{N}])(?:(\\d{1,2})[.]?\\s*(?:ב|de\\s+)?('+monthNames+')|('+monthNames+')\\.?\\s*(\\d{1,2}))(?:,?\\s+(?:de\\s+)?(\\d{4}))?(?![\\p{L}\\p{N}])','giu');
  value=value.replace(textual,(all,d1,m1,m2,d2,y)=>add(y||0,monthIndex(m1||m2),d1||d2)?' ':all);
  return {text:value,dates:found};
 }
@@ -65,17 +78,20 @@ function numericFacts(text,language){
  let value=normalized(dated.text).replace(/([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])(?=\d)/gu,'$1 ').replace(/(?<=\d)([\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])/gu,' $1').replace(/([亿億万萬兆])/gu,' $1 ');
  value=value.replace(/(?:nasdaq|נאסד["״]?ק|s\s*&\s*p|סנ["״]?פ)[ -]*(?=\d)/giu,' index ');
  const compact={k:'thousand',m:'million',b:'billion',t:'trillion'};
+ value=value.replace(/(?<![\p{L}\p{N}])(\d+(?:[.,]\d+)*)\s*([kmbt])(?![\p{L}\p{N}])/giu,(_,n,unit)=>n+' '+compact[unit.toLowerCase()]);
  value=value.replace(/([$€£¥])\s*(\d+(?:[.,]\d+)*)\s*([kmbt])(?![a-z])/giu,(_,currency,n,unit)=>currency+n+' '+compact[unit.toLowerCase()]);
  // Model/chip/ticker identifiers such as H100, GPT-4 and BRK.B are names, not
  // standalone quantities. Their identity is handled by prompting, not arithmetic.
  value=value.replace(/(?<![\p{L}\p{N}])[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*(?![\p{L}\p{N}])/gu,word=>/\d/u.test(word)?' ':word);
+ if(language==='he')value=value.replace(/(?<![\p{L}\p{N}])(?:ו?[בכלמ])[-־]?(?=\d)/gu,' ');
  const re=new RegExp('(?<![\\p{L}\\p{N}])([+-]?\\d+(?:[.,]\\d+|[\\u00a0\\u202f\\x20]\\d{3}(?!\\d))*)\\s*('+suffixPattern+')?(?![\\p{L}\\p{N}])','giu');
  const occupied=[];
  for(const m of value.matchAll(re)){
   const suffix=m[2]||'',scale=scaleFor(suffix,language)||1;
   const basis=/^(?:basis[ -]?points?|bps|bp|נקודות?\s+בסיס)$/iu.test(suffix),percent=/^(?:%|אחוז(?:ים)?|percent(?:age)?|por ciento|prozent|pour cent|процент(?:а|ов)?)$/iu.test(suffix);
   const dimension=basis||percent?'rate:':'number:',factor=basis?1/10000:percent?1/100:scale;
-  facts.push(parsedNumber(m[1],language).filter(Number.isFinite).map(n=>dimension+Number((n*factor).toPrecision(12))));occupied.push([m.index,m.index+m[0].length]);
+  const currencies=!basis&&!percent?currencyForNumber(value,m.index,m.index+m[0].length):null;
+  facts.push(parsedNumber(m[1],language).filter(Number.isFinite).flatMap(n=>(currencies||[null]).map(currency=>(currency?'money:'+currency+':':dimension)+Number((n*factor).toPrecision(12)))));occupied.push([m.index,m.index+m[0].length]);
  }
  // "a million dollars" and "מיליון דולר" are equivalent to "$1 million".
  const implicit=new RegExp('(?<![\\p{L}\\p{N}])(?:a\\s+|one\\s+|ב|כ|ל)?('+scalePattern+')(?![\\p{L}\\p{N}])','giu');
@@ -83,7 +99,7 @@ function numericFacts(text,language){
   if(occupied.some(([start,end])=>m.index<end&&m.index+m[0].length>start))continue;
   // Plural scale words without a numeral describe an unspecified magnitude.
   if(/(?:s|en|es|а|ов)$/iu.test(m[1]))continue;
-  const scale=scaleFor(m[1],language);if(scale)facts.push(['number:'+scale]);
+  const scale=scaleFor(m[1],language),currencies=currencyForNumber(value,m.index,m.index+m[0].length);if(scale)facts.push((currencies||[null]).map(currency=>(currency?'money:'+currency+':':'number:')+scale));
  }
  return facts;
 }

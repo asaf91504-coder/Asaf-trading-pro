@@ -36,7 +36,7 @@ export async function ventureChart(snapshot,input=[],options={}){
  const colors=['#38bdf8','#fbbf24','#c084fc','#fb923c','#a3e635','#f472b6'];let legend=[];
  [...indicators].forEach((id,j)=>{const points=series[id].slice(start).map((v,i)=>Number.isFinite(v)?x(i)+','+y(v):null).filter(Boolean);if(points.length)svg+=`<polyline points="${points.join(' ')}" fill="none" stroke="${colors[j]}" stroke-width="2"/>`;legend.push(`<text x="${25+j*140}" y="620" fill="${colors[j]}" font-size="14">${id}${points.length?'':' (no history)'}</text>`)});
  const positions=new Map(visible.map((b,i)=>[b.date,i]));
- const lineLabels=[],marks=[];
+ const lineLabels=[],marks=[],accessibleLevels=[];
  for(const a of [...annotations].sort((a,b)=>Number(/^(BREAK|STOP|MEASURED)/.test(b.label||''))-Number(/^(BREAK|STOP|MEASURED)/.test(a.label||'')))){
   // Horizontal levels may start outside the visible 120-bar window.
   const horizontal=a.points.length===2&&a.points[0].price===a.points[1].price;
@@ -47,6 +47,8 @@ export async function ventureChart(snapshot,input=[],options={}){
   const kind=label.startsWith('STOP')?'stop':label.startsWith('MEASURED')?'target':label.startsWith('BREAK')?'entry':a.kind;
   const color=kind==='stop'?'#fb7185':kind==='target'?'#c084fc':kind==='entry'?'#38bdf8':kind==='support'?'#a3e635':kind==='resistance'?'#fbbf24':kind==='trendline'?'#60a5fa':'#d8b4fe';
   marks.push({kind,color});
+  // Approved derived horizontal research levels only, never candles or drawing endpoints.
+  if(horizontal&&['support','resistance','entry','stop','target'].includes(kind)&&Number.isFinite(a.points[0].price)&&a.points[0].price>0&&accessibleLevels.length<12&&!accessibleLevels.some(level=>level.kind===kind&&level.price===a.points[0].price))accessibleLevels.push({kind,price:a.points[0].price});
   svg+=`<polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="6 4"/>`;
   const anchorY=y(a.points.at(-1).price);let labelY=Math.max(top+15,Math.min(bottom-4,anchorY-4));
   while(lineLabels.some(v=>Math.abs(v-labelY)<15)&&labelY<bottom-20)labelY+=15;
@@ -62,7 +64,7 @@ export async function ventureChart(snapshot,input=[],options={}){
  for(const i of [0,Math.floor(visible.length/2),visible.length-1])svg+=`<text x="${x(i)}" y="595" text-anchor="middle" font-size="12">${escape(visible[i].date.slice(0,16))}</text>`;
  svg+=legend.join('')+`<text x="25" y="650" font-size="14">Data provided by Twelve Data | Static research image | No raw data export</text><text x="25" y="674" font-size="12">${snapshot.interval==='1day'?'Previous daily sessions only. EOD volume; not live intraday volume.':'Latest candle may be incomplete.'} Conditional research, not a trade order.</text></g></svg>`;
  const png=new Resvg(svg,{font:rasterFontOptions()}).render().asPng();
- return {presentation:'server-raster',source:'Twelve Data',symbol:snapshot.symbol,interval:snapshot.interval,receivedAt:snapshot.receivedAt,latestBarTime:snapshot.latestBarTime,candleCount:bars.length,chartSettings:{style,indicators:[...indicators],visibleRange:{start:visible[0].date,end:snapshot.latestBarTime}},indicatorLegend:[...indicators].map((id,i)=>({id,color:colors[i],available:series[id].slice(start).some(Number.isFinite)})),researchLegend:[...new Map(marks.map(m=>[m.kind,m])).values()],annotationCount:marks.length,firstVisibleBarTime:visible[0].date,exchangeTimezone:snapshot.exchangeTimezone,coverage:marketCoverage(snapshot.interval,chartVolumeCoverage),barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,delayMinutes:snapshot.delayMinutes,cached:snapshot.cached===true,image:'data:image/png;base64,'+Buffer.from(png).toString('base64'),messages:receipt.messages};
+ return {presentation:'server-raster',source:'Twelve Data',symbol:snapshot.symbol,interval:snapshot.interval,receivedAt:snapshot.receivedAt,latestBarTime:snapshot.latestBarTime,candleCount:bars.length,chartSettings:{style,indicators:[...indicators],visibleRange:{start:visible[0].date,end:snapshot.latestBarTime}},indicatorLegend:[...indicators].map((id,i)=>({id,color:colors[i],available:series[id].slice(start).some(Number.isFinite)})),researchLegend:[...new Map(marks.map(m=>[m.kind,m])).values()],accessibleLevels,annotationCount:marks.length,firstVisibleBarTime:visible[0].date,exchangeTimezone:snapshot.exchangeTimezone,coverage:marketCoverage(snapshot.interval,chartVolumeCoverage),barPolicy:snapshot.barPolicy,latestBarMayBePartial:snapshot.latestBarMayBePartial,delayMinutes:snapshot.delayMinutes,cached:snapshot.cached===true,image:'data:image/png;base64,'+Buffer.from(png).toString('base64'),messages:receipt.messages};
 }
 
 // Explicit allowlist: never spread a scan record, summary or pattern candidate.

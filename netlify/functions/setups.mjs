@@ -1,6 +1,6 @@
-import {currentUser} from '../../server/auth-core.mjs';
+import {currentUser,cookieToken,digest} from '../../server/auth-core.mjs';
 import {subscriptionGuard} from '../../server/billing.mjs';
-import {command} from '../../server/storage.mjs';
+import {command,storageKey} from '../../server/storage.mjs';
 import {MarketError,privateMarketTrial} from '../../server/market-feed.mjs';
 import {canReviewSetups,setupReviewContext,visibleSetups,decideSetup,saveSetupDraft} from '../../server/setup-review.mjs';
 import {canAuthorSetup,manualSetupBook,manualSetupView,writeManualSetup} from '../../server/manual-setups.mjs';
@@ -8,7 +8,8 @@ const reply=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Contro
 export function createSetupsHandler({env=process.env,run=command,now=()=>Date.now()}={}){return async request=>{
  try{
   if(!['GET','POST'].includes(request.method))return reply({error:'Method not allowed'},405);
-  const user=await currentUser(request,{env,run});if(!user)return reply({error:'יש להתחבר לחשבון באתר כדי לצפות בסטאפים.'},401);
+  const user=await currentUser(request,{env,run,includeRecords:true});if(!user)return reply({error:'יש להתחבר לחשבון באתר כדי לצפות בסטאפים.'},401);
+  user.sessionKey=storageKey('auth:session:'+digest(cookieToken(request)),env);
   const blocked=await subscriptionGuard(user,{env,run,now:now()});if(blocked)return blocked;
   if(request.method==='POST'){
    if(!canReviewSetups(user,env))return reply({error:'נדרשת הרשאת אישור של אסף.'},403);

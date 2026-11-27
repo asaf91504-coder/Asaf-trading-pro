@@ -13,7 +13,8 @@ function setup(){
  let failWrite=false;
  const run=async a=>{
   if(a[1]!==MANUAL_COMMIT)return f.run(a);
-  const [key,old,next]=a.slice(3);
+  const [key,sessionKey,memberKey,old,next,sessionRaw,memberRaw]=a.slice(3);
+  if(f.db.get(sessionKey)!==sessionRaw||f.db.get(memberKey)!==memberRaw||JSON.parse(sessionRaw).expires<=Date.now())return -1;
   if(failWrite||(f.db.get(key)||'')!==old)return 0;
   f.db.set(key,next);return 1;
  };

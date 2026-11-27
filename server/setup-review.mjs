@@ -1,6 +1,7 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {sharedScannerKey,readSharedScan} from './shared-scanner.mjs';
 import {MarketError} from './market-feed.mjs';
+import {storageKey} from './storage.mjs';
 import {closedSetupAtr14,stopWithinSetupAtr,exactTwoAtrStop} from './setup-atr.mjs';
 const atrError='מרחק הסטופ ממחיר הכניסה חייב להיות בדיוק 2 ATR יומי.';
 export function canReviewSetups(user,env){const owner=env.ASAF_SETUPS_REVIEWER_MEMBER_ID;return !!user&&/^[a-f0-9-]{36}$/.test(owner||'')&&user.id===owner}
@@ -39,7 +40,15 @@ export function setupCandidates(scan){return scan.records.flatMap(r=>{
   return [{id,symbol:r.symbol,pattern:c.label||c.kind,stage:c.stage,scenario,atr14,candleDate:r.summary.date,source:r.source,receivedAt:r.receivedAt,scanAt:scan.progress?r.receivedAt:scan.completedAt}];
  });
 }).slice(0,200)}
+export function setupMutationActor(user,env){
+ if(!user?.sessionKey||!user.sessionRaw||!user.memberRaw)throw new MarketError('יש להתחבר מחדש לפני שינוי הסטאפ.',401);
+ let session,member;try{session=JSON.parse(user.sessionRaw);member=JSON.parse(user.memberRaw)}catch{throw new MarketError('יש להתחבר מחדש לפני שינוי הסטאפ.',401)}
+ if(session?.id!==user.id||member?.id!==user.id||member.enabled!==true||session.version!==member.version||!Number.isFinite(session.expires))throw new MarketError('יש להתחבר מחדש לפני שינוי הסטאפ.',401);
+ return {keys:[user.sessionKey,storageKey('auth:member:'+user.id,env)],args:[user.sessionRaw,user.memberRaw]};
+}
 export const REVIEW_COMMIT=`-- setup-review-cas
+if redis.call('GET',KEYS[3])~=ARGV[4] or redis.call('GET',KEYS[4])~=ARGV[5] then return -1 end
+local session=cjson.decode(ARGV[4]);local clock=redis.call('TIME');if session.expires<=tonumber(clock[1])*1000+tonumber(clock[2])/1000 then return -1 end
 if (redis.call('GET',KEYS[1]) or '')~=ARGV[1] then return 0 end
 if (redis.call('GET',KEYS[2]) or '')~=ARGV[2] then return 0 end
 redis.call('SET',KEYS[2],ARGV[3],'EX',172800)
@@ -66,13 +75,15 @@ export function visibleSetups(context,reviewer,now){
 function checkRevision(expected,stored){
  if((expected??null)!==(stored??null))throw new MarketError('הטיוטה השתנתה. רענן את העמוד לפני שמירה או אישור.',409);
 }
-async function writeReview(context,id,record,{env,run,now}){
+async function writeReview(context,id,record,{user,env,run,now}){
+ const actor=setupMutationActor(user,env);
  // Keep reviews for this scan and still-published items only. A new scan never inherits a draft.
  const ids=new Set(context.candidates.map(c=>c.id));
  const book=Object.fromEntries(Object.entries(context.book).filter(([key,v])=>ids.has(key)||freshApproval(v,now)));
  if(!Object.hasOwn(book,id)&&Object.keys(book).length>=1000)throw new MarketError('תור האישור מלא. נסה לאחר פקיעת הסטאפים הישנים.',429);
  book[id]=record;
- const committed=await run(['EVAL',REVIEW_COMMIT,'2',context.key+':snapshot',context.key+':reviews',context.snapshot,context.raw,JSON.stringify(book)],{env});
+ const committed=await run(['EVAL',REVIEW_COMMIT,'4',context.key+':snapshot',context.key+':reviews',...actor.keys,context.snapshot,context.raw,JSON.stringify(book),...actor.args],{env});
+ if(committed===-1)throw new MarketError('יש להתחבר מחדש לפני שינוי הסטאפ.',401);
  if(committed!==1)throw new MarketError('הנתונים השתנו בזמן השמירה. רענן ונסה שוב.',409);
 }
 export async function saveSetupDraft(context,{id,edits,revision,user,env,run,now}){
@@ -85,7 +96,7 @@ export async function saveSetupDraft(context,{id,edits,revision,user,env,run,now
  if(!ordered(scenario)||PRICE_FIELDS.some(k=>scenario[k]>1e12))throw new MarketError('בלונג הסטופ נמוך מהכניסה והיעד גבוה ממנה. בשורט הסדר הפוך. הזן רמות חיוביות שונות.',400);
  if(!stopWithinSetupAtr(scenario,original.atr14))throw new MarketError(atrError,400);
  const draft={revision:randomUUID(),title:draftText(edits.title,80,false),analysis:draftText(edits.analysis,400,true),...Object.fromEntries(PRICE_FIELDS.map(k=>[k,scenario[k]]))};
- await writeReview(context,id,{status:'pending',at:new Date(now).toISOString(),reviewer:user.id,item:original,draft},{env,run,now});
+ await writeReview(context,id,{status:'pending',at:new Date(now).toISOString(),reviewer:user.id,item:original,draft},{user,env,run,now});
  return {status:'pending',id,revision:draft.revision};
 }
 export async function decideSetup(context,{id,decision,revision,user,env,run,now}){
@@ -103,6 +114,6 @@ export async function decideSetup(context,{id,decision,revision,user,env,run,now
  const original=existing?.original||item;
  const effective=decision==='approved'&&draft?applyDraft(original,draft):item;
  if(decision==='approved'&&!stopWithinSetupAtr(effective.scenario,item.atr14))throw new MarketError(atrError,400);
- await writeReview(context,id,{status:decision,at:new Date(now).toISOString(),reviewer:user.id,item:effective,...(draft?{draft,original}:{})},{env,run,now});
+ await writeReview(context,id,{status:decision,at:new Date(now).toISOString(),reviewer:user.id,item:effective,...(draft?{draft,original}:{})},{user,env,run,now});
  return {status:decision,id};
 }

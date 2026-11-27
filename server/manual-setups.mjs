@@ -2,7 +2,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {MarketError} from './market-feed.mjs';
 import {storageKey} from './storage.mjs';
 import {isChatOwner} from './owner-chat.mjs';
-import {canReviewSetups,draftText} from './setup-review.mjs';
+import {canReviewSetups,draftText,setupMutationActor} from './setup-review.mjs';
 import {exactTwoAtrStop} from './setup-atr.mjs';
 
 const DAY=86400000, LIMIT=60;
@@ -12,6 +12,8 @@ const invalid=()=>new MarketError('שדות הסטאפ הידני אינם תק�
 const conflict=()=>new MarketError('טיוטת הסטאפ השתנתה. רענן את העמוד ונסה שוב.',409);
 export const canAuthorSetup=(user,env)=>isChatOwner(user,env)&&canReviewSetups(user,env);
 export const MANUAL_COMMIT=`-- manual-setup-cas
+if redis.call('GET',KEYS[2])~=ARGV[3] or redis.call('GET',KEYS[3])~=ARGV[4] then return -1 end
+local session=cjson.decode(ARGV[3]);local clock=redis.call('TIME');if session.expires<=tonumber(clock[1])*1000+tonumber(clock[2])/1000 then return -1 end
 if (redis.call('GET',KEYS[1]) or '')~=ARGV[1] then return 0 end
 redis.call('SET',KEYS[1],ARGV[2])
 return 1`;
@@ -46,6 +48,7 @@ function values(data,keys,side,atr14){
 }
 export async function writeManualSetup(body,{user,env,run,now}){
  if(!canAuthorSetup(user,env))throw new MarketError('רק בעל החשבון יכול ליצור ולשנות סטאפים ידניים.',403);
+ const actor=setupMutationActor(user,env);
  const creating=body.action==='create-manual-draft';
  const editing=body.action==='edit-manual-draft';
  const deciding=body.action==='decide-manual';
@@ -81,6 +84,8 @@ export async function writeManualSetup(body,{user,env,run,now}){
  const updated={...retained,[id]:record};
  const rejected=Object.entries(updated).filter(([,r])=>r.status==='rejected').sort(([,a],[,b])=>b.at.localeCompare(a.at));
  for(const [oldId] of rejected.slice(LIMIT))delete updated[oldId];
- if(await run(['EVAL',MANUAL_COMMIT,'1',key,raw,JSON.stringify(updated)],{env})!==1)throw conflict();
+ const result=await run(['EVAL',MANUAL_COMMIT,'3',key,...actor.keys,raw,JSON.stringify(updated),...actor.args],{env});
+ if(result===-1)throw new MarketError('יש להתחבר מחדש לפני שינוי הסטאפ.',401);
+ if(result!==1)throw conflict();
  return {id,revision,status:record.status};
 }

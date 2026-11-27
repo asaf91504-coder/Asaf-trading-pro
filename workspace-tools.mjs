@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id),watchKey='asaf_watch_v2';let watch=[];co
 try{watch=watchRecords(JSON.parse(localStorage.getItem(watchKey)||localStorage.getItem('asaf_watch')||'["NASDAQ:AAPL","NASDAQ:NVDA","NASDAQ:MSFT"]'))}catch{}
 function download(name,type,text){const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 function persist(){try{localStorage.setItem(watchKey,JSON.stringify(watch));$('watchStatus').textContent='רשימת המעקב נשמרה במכשיר.'}catch{$('watchStatus').textContent='לא ניתן לשמור במכשיר. ייצא גיבוי לפני יציאה.'}render();window.dispatchEvent(new Event('asaf:watch-changed'))}
-function select(symbol,tab='charts'){$('symbol').value=symbol;$('symbol').dispatchEvent(new Event('input'));document.querySelector('[data-tab="'+tab+'"]').click();$('activeSymbol').textContent=symbol}
+function select(symbol,tab='charts'){$('symbol').value=symbol;$('symbol').dispatchEvent(new Event('input'));document.querySelector('[data-tab="'+tab+'"]').click();$('activeSymbol').textContent=symbol;if(tab==='charts')$('loadChart').click()}
 function render(){const host=$('watchRows');host.replaceChildren();const q=$('watchSearch').value.trim().toUpperCase();let count=0;
  for(const item of watch.filter(x=>(x.symbol+' '+x.note).toUpperCase().includes(q))){count++;const card=document.createElement('article');card.className='source-card';
   const heading=document.createElement('strong');heading.textContent=item.symbol;heading.dir='ltr';

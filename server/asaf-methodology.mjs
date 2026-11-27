@@ -1,3 +1,4 @@
+import {scannerScenarioFilters} from '../scanner-scenario-filters.mjs';
 import {screenResult} from '../scanner-core.mjs';
 import {marketCapAvailable} from '../market-quality.mjs';
 import {closedSetupAtr14,exactTwoAtrStop} from './setup-atr.mjs';
@@ -12,9 +13,12 @@ const candidateQualifies=(candidate,side)=>supported[side]?.has(candidate.kind)&
 
 // Bind every presentation to the same candidate that justifies the pattern
 // check. A more attractive RR from a different, failing setup is not that match.
-export function selectMethodologyCandidate(record,{side='long',fullMatch=false}={}){
+export function selectMethodologyCandidate(record,{side='long',fullMatch=false,filters}={}){
+ const requested=scannerScenarioFilters(filters);
  const candidates=(record.research?.candidates||[]).filter(c=>
   supported[side]?.has(c.kind)&&stages[side]?.includes(c.stage)&&c.scenario?.side===side&&
+  (requested.pattern==='any'||c.kind===requested.pattern)&&(!requested.crossedOnly||c.stage==='crossed')&&
+  Number.isFinite(c.scenario.movePercent)&&c.scenario.movePercent>=requested.minMeasuredMove&&Number.isFinite(c.scenario.riskReward)&&c.scenario.riskReward>=requested.minScenarioRR&&
   [c.scenario.entry,c.scenario.stop,c.scenario.target].every(v=>Number.isFinite(v)&&v>0)&&
   (side==='long'?c.scenario.stop<c.scenario.entry&&c.scenario.target>c.scenario.entry:c.scenario.stop>c.scenario.entry&&c.scenario.target<c.scenario.entry));
  const ordered=candidates.sort((a,b)=>(b.scenario.riskReward||0)-(a.scenario.riskReward||0));

@@ -5,10 +5,14 @@ import {command,storageKey} from '../../server/storage.mjs';
 const reply=(body,status=200,extra={})=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...extra}});
 const expiredCookie='asaf_session=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0';
 const parse=value=>{try{return JSON.parse(value||'null')}catch{return null}};
+const ACTOR_GUARD=`if redis.call('GET',KEYS[3])~=ARGV[5] or redis.call('GET',KEYS[4])~=ARGV[6] then return -1 end
+local session=cjson.decode(ARGV[5]);local clock=redis.call('TIME');if session.expires<=tonumber(clock[1])*1000+tonumber(clock[2])/1000 then return -1 end`;
 const CHANGE=`-- account-version-change
+${ACTOR_GUARD}
 if redis.call('GET',KEYS[1])~=ARGV[1] or redis.call('GET',KEYS[2])~=ARGV[2] then return 0 end
 redis.call('SET',KEYS[1],ARGV[3]);redis.call('SET',KEYS[2],ARGV[4]);return 1`;
 const DELETE=`-- account-self-delete
+${ACTOR_GUARD.replaceAll('KEYS[3]','KEYS[14]').replaceAll('KEYS[4]','KEYS[15]').replaceAll('ARGV[5]','ARGV[7]').replaceAll('ARGV[6]','ARGV[8]')}
 if redis.call('GET',KEYS[1])~=ARGV[1] or redis.call('GET',KEYS[2])~=ARGV[2] then return 0 end
 if ARGV[3]=='1' and redis.call('GET',KEYS[5])==ARGV[4] then redis.call('DEL',KEYS[5]) end
 local posts=cjson.decode(redis.call('GET',KEYS[12]) or '[]');for i=#posts,1,-1 do if posts[i].authorId==ARGV[6] then table.remove(posts,i) elseif posts[i].reports then posts[i].reports[ARGV[6]]=nil end end;redis.call('SET',KEYS[12],cjson.encode(posts));
@@ -18,7 +22,8 @@ export function createAccountHandler({env=process.env,run=command}={}){return as
  if(!publicAuthConfigured(env))return reply({error:'ניהול חשבונות אינו זמין.'},503);
  if(request.method==='POST'&&request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
  try{
-  const current=await currentUser(request,{env,run});if(!current)return reply({error:'יש להיכנס לחשבון.'},401);
+  const current=await currentUser(request,{env,run,includeRecords:true});if(!current)return reply({error:'יש להיכנס לחשבון.'},401);
+  const actorSessionKey=storageKey('auth:session:'+digest(cookieToken(request)),env),actorMemberKey=storageKey('auth:member:'+current.id,env);
   const admin=(env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(x=>x.trim()).includes(current.id);
   let hash=await run(['GET',storageKey('auth:index:'+current.id,env)],{env});
   let userKey=typeof hash==='string'&&/^[a-f0-9]{64}$/.test(hash)?storageKey('auth:user:'+hash,env):null;
@@ -50,13 +55,15 @@ export function createAccountHandler({env=process.env,run=command}={}){return as
    return await withBillingLock(identity,async()=>{
    const billing=await readBilling(identity,{env,run});
    if(billing?.createRequestId&&!billing.subscriptionId||billing?.subscriptionId&&!['CANCELLED','EXPIRED'].includes(billing.subscriptionStatus))return reply({error:'לפני מחיקת החשבון יש לבטל את המנוי או להסדיר בקשת תשלום ממתינה בעמוד המנוי. מחיקת החשבון אינה מבטלת חיוב ב־PayPal.',subscriptionUrl:'/subscription.html'},409);
-   const result=await run(['EVAL',DELETE,'13',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),storageKey('alerts:rules:'+user.id,env),storageKey('alerts:state:'+user.id,env),storageKey('alerts:inbox:'+user.id,env),storageKey('alerts:members',env),storageKey('community:posts',env),storageKey('conversations:member:'+user.id,env),userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id,digest(user.id)],{env});
+   const result=await run(['EVAL',DELETE,'15',userKey,memberKey,storageKey('workspace:member:'+user.id,env),storageKey('auth:index:'+user.id,env),storageKey('auth:google:'+(user.googleSubject||'none'),env),storageKey('auth:session:'+digest(cookieToken(request)),env),storageKey('auth:members',env),storageKey('alerts:rules:'+user.id,env),storageKey('alerts:state:'+user.id,env),storageKey('alerts:inbox:'+user.id,env),storageKey('alerts:members',env),storageKey('community:posts',env),storageKey('conversations:member:'+user.id,env),actorSessionKey,actorMemberKey,userRaw,memberRaw,user.googleSubject?'1':'0',hash,user.id,digest(user.id),current.sessionRaw,current.memberRaw],{env});
+   if(result===-1)return reply({error:'יש להיכנס לחשבון מחדש.'},401);
    if(result!==1)return reply({error:'החשבון עודכן. נסה שוב.'},409);
    return reply({deleted:true,authenticated:false},200,{'Set-Cookie':expiredCookie});
    },{env,run});
   }
   const version=randomUUID(),enabled=adminAction?body.action==='admin-enable':true;
-  const record={...user,version,enabled},changed=await run(['EVAL',CHANGE,'2',userKey,memberKey,userRaw,memberRaw,JSON.stringify(record),JSON.stringify({id:user.id,version,enabled})],{env});
+  const record={...user,version,enabled},changed=await run(['EVAL',CHANGE,'4',userKey,memberKey,actorSessionKey,actorMemberKey,userRaw,memberRaw,JSON.stringify(record),JSON.stringify({id:user.id,version,enabled}),current.sessionRaw,current.memberRaw],{env});
+  if(changed===-1)return reply({error:'יש להיכנס לחשבון מחדש.'},401);
   if(changed!==1)return reply({error:'החשבון עודכן. נסה שוב.'},409);
   return adminAction?reply({exists:true,memberId:user.id,enabled}):reply({authenticated:false,allSessionsRevoked:true},200,{'Set-Cookie':expiredCookie});
  }catch{return reply({error:'ניהול החשבון אינו זמין. נסה שוב.'},503)}

@@ -28,6 +28,8 @@ test('static chart emits PNG pixels and bounded metadata, without OHLCV, SVG coo
  const result=await ventureChart(snapshot,[{type:'levels',kind:'both'}]);noRawFields(result);
  const bytes=Buffer.from(result.image.split(',')[1],'base64');assert.equal(bytes.subarray(1,4).toString(),'PNG');assert.equal(bytes.readUInt32BE(16),1200);assert.equal(bytes.readUInt32BE(20),690);assert.ok(bytes.length>10000);
  assert.equal(result.firstVisibleBarTime,bars.at(-120).date);assert.equal(result.candleCount,200);assert.doesNotMatch(JSON.stringify(result),/mock-private-key|<svg|<path/);
+ assert.ok(result.accessibleLevels.length>0);assert.ok(result.accessibleLevels.length<=12);
+ for(const level of result.accessibleLevels){assert.deepEqual(Object.keys(level).sort(),['kind','price']);assert.ok(['support','resistance','entry','stop','target'].includes(level.kind));assert.ok(Number.isFinite(level.price)&&level.price>0)}
 });
 test('authenticated image and AI use the same server snapshot and repeated annotations make no provider request',async()=>{
  const {state,user}=seeded();let calls=0;const handler=createPublicMarketHandler({env,run:state.run,now:()=>now,fetcher:async()=>{calls++;throw Error('No provider call')}});

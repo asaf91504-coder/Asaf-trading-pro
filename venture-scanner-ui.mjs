@@ -1,3 +1,4 @@
+import {scannerScenarioFilters} from './scanner-scenario-filters.mjs';
 import {rankedScannerCandidates} from './scanner-candidates.mjs';
 import {partialVolumeReason,volumeUnavailableReason} from './comparable-volume.mjs';
 const $=id=>document.getElementById(id),pretty=v=>Number.isFinite(v)?Number(v).toLocaleString('en-US',{maximumFractionDigits:2}):'חסר';
@@ -27,7 +28,7 @@ export function mountVentureScanner({filters,openCharts}){
  const update=document.createElement('button');update.type='button';update.textContent='עדכן תוצאות לפי המסננים';update.className='primary';$('scanClear').before(update);
  const pager=document.createElement('div'),previous=document.createElement('button'),next=document.createElement('button'),pageLabel=document.createElement('span');
  pager.className='scanner-pagination';previous.type=next.type='button';previous.onclick=()=>{page=Math.max(0,page-1);render()};next.onclick=()=>{page++;render()};pager.append(previous,pageLabel,next);$('scanRows').closest('table').before(pager);
- const open=(record,side=record.methodology?.side)=>{openCharts();window.dispatchEvent(new CustomEvent('asaf:open-provider-chart',{detail:{symbol:record.symbol,scannerContext:{asOf:record.asOf,receivedAt:record.receivedAt,...(['long','short'].includes(side)?{side}:{})}}}))};
+ const open=(record,side=record.methodology?.side)=>{openCharts();window.dispatchEvent(new CustomEvent('asaf:open-provider-chart',{detail:{symbol:record.symbol,scannerContext:{asOf:record.asOf,receivedAt:record.receivedAt,filters:scannerScenarioFilters(Object.fromEntries(['pattern','crossedOnly','minMeasuredMove','minScenarioRR'].map(key=>[key,filters()[key]]).filter(([,value])=>value!==undefined))),...(['long','short'].includes(side)?{side}:{})}}}))};
  function ordered(){return [...records.values()].sort((a,b)=>$('scanSort').value==='symbol'?a.symbol.localeCompare(b.symbol):$('scanSort').value==='scenario'?Math.max(-1,...b.patterns.map(p=>p.movePercent??-1))-Math.max(-1,...a.patterns.map(p=>p.movePercent??-1)):$('scanSort').value==='volume'?(b.metrics.relativeVolume??-1)-(a.metrics.relativeVolume??-1):(b.metrics.atrPercent??-1)-(a.metrics.atrPercent??-1))}
  function render(){
   const host=$('scanRows');host.replaceChildren();const shortlist=$('scanShortlist');shortlist?.replaceChildren();

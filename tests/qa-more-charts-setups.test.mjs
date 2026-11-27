@@ -99,7 +99,7 @@ same('approved setup uses machine kind when display label is absent',()=>accepte
 add('stale scan allows retracting already published previous item',async()=>{
  const id='unrelated',reviewer='12345678-1234-1234-1234-123456789abc',env={ASAF_SETUPS_REVIEWER_MEMBER_ID:reviewer};
  let received;
- const result=await decideSetup(context({[id]:{status:'approved',at:time(-100),item:accepted}},{scan:{...base,stale:true}}),{id,decision:'rejected',user:{id:reviewer},env,now,run:async args=>{received=JSON.parse(args.at(-1));return 1}});
+ const result=await decideSetup(context({[id]:{status:'approved',at:time(-100),item:accepted}},{scan:{...base,stale:true}}),{id,decision:'rejected',user:{id:reviewer,sessionKey:'test-session',sessionRaw:JSON.stringify({id:reviewer,version:'v1',expires:now+60000}),memberRaw:JSON.stringify({id:reviewer,version:'v1',enabled:true})},env,now,run:async args=>{received=JSON.parse(args.at(-3));return 1}});
  assert.equal(result.status,'rejected');assert.equal(received[id].status,'rejected');
 });
 

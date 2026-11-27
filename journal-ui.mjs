@@ -33,5 +33,5 @@ $('clear').onclick=()=>{if(window.confirm('למחוק לצמיתות את כל �
 function reloadJournal(){try{const loaded=personalData('journal',JSON.parse(localStorage.getItem(key())||'[]'));trades=loaded;storageInvalid=false;clearForm();render();$('journalStatus').textContent='העותק המקומי עודכן.'}catch{storageInvalid=true;$('journalStatus').textContent='לא ניתן לקרוא את היומן המקומי. הנתונים המקוריים נשמרו ללא שינוי.'}}
 window.addEventListener('asaf:personal-loaded',e=>{if(e.detail?.section==='journal')reloadJournal()});window.addEventListener('storage',e=>{if(e.key===key())reloadJournal()});
 let journalOwner=authState.memberId||null;
-window.addEventListener('asaf:auth',()=>{const next=authState.memberId||null;if(authState.checkAvailable&&next!==journalOwner){journalOwner=next;reloadJournal()}});
+window.addEventListener('asaf:auth',()=>{const next=authState.memberId||null;if(authState.checkAvailable&&next!==journalOwner){journalOwner=next;trades=[];storageInvalid=false;clearForm();render();reloadJournal()}});
 clearForm();reloadJournal();render();mountPersonalSync(document.getElementById('journalSync'),{only:'journal'});

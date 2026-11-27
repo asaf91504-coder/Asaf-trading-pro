@@ -35,3 +35,7 @@ test('more candidates retain prior explicit screening filters and side unless th
  const switched='תן לי עוד שלוש מניות אחרות לשורט';assert.equal(resolveDiscoveryContext(stockDiscoveryIntent(switched),history,switched).side,'short');
  const reset='תן לי שלוש מניות לשורט';assert.equal(resolveDiscoveryContext(stockDiscoveryIntent(reset),history,reset).filters,undefined);
 });
+
+test('repeated more requests exclude all earlier scanner lists in the bounded context',()=>{
+ const history=[{role:'assistant',content:'AAPL, MSFT, NVDA',chartContext:{source:'Twelve Data'}},{role:'assistant',content:'AMD, TSLA, INTC',chartContext:{source:'Twelve Data'}}];assert.deepEqual(previousScannerSymbols(history,['AAPL','MSFT','NVDA','AMD','TSLA','INTC']),['AAPL','MSFT','NVDA','AMD','TSLA','INTC']);
+});

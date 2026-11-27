@@ -24,7 +24,7 @@ test('marked view has a truthful colored legend and a wide phone view that follo
  }finally{f.restore()}
 });
 test('unidentified geometry is explained rather than adding invented marks',()=>{
- const f=fixture();try{f.view.setSnapshot({...image,researchLegend:[]});const host=f.panel.afterNode;assert.equal(host.children[3].children.length,2);assert.match(host.children[4].textContent,/לא זוהה קו מגמה/);assert.match(host.children[4].textContent,/לא זוהתה תבנית/);}finally{f.restore()}
+ const f=fixture();try{f.view.setSnapshot({...image,researchLegend:[]});const host=f.panel.afterNode,missing=host.children.find(node=>node.className==='muted');assert.equal(host.children[3].children.length,2);assert.match(missing.textContent,/לא זוהה קו מגמה/);assert.match(missing.textContent,/לא זוהתה תבנית/);}finally{f.restore()}
 });
 test('language repaint and unsafe image rejection do not alter the chart snapshot',()=>{
  const f=fixture();try{
