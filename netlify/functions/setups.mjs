@@ -30,7 +30,7 @@ export function createSetupsHandler({env=process.env,run=command,now=()=>Date.no
   }
   const when=now(),owner=canAuthorSetup(user,env),reviewer=canReviewSetups(user,env);
   let scanner;
-  try{scanner=visibleSetups(await setupReviewContext({env,run,now:when,memberId:user.id}),reviewer,when)}
+  try{scanner=visibleSetups(await setupReviewContext({env,run,now:when,memberId:user.id,includeCandidates:reviewer}),reviewer,when)}
   catch(e){
    if(!(e instanceof MarketError)||![403,409,503].includes(e.status)||!owner&&privateMarketTrial(env))throw e;
    // If the scanner is disabled or stale, no scanner record is projected.
