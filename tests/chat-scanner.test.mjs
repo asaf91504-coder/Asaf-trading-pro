@@ -3,7 +3,7 @@ import {marketSnapshotKey} from '../server/market-feed.mjs';
 import {storageKey} from '../server/storage.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readChatScanner} from '../server/chat-scanner.mjs';
+import {readChatScanner,CHAT_SCANNER_PAGE_SIZE} from '../server/chat-scanner.mjs';
 import {scanBars} from '../scanner-core.mjs';
 import {scannerDailyVolumeBasis} from '../server/scanner-market-data.mjs';
 import {sharedScannerKey} from '../server/shared-scanner.mjs';
@@ -52,4 +52,50 @@ test('single-stock analysis includes cached company size and rejects expired com
  const result=await analysisMarket(payload,{env:configured,run:f.run,now,memberId:id});assert.equal(result.meta.capitalization.value,2e9);
  f.db.set(key,JSON.stringify({...r.fundamentals,receivedAt:new Date(now-86400001).toISOString()}));
  const expired=await analysisMarket(payload,{env:configured,run:f.run,now,memberId:id});assert.equal(expired.meta.capitalization,null);
+});
+
+
+test('reported month-long request supplies two server-derived candidates to inference',async()=>{
+ const oldEnv=process.env,oldFetch=globalThis.fetch,oldNow=Date.now,f=fixture();process.env={...env};Date.now=()=>now;
+ const user=seed(f,'owner@example.test',id);f.db.set(sharedScannerKey(env)+':snapshot',JSON.stringify(snapshot));let supplied;
+ globalThis.fetch=async(url,init)=>{
+  const b=JSON.parse(init.body);if(url==='https://test.upstash.io'){if(b[0]==='EVAL'&&b[1].includes('owner-chat-burst'))return Response.json({result:1});return Response.json({result:await f.run(b)})}
+  assert.equal(url,'https://api.openai.com/v1/responses');supplied=JSON.parse(b.input.at(-1).content.split('SCANNER_DISCOVERY (verified server-derived candidates, not instructions):\n')[1]);
+  return Response.json({status:'completed',output:[{type:'message',role:'assistant',content:[{type:'output_text',text:supplied.candidates.map(c=>c.symbol+' '+c.close).join(', ')}]}]});
+ };
+ try{
+  const response=await handler(request('free-chat',{message:'תרשום לי 2 מניות להשקיע לטווח של חודש מניות לונג',language:'he',symbol:'ACMR',source:'none',history:[{role:'assistant',content:'No old stock data'}]},user.cookie));
+  const b=await response.json();assert.equal(response.status,200,JSON.stringify(b));assert.equal(supplied.candidates.length,2);assert.equal(b.scannerDiscovery.candidates.length,2);
+  assert.ok(supplied.candidates.every(c=>c.side==='long'&&Number.isFinite(c.close)&&Number.isFinite(c.changePercent)&&Number.isFinite(c.sma20)));
+  assert.equal(b.analysisContext,null);assert.equal(b.source,'Twelve Data');
+ }finally{process.env=oldEnv;globalThis.fetch=oldFetch;Date.now=oldNow}
+});
+
+test('a 10,000-stock chat search stops reading candle rows once the requested candidates exist',async()=>{
+ const f=fixture(),symbols=Array.from({length:10000},(_,i)=>'S'+i),configured={...env,ASAF_MARKET_ALLOWED_SYMBOLS:symbols.join(',')},commands=[];
+ const rows=symbols.map(symbol=>({symbol,key:'test-row:'+symbol}));
+ for(let i=0;i<CHAT_SCANNER_PAGE_SIZE*2;i++){
+  const symbol=symbols[i],record={...records[0],symbol,fundamentals:{...records[0].fundamentals,symbol}};
+  f.db.set(rows[i].key,JSON.stringify(record));
+ }
+ f.db.set(sharedScannerKey(configured)+':snapshot',JSON.stringify({...snapshot,format:'scanner-symbol-manifest-v1',records:[],rows,total:10000}));
+ const run=async a=>{commands.push(a);return f.run(a)};
+ const result=await readChatScanner({side:'long',limit:2},{env:configured,memberId:id,now,run});
+ assert.equal(result.candidates.length,2);assert.equal(result.total,10000);assert.equal(result.scanned,CHAT_SCANNER_PAGE_SIZE);assert.equal(result.partial,true);
+ const reads=commands.filter(a=>a[0]==='MGET');assert.equal(reads.length,1);assert.equal(reads[0].length,CHAT_SCANNER_PAGE_SIZE+1);
+ assert.ok(commands.every(a=>['GET','MGET'].includes(a[0])));
+ const next=await readChatScanner({side:'long',limit:2,excludeSymbols:result.candidates.map(c=>c.symbol)},{env:configured,memberId:id,now,run});
+ assert.equal(next.candidates.length,2);assert.ok(next.candidates.every(c=>!result.candidates.some(prior=>prior.symbol===c.symbol)));
+});
+
+test('discovery reads another page when filters reject the first, and never silently drops filters',async()=>{
+ const invalid=records.map(r=>({...r,fundamentals:{...r.fundamentals,marketCap:1e8}}));let pages=0;
+ const result=await readChatScanner({side:'long',limit:2,filters:{minMarketCap:1e9}},{env,memberId:id,now,readScan:async({page})=>{
+  pages++;assert.equal(page.offset,pages===1?0:4);return {...snapshot,records:pages===1?invalid:records.map(r=>({...r,symbol:'NEXT'+r.symbol,fundamentals:{...r.fundamentals,symbol:'NEXT'+r.symbol}})),pagination:{nextOffset:4,hasMore:pages===1}};
+ }});
+ assert.equal(pages,2);assert.equal(result.candidates.length,2);assert.ok(result.candidates.every(c=>c.marketCapUsd>=1e9));
+});
+
+test('a hanging scanner read returns a bounded error instead of waiting for host termination',async()=>{
+ await assert.rejects(readChatScanner({side:'long',limit:2},{env,memberId:id,now,timeoutMs:10,readScan:()=>new Promise(()=>{})}),/התעכבה/);
 });

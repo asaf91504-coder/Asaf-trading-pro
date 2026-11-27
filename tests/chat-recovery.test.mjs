@@ -500,6 +500,18 @@ test('a scanner request drops the selected chart, its receipt and history withou
  await s.ctx.ask('אני רוצה שתתן לי שלוש מניות לשורט או לונג');
  assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,undefined);assert.equal(p.history,undefined);assert.equal(p.useServerMarket,undefined);assert.equal(p.scannerContext,undefined);assert.ok(s.ctx.conversation.length>=1);
 });
+test('the reported write-two-stocks request reaches discovery with or without an open chart',async()=>{
+ for(const attached of [false,true]){
+  const s=setup();if(attached){s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;}
+  s.ctx.parseChartCommand=parseChartCommand;
+  s.ctx.conversation=[{role:'assistant',content:'אין לי נתונים על המניה הקודמת',chartContext:{symbol:'ACMR',source:'Twelve Data'}}];
+  s.ctx.runChatActions=async()=>assert.fail('discovery must not load the selected chart');
+  await s.ctx.ask('תרשום לי 2 מניות להשקיע לטווח של חודש מניות לונג');
+  assert.equal(s.payloads.length,1);
+  assert.equal(s.payloads[0].symbol,undefined);assert.equal(s.payloads[0].useServerMarket,undefined);assert.equal(s.payloads[0].history,undefined);
+  assert.equal(s.payloads[0].webSearch,false);assert.equal(s.payloads[0].message,'תרשום לי 2 מניות להשקיע לטווח של חודש מניות לונג');
+ }
+});
 test('switching named stocks loads the new asset and preserves the same conversation',async()=>{
  const s=setup();let stayedInChat=false;s.ctx.document.querySelector=selector=>{assert.equal(selector,'[data-tab="chat"]');return {click(){stayedInChat=true}}};s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;
  s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;
