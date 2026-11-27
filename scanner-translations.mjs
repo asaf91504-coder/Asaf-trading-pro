@@ -1,6 +1,9 @@
 // Complete scanner messages; do not translate user or provider data.
 export const scannerTranslations = {
   "en": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "Search pool: {total} stocks · stop after 50 distinct matches.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "Stopped after 50 distinct matches.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "Available data searched; fewer than 50 matches found.",
     "פתח גרף מסומן": "Open marked chart",
     "גרף מסומן מהסורק": "Marked screener chart",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Marks are calculated automatically from the scan data. Patterns and trendlines appear only when detected.",
@@ -120,6 +123,9 @@ export const scannerTranslations = {
     "down": "Down"
   },
   "es": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "Universo: {total} acciones · detener tras 50 coincidencias distintas.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "Búsqueda detenida tras 50 coincidencias distintas.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "Universo agotado; se encontraron menos de 50 coincidencias.",
     "פתח גרף מסומן": "Abrir gráfico marcado",
     "גרף מסומן מהסורק": "Gráfico marcado del escáner",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Las marcas se calculan automáticamente a partir del análisis. Los patrones y las líneas de tendencia aparecen solo cuando se detectan.",
@@ -239,6 +245,9 @@ export const scannerTranslations = {
     "down": "Bajista"
   },
   "fr": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "Univers : {total} actions · arrêt après 50 correspondances distinctes.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "Arrêt après 50 correspondances distinctes.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "Univers parcouru ; moins de 50 correspondances trouvées.",
     "פתח גרף מסומן": "Ouvrir le graphique annoté",
     "גרף מסומן מהסורק": "Graphique annoté du scanner",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Les annotations sont calculées automatiquement à partir des données du scan. Les figures et les tendances ne sont affichées que si elles sont détectées.",
@@ -358,6 +367,9 @@ export const scannerTranslations = {
     "down": "Baissier"
   },
   "de": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "Suchuniversum: {total} Aktien · Stopp nach 50 verschiedenen Treffern.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "Nach 50 verschiedenen Treffern gestoppt.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "Suchuniversum durchsucht; weniger als 50 Treffer gefunden.",
     "פתח גרף מסומן": "Markiertes Chart öffnen",
     "גרף מסומן מהסורק": "Markiertes Screener-Chart",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Markierungen werden automatisch aus den Scan-Daten berechnet. Muster und Trendlinien erscheinen nur, wenn sie erkannt werden.",
@@ -477,6 +489,9 @@ export const scannerTranslations = {
     "down": "Abwärts"
   },
   "pt": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "Universo: {total} ações · parar após 50 correspondências distintas.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "Busca encerrada após 50 correspondências distintas.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "Universo esgotado; menos de 50 correspondências encontradas.",
     "פתח גרף מסומן": "Abrir gráfico marcado",
     "גרף מסומן מהסורק": "Gráfico marcado do scanner",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "As marcações são calculadas automaticamente a partir dos dados da análise. Padrões e linhas de tendência aparecem apenas quando detetados.",
@@ -596,6 +611,9 @@ export const scannerTranslations = {
     "down": "Baixa"
   },
   "ru": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "База поиска: {total} акций · остановка после 50 разных совпадений.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "Поиск остановлен после 50 разных совпадений.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "База просмотрена; найдено менее 50 совпадений.",
     "פתח גרף מסומן": "Открыть график с отметками",
     "גרף מסומן מהסורק": "График сканера с отметками",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "Отметки рассчитываются автоматически по данным сканирования. Фигуры и линии тренда отображаются только при обнаружении.",
@@ -715,6 +733,9 @@ export const scannerTranslations = {
     "down": "Вниз"
   },
   "ar": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "نطاق البحث: {total} سهم · التوقف بعد 50 مطابقة مختلفة.",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "توقف البحث بعد 50 مطابقة مختلفة.",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "اكتمل نطاق البحث؛ تم العثور على أقل من 50 مطابقة.",
     "פתח גרף מסומן": "افتح الرسم مع العلامات",
     "גרף מסומן מהסורק": "رسم الماسح مع العلامات",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "تُحسب العلامات تلقائياً من بيانات الفحص. تظهر الأنماط وخطوط الاتجاه فقط عند اكتشافها.",
@@ -834,6 +855,9 @@ export const scannerTranslations = {
     "down": "هابط"
   },
   "zh": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "搜索池：{total}只股票 · 找到50只不同的匹配股票后停止。",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "找到50只不同的匹配股票后已停止。",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "已搜索整个股票池，匹配股票不足50只。",
     "פתח גרף מסומן": "打开标注图表",
     "גרף מסומן מהסורק": "筛选器标注图表",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "标注根据扫描数据自动计算。仅显示检测到的形态和趋势线。",
@@ -953,6 +977,9 @@ export const scannerTranslations = {
     "down": "下跌"
   },
   "ja": {
+    "מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.": "検索対象：{total}銘柄 · 異なる50銘柄が一致した時点で停止。",
+    "הסריקה נעצרה לאחר 50 התאמות שונות.": "異なる50銘柄が一致したため停止しました。",
+    "החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.": "検索対象を確認しました。一致は50銘柄未満です。",
     "פתח גרף מסומן": "注釈付きチャートを開く",
     "גרף מסומן מהסורק": "スクリーナーの注釈付きチャート",
     "הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.": "注釈はスキャンデータから自動計算されます。パターンとトレンドラインは検出された場合のみ表示されます。",

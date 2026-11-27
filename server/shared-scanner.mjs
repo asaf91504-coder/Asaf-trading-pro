@@ -10,13 +10,18 @@ import {scannerBatchPlan} from './scanner-budget.mjs';
 import {scanBars} from '../scanner-core.mjs';
 import {twelveSettings} from './twelve-config.mjs';
 import {isScannerManifest,readScannerManifest,refreshLargeScanner} from './scanner-large-cache.mjs';
+import {scannerUniverse} from './scanner-universe.mjs';
 export const SCAN_PERIOD_MS=3*60*60*1000;
 export const sharedScannerEnabled=env=>env.ASAF_HOURLY_SCANNER_ENABLED==='true';
-export function sharedScannerKey(env){return storageKey('scanner:three-hour:v2:'+createHash('sha256').update(JSON.stringify({symbols:approvedMarketSymbols(env),feed:legacyMarketSnapshotKey('_','1day',env),fundamentals:env.ASAF_MARKET_FUNDAMENTALS_ENABLED==='true',...(scannerDailyVolumeEnabled(env)?{dailyVolume:true}:{})})).digest('hex').slice(0,24),env)}
+export function sharedScannerKey(env,symbols=approvedMarketSymbols(env)){return storageKey('scanner:three-hour:v2:'+createHash('sha256').update(JSON.stringify({symbols,feed:legacyMarketSnapshotKey('_','1day',env),fundamentals:env.ASAF_MARKET_FUNDAMENTALS_ENABLED==='true',...(scannerDailyVolumeEnabled(env)?{dailyVolume:true}:{})})).digest('hex').slice(0,24),env)}
 const parse=raw=>{try{return JSON.parse(raw)}catch{return null}};
+// Preserve existing research while the larger namespace fills progressively.
+export const previousScannerKey=env=>['us1000','us10000'].includes(env.ASAF_SCANNER_UNIVERSE)?sharedScannerKey(env,scannerUniverse(env,{legacy:true})):null;
 export async function readSharedScan({env=process.env,run=command,now=Date.now(),memberId,symbols}={}){
  if(!sharedScannerEnabled(env)||!marketAccessAllowed(memberId,env,now))throw new MarketError('הסריקה המשותפת אינה זמינה לחשבון זה.',403);
- const snapshot=parse(await run(['GET',sharedScannerKey(env)+':snapshot'],{env}));
+ let snapshot=parse(await run(['GET',sharedScannerKey(env)+':snapshot'],{env}));
+ const previousKey=previousScannerKey(env);
+ if(!snapshot&&previousKey){snapshot=parse(await run(['GET',previousKey+':snapshot'],{env}));if(snapshot)snapshot={...snapshot,total:approvedMarketSymbols(env).length,partial:true,progress:{processed:0,total:approvedMarketSymbols(env).length,complete:false}};}
  const age=now-Date.parse(isScannerManifest(snapshot)?snapshot.updatedAt:snapshot?.completedAt);
  if(!snapshot||!Array.isArray(snapshot.records)||!Number.isFinite(age)||age<0||age>86400000)throw new MarketError('הסריקה התלת־שעתית עדיין אינה זמינה. נסה שוב לאחר העדכון הבא.',503);
  const selected=new Set(symbols||approvedMarketSymbols(env)),basis=scannerDailyVolumeBasis(env)||twelveSettings(env).dailyVolumeBasis;
@@ -43,7 +48,7 @@ export async function refreshSharedScan({env=process.env,run=command,fetcher=fet
  if(!sharedScannerEnabled(env)||(env.CONTEXT||runtimeContext)!=='production'||!marketAccessAllowed(memberId,env,now))return {status:'disabled'};
  const symbols=approvedMarketSymbols(env),plan=scannerBatchPlan(env,{fundamentals:fundamentalsConfigured(env,now)});
  if(!plan.maxSymbols)return {status:'budget-too-small'};
- if(symbols.length>50)return refreshLargeScanner({env,run,fetcher,now,key:sharedScannerKey(env),symbols,plan,memberId,readBars,readFundamentals,fundamentals:fundamentalsConfigured(env,now),commitScript:SCANNER_COMMIT,periodMs:SCAN_PERIOD_MS});
+ if(symbols.length>50)return refreshLargeScanner({env,run,fetcher,now,key:sharedScannerKey(env),seedKey:previousScannerKey(env),symbols,plan,memberId,readBars,readFundamentals,fundamentals:fundamentalsConfigured(env,now),commitScript:SCANNER_COMMIT,periodMs:SCAN_PERIOD_MS});
  const key=sharedScannerKey(env),token=randomUUID(),lock=key+':lock';
  if(await run(['SET',lock,token,'NX','EX','55'],{env})!=='OK')return {status:'busy'};
  try{

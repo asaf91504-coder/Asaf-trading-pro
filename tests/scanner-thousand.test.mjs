@@ -23,11 +23,11 @@ function setup(){
  return {...f,run,commands};
 }
 
-test('US preset has exactly 1,000 unique symbols and preserves configured names',()=>{
- const list=scannerUniverse({ASAF_SCANNER_UNIVERSE:'us1000',ASAF_MARKET_ALLOWED_SYMBOLS:'TSLA,AMD, TSLA'});
+test('legacy US cache preset has 1,000 unique symbols and preserves configured names',()=>{
+ const list=scannerUniverse({ASAF_SCANNER_UNIVERSE:'us1000',ASAF_MARKET_ALLOWED_SYMBOLS:'TSLA,AMD, TSLA'},{legacy:true});
  assert.equal(list.length,1000);assert.equal(new Set(list).size,1000);assert.deepEqual(list.slice(0,2),['TSLA','AMD']);
  assert.equal(scannerUniverse(env).length,1000);
- assert.deepEqual(scannerUniverse({...env,ASAF_MARKET_ALLOWED_SYMBOLS:env.ASAF_MARKET_ALLOWED_SYMBOLS+',EXTRA'}),[]);
+ assert.deepEqual(scannerUniverse({...env,ASAF_MARKET_ALLOWED_SYMBOLS:Array.from({length:10001},(_,i)=>'STOCK'+i).join(',')}),[]);
  for(const patch of [{ASAF_SCANNER_UNIVERSE:'unknown'},{ASAF_MARKET_ALLOWED_SYMBOLS:'AAPL,bad/name'}])assert.deepEqual(scannerUniverse({...env,...patch}),[]);
 });
 
@@ -104,4 +104,17 @@ test('a transient refresh error preserves a previous valid scanner row and repor
  await refreshSharedScan({...options,now:now+3*3600000,readBars:async()=>{throw new MarketError('temporary outage',503)}});
  const retained=await readSharedScan({env:small,run:f.run,now:now+3*3600000,memberId:owner});assert.equal(retained.records.length,60);assert.equal(retained.partial,true);assert.equal(retained.errors.length,10);assert.equal(retained.records[0].receivedAt,prior.records[0].receivedAt);
  const expired=await readSharedScan({env:small,run:f.run,now:now+25*3600000,memberId:owner});assert.equal(expired.records.length,0);
+});
+
+test('expanding to 10,000 retains prior cached research while the new namespace fills',async()=>{
+ const f=setup(),options={env,run:f.run,readBars:sample,readFundamentals:company};
+ const previousEnv={...env};
+ for(let i=0;i<3;i++)await refreshSharedScan({...options,env:previousEnv,now:now+i*60000});
+ const largerEnv={...env,ASAF_SCANNER_UNIVERSE:'us10000'};
+ const before=await readSharedScan({env:largerEnv,run:f.run,memberId:owner,now:now+3*60000});
+ assert.equal(before.records.length,30);assert.equal(before.total,10000);assert.equal(before.partial,true);assert.equal(before.progress.complete,false);
+ const result=await refreshSharedScan({...options,env:largerEnv,now:now+3*60000});assert.equal(result.total,10000);
+ const after=await readSharedScan({env:largerEnv,run:f.run,memberId:owner,now:now+3*60000});
+ assert.equal(after.records.length,30);assert.equal(after.progress.processed,10);assert.equal(after.total,10000);
+ assert.ok(after.records.some(r=>r.symbol==='STOCK29'));
 });

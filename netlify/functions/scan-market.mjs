@@ -1,6 +1,7 @@
 import {screenWithMethodology} from '../../server/asaf-methodology.mjs';
 import {sharedScannerEnabled,readSharedScan} from '../../server/shared-scanner.mjs';
 import {SHARED_SCANNER_PAGE_SIZE} from '../../server/scanner-universe.mjs';
+import {SCANNER_MATCH_LIMIT} from '../../scanner-search-policy.mjs';
 import {scannerCapacity} from '../../server/scanner-budget.mjs';
 import {scannerBatchPlan} from '../../server/scanner-budget.mjs';
 import {ventureScanRecord} from '../../server/venture-presentation.mjs';
@@ -23,7 +24,7 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
  let plan={maxSymbols:0,batchDelayMs:61000};
  try{if(access)plan=scannerBatchPlan(env,{fundamentals:fundamentalsConfigured(env,now())})}catch{return reply({error:'הגדרות מכסת הסריקה אינן תקינות.'},503)}
  const shared=sharedScannerEnabled(env),enabled=access&&(shared||plan.maxSymbols>0);
- if(request.method==='GET')return reply({enabled,...plan,shared,maxSymbols:shared?SHARED_SCANNER_PAGE_SIZE:plan.maxSymbols,interval:'1day',fundamentalsEnabled:fundamentalsConfigured(env,now()),barPolicy:'previous-daily-sessions',presentation:'derived-only',...(enabled&&viewer?{symbols:approvedMarketSymbols(env),capacity:scannerCapacity(env,{symbols:approvedMarketSymbols(env).length,fundamentals:fundamentalsConfigured(env,now())})}:{})});
+ if(request.method==='GET')return reply({enabled,...plan,shared,matchLimit:SCANNER_MATCH_LIMIT,maxSymbols:shared?SHARED_SCANNER_PAGE_SIZE:plan.maxSymbols,interval:'1day',fundamentalsEnabled:fundamentalsConfigured(env,now()),barPolicy:'previous-daily-sessions',presentation:'derived-only',...(enabled&&viewer?{symbols:approvedMarketSymbols(env),capacity:scannerCapacity(env,{symbols:approvedMarketSymbols(env).length,fundamentals:fundamentalsConfigured(env,now())})}:{})});
  if(!enabled)return reply({error:'סריקה מספק ממתינה למנוי ולהפעלת רישוי הנתונים.'},503);
  if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Origin mismatch'},403);
  if(!(request.headers.get('content-type')||'').includes('application/json'))return reply({error:'JSON only'},415);
@@ -36,7 +37,9 @@ export function createScanMarketHandler({env=process.env,run=command,fetcher=fet
   const filters=body.filters||{};
   const project=input=>{const {record,screen,methodology,opportunities}=screenWithMethodology(input,filters,{now:now()});return ventureScanRecord(record,screen,methodology,opportunities,now())};
   if(!shared&&body.cachedOnly!==true&&symbols.length>plan.maxSymbols)return reply({error:`אפשר לסרוק עד ${plan.maxSymbols} מניות בקבוצה לפי מכסת הספק הנוכחית.`,code:'scan_batch_limit',maxSymbols:plan.maxSymbols},422);
-  const slot=Math.floor(now()/60000);const quota=await run(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0');if n>="+(shared?'30':body.cachedOnly===true?'12':'2')+" then return 0 end;redis.call('INCR',KEYS[1]);redis.call('EXPIRE',KEYS[1],120);return 1",'1',storageKey('market:scan:'+(body.cachedOnly===true?'filter:':'fetch:')+user.id+':'+slot,env)],{env});if(quota!==1)return reply({error:'מכסת הסריקות או שינויי המסננים בדקה נוצלה. המתן ונסה שוב.'},429);
+  // Cache-only shared reads need up to 100 bounded pages for a 10,000-stock
+  // search. This does not increase the separate atomic provider credit quota.
+  const slot=Math.floor(now()/60000);const quota=await run(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0');if n>="+(shared?'120':body.cachedOnly===true?'12':'2')+" then return 0 end;redis.call('INCR',KEYS[1]);redis.call('EXPIRE',KEYS[1],120);return 1",'1',storageKey('market:scan:'+(body.cachedOnly===true?'filter:':'fetch:')+user.id+':'+slot,env)],{env});if(quota!==1)return reply({error:'מכסת הסריקות או שינויי המסננים בדקה נוצלה. המתן ונסה שוב.'},429);
   if(shared){const scan=await readSharedScan({env,run,now:now(),memberId:user.id,symbols});return reply({records:scan.records.map(r=>project(r)),errors:scan.errors,scope:scan.scope,shared:true,stale:scan.stale,partial:scan.partial,completedAt:scan.completedAt,updatedAt:scan.updatedAt,progress:scan.progress,nextUpdateAt:scan.nextUpdateAt});}
   const scanTime=now();
   const results=await Promise.all(symbols.map(async symbol=>{try{

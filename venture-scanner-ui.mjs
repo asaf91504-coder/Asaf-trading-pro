@@ -1,4 +1,5 @@
 import {scannerScenarioFilters} from './scanner-scenario-filters.mjs';
+import {collectScannerResults,SCANNER_SEARCH_POOL_LIMIT,SCANNER_MATCH_LIMIT} from './scanner-search-policy.mjs';
 import {rankedScannerCandidates} from './scanner-candidates.mjs';
 import {partialVolumeReason,volumeUnavailableReason} from './comparable-volume.mjs';
 const $=id=>document.getElementById(id),pretty=v=>Number.isFinite(v)?Number(v).toLocaleString('en-US',{maximumFractionDigits:2}):'חסר';
@@ -19,7 +20,7 @@ export async function scannerJson(fetcher,url,options,signal,timeoutMs){
  }
 }
 export function mountVentureScanner({filters,openCharts}){
- const records=new Map();let busy=false,controller=null,revision=0,lastFilters='',dirty=true,inspectedSymbol=null,page=0,sharedScan=false;
+ const records=new Map();let busy=false,controller=null,revision=0,lastFilters='',dirty=true,inspectedSymbol=null,page=0,sharedScan=false,discoverySymbols=[];
  const pageSize=100;
  const translate=value=>window.asafTranslate?.(value)??value;
  const localized=(element,parts)=>{element.translate=false;element.textContent=parts.map(translate).join('');};
@@ -48,7 +49,7 @@ export function mountVentureScanner({filters,openCharts}){
   // They never count as full matches and never conceal the missing conditions.
   let watchCount=0;
   if(shortlist&&!dirty){
-   const candidates=rankedScannerCandidates([...records.values()],{side:filters().scenarioSide||'any'});
+   const candidates=rankedScannerCandidates([...records.values()],{side:filters().scenarioSide||'any',limit:SCANNER_MATCH_LIMIT});
    if(candidates.length){const heading=document.createElement('h3');localized(heading,['מניות שנמצאו למחקר']);shortlist.append(heading);}
    for(const {record:r,opportunity:o} of candidates){
     const m=r.metrics,full=o.status==='match'&&r.screen.matches;
@@ -84,10 +85,10 @@ export function mountVentureScanner({filters,openCharts}){
   if(busy)return;busy=true;const current=++revision;controller=new AbortController();const signal=controller.signal,selected=filters(),signature=JSON.stringify(selected),status=$('scanDiscoverStatus')||$('scanProviderStatus');
   const stop=$('scanDiscoverStop');if(stop)stop.hidden=false;update.disabled=true;$('scanProvider').disabled=true;if($('scanDiscover'))$('scanDiscover').disabled=true;$('scanProviderAuto').checked=false;
   try{
-   let symbols,batchSize=10,delay=31000,shared=false,sharedReceipt='';
-   if(cachedOnly){shared=sharedScan;batchSize=shared?100:10;symbols=[...records.keys()];if(!symbols.length)throw Error('יש לבצע סריקה ראשונה לפני עדכון המסננים.');}
-   else if(discover){const {response,data:config}=await scannerJson(fetch,'/.netlify/functions/scan-market',{credentials:'same-origin'},signal,15000);if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=config.symbols.slice(0,1000);batchSize=Math.min(shared?100:10,config.maxSymbols||10);sharedScan=shared;delay=Math.max(31000,config.batchDelayMs||0);}
-   else symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);
+   let symbols,batchSize=10,delay=31000,shared=false,sharedReceipt='',targetReached=false;
+   if(cachedOnly){shared=sharedScan;batchSize=shared?100:10;symbols=discoverySymbols.length?discoverySymbols:[...records.keys()];if(!symbols.length)throw Error('יש לבצע סריקה ראשונה לפני עדכון המסננים.');}
+   else if(discover){const {response,data:config}=await scannerJson(fetch,'/.netlify/functions/scan-market',{credentials:'same-origin'},signal,15000);if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=[...new Set(config.symbols)].slice(0,SCANNER_SEARCH_POOL_LIMIT);discoverySymbols=symbols;batchSize=Math.min(shared?100:10,config.maxSymbols||10);sharedScan=shared;delay=Math.max(31000,config.batchDelayMs||0);}
+   else {discoverySymbols=[];symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);}
    if(!symbols.length||(!discover&&!cachedOnly&&symbols.length>10))throw Error('בחר 1 עד 10 סימולים בכל סריקה ידנית.');
    // A failed cached filter update must remain retryable without refetching market data.
    const staged=cachedOnly?new Map():records;
@@ -98,12 +99,14 @@ export function mountVentureScanner({filters,openCharts}){
     const {response,data}=await scannerJson(fetch,'/.netlify/functions/scan-market',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:symbols.slice(offset,offset+batchSize),filters:selected,cachedOnly})},signal,35000);
     if(!response.ok)throw Error(data.error||'הסריקה נכשלה.');if(current!==revision||signal.aborted)return;
     if(data.shared){shared=sharedScan=true;sharedReceipt='סריקה משותפת · עדכון '+(data.updatedAt||data.completedAt)+' · עדכון הבא '+new Date(data.nextUpdateAt).toLocaleString(globalThis.document?.documentElement?.lang||'he-IL')+(data.stale?' · ממתין לרענון':'');if(data.progress&&!data.progress.complete)sharedReceipt+=' · '+translate('עדכון ברקע: {processed} מתוך {total} מניות').replace('{processed}',String(data.progress.processed)).replace('{total}',String(data.progress.total));}
-    for(const r of data.records||[])if(r.presentation==='derived-only')staged.set(r.symbol,r);
+    targetReached=collectScannerResults(staged,data.records)>=SCANNER_MATCH_LIMIT;
     if(!cachedOnly){dirty=JSON.stringify(filters())!==signature;lastFilters=signature;render();}
     if(data.errors?.length)$('scanProviderStatus').textContent=data.errors.slice(0,3).map(e=>e.symbol+': '+e.error).join(' | ');
+    if(targetReached||JSON.stringify(filters())!==signature)break;
    }
    if(cachedOnly){records.clear();for(const [symbol,result] of staged)records.set(symbol,result);dirty=JSON.stringify(filters())!==signature;lastFilters=signature;render();}
-   status.textContent=sharedReceipt||`הסריקה הסתיימה: התקבלו ${records.size} תוצאות נגזרות. `+(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':'החישוב בשרת; נפח יומי EOD, ללא מחירי מקור להורדה.');
+   const searchReceipt=discoverySymbols.length?translate('מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.').replace('{total}',String(discoverySymbols.length))+' '+translate(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':targetReached?'הסריקה נעצרה לאחר 50 התאמות שונות.':'החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.')+' ':'';
+   status.textContent=searchReceipt+(sharedReceipt||`הסריקה הסתיימה: התקבלו ${records.size} תוצאות נגזרות. `+(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':'החישוב בשרת; נפח יומי EOD, ללא מחירי מקור להורדה.'));
   }catch(e){status.textContent=e.name==='AbortError'?'הסריקה נעצרה.':e.message;}
   finally{if(current===revision){busy=false;controller=null;update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if(stop)stop.hidden=true}}
  }
@@ -111,8 +114,8 @@ export function mountVentureScanner({filters,openCharts}){
  document.addEventListener('click',e=>{if(e.target.id==='scanDiscover')scan({discover:true});if(e.target.id==='scanDiscoverStop')controller?.abort()});
  $('scanner').addEventListener('input',()=>{page=0;dirty=JSON.stringify(filters())!==lastFilters;render()});$('scanner').addEventListener('change',()=>{page=0;dirty=JSON.stringify(filters())!==lastFilters;render()});
  window.addEventListener('asaf:language',()=>{render();if(inspectedSymbol&&records.has(inspectedSymbol))details(records.get(inspectedSymbol));});
- $('scanClear').onclick=()=>{controller?.abort();records.clear();page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render()};
- window.addEventListener('asaf:logout',()=>{revision++;controller?.abort();busy=false;records.clear();page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render();update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if($('scanDiscoverStop'))$('scanDiscoverStop').hidden=true});
+ $('scanClear').onclick=()=>{controller?.abort();records.clear();discoverySymbols=[];page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render()};
+ window.addEventListener('asaf:logout',()=>{revision++;controller?.abort();busy=false;records.clear();discoverySymbols=[];page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render();update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if($('scanDiscoverStop'))$('scanDiscoverStop').hidden=true});
  $('scanProviderAuto').disabled=true;$('scanProviderAuto').closest('label').hidden=true;
  render();
 }

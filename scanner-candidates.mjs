@@ -10,5 +10,5 @@ export function rankedScannerCandidates(records,{side='any',limit=8}={}){
  }
  candidates.sort((a,b)=>b.opportunity.rank-a.opportunity.rank||a.record.symbol.localeCompare(b.record.symbol));
  const unique=[];for(const candidate of candidates)if(!unique.some(c=>c.record.symbol===candidate.record.symbol))unique.push(candidate);
- return unique.slice(0,Math.max(0,Math.min(12,limit)));
+ return unique.slice(0,Math.max(0,Math.min(50,limit)));
 }

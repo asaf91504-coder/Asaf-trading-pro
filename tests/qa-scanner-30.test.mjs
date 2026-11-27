@@ -133,7 +133,7 @@ ui('numeric company size appears in each table row and research card',async()=>j
 
 ui('discovers all 1,000 stocks, loads ten cached groups and pages the table',async q=>{
  if(!q.body)return json({enabled:true,shared:true,maxSymbols:100,symbols:Array.from({length:1000},(_,i)=>'STOCK'+i)});
- return json({shared:true,records:q.body.symbols.map(s=>derived(s)),completedAt:'2026-11-26T12:00:00Z',nextUpdateAt:Date.parse('2026-11-26T15:00:00Z')});
+ return json({shared:true,records:q.body.symbols.map(s=>derived(s,false)),completedAt:'2026-11-26T12:00:00Z',nextUpdateAt:Date.parse('2026-11-26T15:00:00Z')});
 },async f=>{
  const done=new Promise((resolve,reject)=>{let ticks=0;const timer=setInterval(()=>{if(f.calls.length===11&&!f.$('scanProvider').disabled){clearInterval(timer);resolve();}else if(++ticks>2000){clearInterval(timer);reject(Error(f.status()+'; calls='+f.calls.length));}},1)});
  f.clickDoc('scanDiscover');await done;
@@ -142,4 +142,24 @@ ui('discovers all 1,000 stocks, loads ten cached groups and pages the table',asy
  const pager=f.$('scanRows').closest('table').previous;assert.equal(pager.hidden,false);assert.equal(pager.children[0].disabled,true);assert.match(pager.children[1].textContent,/עמוד 1 מתוך 10/);
  for(let i=0;i<9;i++)pager.children[2].click();assert.match(pager.children[1].textContent,/עמוד 10 מתוך 10/);assert.equal(pager.children[2].disabled,true);assert.match(f.rows()[0].children[0].textContent,/STOCK900/);
  await f.update();assert.equal(f.calls.length,21);assert.ok(f.calls.slice(11).every(q=>q.body.cachedOnly&&q.body.symbols.length===100));assert.equal(f.rows().length,100);
+});
+
+ui('10,000-stock discovery stops at 50 distinct full matches and refilters the entire pool',async q=>{
+ if(!q.body)return json({enabled:true,shared:true,maxSymbols:100,symbols:Array.from({length:10000},(_,i)=>'STOCK'+i)});
+ const start=q.body.filters.minPrice===1000?700:120;
+ return json({shared:true,records:q.body.symbols.map(s=>{
+  const n=Number(s.slice(5)),matches=n>=start&&n<start+100;
+  return {...derived(s,matches),opportunities:[{side:'long',status:matches?'match':'watch',eligible:true,rank:matches?100:1,reasons:[]},{side:'short',status:'watch',eligible:true,rank:0,reasons:[]}]};
+ }),completedAt:'2026-11-26T12:00:00Z',nextUpdateAt:Date.parse('2026-11-26T15:00:00Z')});
+},async f=>{
+ f.clickDoc('scanDiscover');
+ for(let i=0;f.$('scanProvider').disabled&&i<100;i++)await new Promise(r=>setImmediate(r));
+ assert.equal(f.$('scanProvider').disabled,false);assert.equal(f.calls.length,3);
+ assert.match(f.$('scanSummary').textContent,/50 התאמות/);assert.match(f.status(),/10000 מניות.*נעצרה לאחר 50/);
+ f.$('scanOnlyMatches').checked=true;f.filters({minPrice:1000});await f.update();
+ const queries=f.calls.slice(3);assert.equal(queries.length,8);assert.ok(queries.every(q=>q.body.cachedOnly));
+ assert.ok(queries.at(-1).body.symbols.includes('STOCK700'));assert.equal(f.rows().length,50);
+ assert.ok(f.rows().every(r=>/^STOCK7/.test(r.children[0].textContent)));
+ const cards=f.$('scanShortlist').children.filter(n=>n.tagName==='article');assert.equal(cards.length,50);
+ assert.equal(new Set(cards.map(card=>card.children[0].textContent.split(' · ')[0])).size,50);
 });

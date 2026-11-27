@@ -21,7 +21,7 @@ export async function readScannerManifest(snapshot,{symbols,run,env,now}){
  return {records,errors};
 }
 
-export async function refreshLargeScanner({env,run,fetcher,now,key,symbols,plan,memberId,readBars,readFundamentals,fundamentals,commitScript,periodMs}){
+export async function refreshLargeScanner({env,run,fetcher,now,key,seedKey,symbols,plan,memberId,readBars,readFundamentals,fundamentals,commitScript,periodMs}){
  const token=randomUUID(),lock=key+':lock';
  if(await run(['SET',lock,token,'NX','EX','55'],{env})!=='OK')return {status:'busy'};
  try{
@@ -29,6 +29,10 @@ export async function refreshLargeScanner({env,run,fetcher,now,key,symbols,plan,
   if(state?.done&&now<state.nextUpdateAt)return {status:'current'};
   if(await run(['SET',key+':tick:'+Math.floor(now/60000),'1','NX','EX','120'],{env})!=='OK')return {status:'busy'};
   let manifest=parse(await run(['GET',key+':snapshot'],{env}));
+  if(!manifest&&seedKey){
+   const seed=parse(await run(['GET',seedKey+':snapshot'],{env})),allowed=new Set(symbols);
+   if(isScannerManifest(seed))manifest={...seed,rows:seed.rows.filter(row=>allowed.has(row.symbol)),errors:[],completedAt:null};
+  }
   if(!isScannerManifest(manifest))manifest={format:FORMAT,rows:[],errors:[],records:[],completedAt:null};
   // An unfinished cycle survives period boundaries and daily quota pauses.
   if(!state||state.done){
