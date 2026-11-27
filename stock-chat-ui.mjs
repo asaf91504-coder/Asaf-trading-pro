@@ -1,4 +1,5 @@
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from './chat-asset-intent.mjs';
+import {resolveDiscoveryContext} from './chat-discovery-context.mjs';
 import {chatAnswerText} from './chat-answer-presentation.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
 import {isLearningQuestion,mergeResearchActions} from './chat-request-intent.mjs';
@@ -226,7 +227,7 @@ async function ask(q,extra={}){
   if(authState.checkAvailable===false)throw Error("לא ניתן לבדוק את החיבור לחשבון כרגע. השאלה נשמרה; נסה שוב כשהחיבור חוזר.");
   const intentQuestion=window.asafCanonicalPrompt?.(question)||question;
   const ownerWeb=authState.ownerHostedSearch===true&&(preparedPayload?preparedPayload.webSearch===true:$("chatWebSearch")?.checked===true);
-  const discovery=!extra.newsArticleId&&stockDiscoveryIntent(intentQuestion);
+  const discovery=!extra.newsArticleId&&resolveDiscoveryContext(stockDiscoveryIntent(intentQuestion),conversation,intentQuestion);
   const broadMarket=ownerWeb||!extra.newsArticleId&&currentUSMarketIntent(question);
   if(!broadMarket&&!discovery&&!extra.retryPayload&&!extra.newsArticleId&&journalIntent(question)){
    waiting.textContent='טיוטה ליומן המסחר';
@@ -395,7 +396,7 @@ async function ask(q,extra={}){
   pendingImage=null;
   if(imageInput)imageInput.value="";
   if(imageStatus)imageStatus.textContent=image?"התמונה נשלחה עם ההודעה. התמיכה החזותית תלויה במודל שנבחר.":"נתוני הגרף הפתוח מצורפים אוטומטית כשיש נתונים תואמים.";
-  const aiStatusBase=data.provider==='openai'?'✓ AI שיחתי מחובר · OpenAI · '+data.model+' · נתוני שוק לפי מקור/תאריך':'✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך';
+  const aiStatusBase=data.answerMode==='verified-data'?(data.recoveryStatus||'✓ סיכום נתונים מאומתים · ניתוח AI לא הושלם'):data.provider==='openai'?'✓ AI שיחתי מחובר · OpenAI · '+data.model+' · נתוני שוק לפי מקור/תאריך':'✓ AI שיחתי מחובר · openrouter/free · ללא חיוב טוקנים · נתוני שוק לפי מקור/תאריך';
   setAiStatus(aiStatusBase+(data.ownerChatNoAppCredits===true?' · גישת בעלים: ללא ניכוי קרדיטים באתר':''));
  }catch(e){
   if(epoch!==conversationEpoch)return;

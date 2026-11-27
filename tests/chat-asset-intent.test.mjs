@@ -33,3 +33,9 @@ test('natural stock requests, including the reported month-long request, use ver
  assert.deepEqual(stockDiscoveryIntent('עוד שתי מניות לשורט'),{side:'short',limit:2,more:true});
  for(const q of ['תסביר איך תמליץ על מניות','איך כותבים רשימת מניות','תרגיל היפותטי: תרשום לי 2 מניות ללונג','נתח את מניית TSLA','יש לי שתי מניות בתיק','write a guide about stocks','תן צ׳ק ליסט לפני כניסה למניה','כתוב לי מדריך על מניות','תן לי הסבר על מניות'])assert.equal(stockDiscoveryIntent(q),null,q);
 });
+
+
+test('a stock-selection goal routes discovery without requiring a particular verb',()=>{
+ for(const q of ['מניות','מניות ללונג','שתי מניות להשקעה לחודש','מניות לשורט','אילו מניות כדאי לבדוק','איזה מניות אתה מציע','stocks to buy','long stocks'])assert.ok(stockDiscoveryIntent(q),q);
+ for(const q of ['אני רוצה מניה TSLA ללונג','האם כדאי לקנות מניית NVDA','מה זה מניה','מה ההבדל בין לונג לשורט','how to buy stocks','תן צ׳ק ליסט לפני כניסה למניה'])assert.equal(stockDiscoveryIntent(q),null,q);
+});

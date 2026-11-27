@@ -78,7 +78,13 @@ export function stockDiscoveryIntent(value){
  const stockNoun=/(?:מניות|מועמדות|סטאפים|מנ(?:י|יי)ה(?![\p{L}\p{N}_])|\b(?:stocks?|candidates?|setups?)\b)/iu.test(text);
  const request=/(?:תן|תתן|תיתן|תביא|מצא|תמצא|חפש|תחפש|אני רוצה|אפשר|(?:ת?רשום|ת?כתוב|תציע|הצע|תמליץ|המלץ|תציג|הצג|מחפש(?:ת|ים)?|צריך|צריכ(?:ה|ים|ות))(?![\p{L}\p{N}_])|\b(?:find|give|show|scan|want|suggest|recommend|list|screen|need|looking\s+for)\b)/iu.test(text);
  const compactRequest=/^\s*(?:בבקשה\s+)?(?:עוד\s+)?(?:\d{1,4}|שתי|שתיים|שלוש|שלושה|ארבע|ארבעה|חמש|חמישה|שש|שישה|שבע|שבעה|שמונה|תשע|תשעה|עשר|עשרה)\s+(?:מניות|מועמדות|סטאפים)(?![\p{L}\p{N}_])/u.test(text);
- if(!stockNoun||!request&&!compactRequest)return null;
+ // The goal, rather than one particular imperative verb, can request a scan.
+ // Named-asset research must keep that asset instead of substituting a list.
+ const goal=/(?:לונג|שורט|להשק(?:יע|עה)|לקנות|לרכוש|מומלצות|הזדמנויות|\b(?:long|short|invest(?:ment|ing)?|buy|opportunities)\b)/iu.test(text);
+ const bareStock=/^(?:מניות|מניה|stocks?)[?!]?$/iu.test(text);
+ const selectionQuestion=/^(?:איזה|אילו|which)\s+(?:מניות|stocks?)/iu.test(text);
+ if(!stockNoun||!request&&!compactRequest&&!goal&&!selectionQuestion&&!bareStock)return null;
+ if(questionAsset(text)&&!/(?:לא כולל|למעט|חוץ מ|בלי|ללא|\b(?:excluding|exclude|except|without)\b)/iu.test(text))return null;
  const negative=side=>new RegExp('(?:^|[\\s,;])(?:ו?(?:לא|בלי|ללא)|not|no|without)\\s+(?:ל|ב|a |any |for )?(?:'+side+')(?![\\p{L}\\p{N}_])','iu').test(text);
  const noLong=negative('לונג|long'),noShort=negative('שורט|short');
  const long=!noLong&&(/(?:לונג|\blong\b)/iu.test(text)||noShort),short=!noShort&&(/(?:שורט|\bshort\b)/iu.test(text)||noLong);

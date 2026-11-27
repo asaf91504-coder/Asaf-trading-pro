@@ -2,6 +2,7 @@ import {approvedMarketSymbols} from '../../server/market-feed.mjs';
 import {previousScannerSymbols,resolveDiscoveryContext} from '../../chat-discovery-context.mjs';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../../chat-asset-intent.mjs';
 import {readChatScanner,SCANNER_CHAT_POLICY} from '../../server/chat-scanner.mjs';
+import {verifiedChatFallback} from '../../server/chat-verified-fallback.mjs';
 import {chatAnswerText} from '../../chat-answer-presentation.mjs';
 import {priceResearchLevels} from '../../price-research-levels.mjs';
 import {readUSMarketOverview,BROAD_MARKET_SYSTEM} from '../../server/us-market-overview.mjs';
@@ -304,9 +305,17 @@ async function handler(request,{requireOwner=false}={}){
   content=image?[{type:'text',text:userText},{type:'image_url',image_url:{url:image}}]:userText;
  }
  const webSearch=webResearch?{status:'available',searchedAt:webResearch.searchedAt,sources:webResearch.sources.map(({excerpt,...source})=>source)}:headlineSnapshot?.status==='available'?{status:'available',kind:'cached-market-headlines',searchedAt:headlineSnapshot.updatedAt,sources:headlineSnapshot.articles.map((a,index)=>({id:index+1,title:a.title,url:a.url,publishedAt:a.publishedAt}))}:null;
+ // The fallback uses only data verified during this request. Authorization
+ // still applies at response time; an expired trial cannot expose cached prices.
+ const fallbackResponse=()=>{
+  if(privateTrial&&(twelveRequested||discoverySnapshot?.candidates?.length)&&!marketAccessAllowed(member?.id,process.env,Date.now()))return null;
+  const fallback=verifiedChatFallback({discovery:discoverySnapshot,context,language:responseLanguage});
+  if(!fallback)return null;
+  return reply({...fallback,responseLanguage,tradeScenario:null,analysisContext,source:context?.source||'Twelve Data',provider:ai.provider,model:ai.model,...(ownerChat?{ownerChatNoAppCredits:true}:{}),...(discoverySnapshot?{scannerDiscovery:{scanned:discoverySnapshot.scanned,total:discoverySnapshot.total,updatedAt:discoverySnapshot.updatedAt,candidates:discoverySnapshot.candidates.map(c=>({symbol:c.symbol,side:c.side,status:c.status,asOf:c.asOf,receivedAt:c.receivedAt}))}}:{})});
+ };
  // Keep the complete function below the host's 60-second execution ceiling.
  const remainingMs=Math.min(45000,50000-(Date.now()-startedAt));
- if(remainingMs<=0)return reply({error:'הכנת הנתונים התעכבה. השאלה נשמרה ואפשר לנסות שוב.',code:'preparation_timeout'},504);
+ if(remainingMs<=0)return fallbackResponse()||reply({error:'הכנת הנתונים התעכבה. השאלה נשמרה ואפשר לנסות שוב.',code:'preparation_timeout'},504);
  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),remainingMs);
  try{
   // Storage/quota preparation can cross the trial boundary. Do not send a
@@ -321,7 +330,7 @@ async function handler(request,{requireOwner=false}={}){
   if(payload.chartControl===true){const parsed=parseChartToolResponse(result.answer,{truncated,language:responseLanguage});return reply({...ownerState,...parsed,answer:chatAnswerText(neutralEducationalText(parsed.answer,responseLanguage))+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),...(discoverySnapshot?{scannerDiscovery:{scanned:discoverySnapshot.scanned,total:discoverySnapshot.total,updatedAt:discoverySnapshot.updatedAt,candidates:discoverySnapshot.candidates.map(c=>({symbol:c.symbol,side:c.side,status:c.status,asOf:c.asOf,receivedAt:c.receivedAt}))}}:{}),provider:result.provider,model:result.model,source:context?.source||(discoverySnapshot?.candidates?.length||marketOverview?.instruments?.length?"Twelve Data":"none"),latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})})};
   const text=answer.slice(0,7500)+(truncated?"\n\n⚠️ "+assistantReplyCopy(responseLanguage).textTruncated:"");
   return reply({...ownerState,answer:text+scenarioSuffix,tradeScenario,responseLanguage,truncated,historyRestricted,analysisContext,...(webSearch?{webSearch}:{}),...(discoverySnapshot?{scannerDiscovery:{scanned:discoverySnapshot.scanned,total:discoverySnapshot.total,updatedAt:discoverySnapshot.updatedAt,candidates:discoverySnapshot.candidates.map(c=>({symbol:c.symbol,side:c.side,status:c.status,asOf:c.asOf,receivedAt:c.receivedAt}))}}:{}),provider:result.provider,model:result.model,source:context?.source||(discoverySnapshot?.candidates?.length||marketOverview?.instruments?.length?"Twelve Data":"none"),latestBarTime:context?.lastCandleTime||null,...(newsArticle?{newsArticle}:{})});
- }catch(error){if(error instanceof AIProviderError)return error.status===429?throttleReply(error.code,responseLanguage):reply({error:error.message,code:error.code},error.status);return reply({error:error?.name==='AbortError'?'מודל ה-AI לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.':'אין כרגע חיבור למודל ה-AI',code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
+ }catch(error){const fallback=fallbackResponse();if(fallback)return fallback;if(error instanceof AIProviderError)return error.status===429?throttleReply(error.code,responseLanguage):reply({error:error.message,code:error.code},error.status);return reply({error:error?.name==='AbortError'?'מודל ה-AI לא ענה בזמן. השאלה נשמרה ואפשר לנסות שוב.':'אין כרגע חיבור למודל ה-AI',code:error?.name==='AbortError'?'model_timeout':'model_unavailable'},502)}
  finally{clearTimeout(timeout)}
 }
 
@@ -348,7 +357,7 @@ export default async function creditAwareHandler(request){
   ticket=await reserveCredits(member.id,maxCost);
   const response=await handler(request);
   if(!response.ok&&ticket)await ticket.refund();
-  if(response.ok&&ticket){const data=await response.json();return reply({...data,credits:{charged:ticket.credits,remaining:ticket.remaining,resetsAt:ticket.resetsAt}})}
+  if(response.ok&&ticket){const data=await response.json();if(data.answerMode==='verified-data'&&data.modelUnavailable===true){await ticket.refund();return reply({...data,credits:{charged:0,remaining:ticket.remaining+ticket.credits,resetsAt:ticket.resetsAt}})}return reply({...data,credits:{charged:ticket.credits,remaining:ticket.remaining,resetsAt:ticket.resetsAt}})}
   return response;
  }catch(e){if(ticket)try{await ticket.refund()}catch{};return reply({error:e.status===402?e.message:'שירות הקרדיטים אינו זמין כרגע.',code:e.status===402?'credits_exhausted':'credits_unavailable'},e.status||503)}
 }

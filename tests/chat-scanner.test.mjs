@@ -1,3 +1,4 @@
+import {billingIdentity,saveBilling} from '../server/billing.mjs';
 import {analysisMarket} from '../server/analysis-sources.mjs';
 import {marketSnapshotKey} from '../server/market-feed.mjs';
 import {storageKey} from '../server/storage.mjs';
@@ -98,4 +99,56 @@ test('discovery reads another page when filters reject the first, and never sile
 
 test('a hanging scanner read returns a bounded error instead of waiting for host termination',async()=>{
  await assert.rejects(readChatScanner({side:'long',limit:2},{env,memberId:id,now,timeoutMs:10,readScan:()=>new Promise(()=>{})}),/התעכבה/);
+});
+
+
+test('model outages return the verified scanner prices without another model or data-provider request',async()=>{
+ for(const failure of ['unavailable','quota','empty','aborted']){
+  const oldEnv=process.env,oldFetch=globalThis.fetch,oldNow=Date.now,f=fixture();process.env={...env};Date.now=()=>now;
+  const user=seed(f,'owner@example.test',id);f.db.set(sharedScannerKey(env)+':snapshot',JSON.stringify(snapshot));let calls=0;
+  globalThis.fetch=async(url,init)=>{
+   const b=JSON.parse(init.body);if(url==='https://test.upstash.io'){if(b[0]==='EVAL'&&b[1].includes('owner-chat-burst'))return Response.json({result:1});return Response.json({result:await f.run(b)})}
+   assert.equal(url,'https://api.openai.com/v1/responses');calls++;
+   if(failure==='aborted')throw new DOMException('Timeout','AbortError');
+   if(failure==='empty')return Response.json({status:'completed',output:[]});
+   return Response.json({error:{code:'not_available'}},{status:failure==='quota'?429:503});
+  };
+  try{
+   const response=await handler(request('free-chat',{message:'מניות ללונג',language:'he'},user.cookie)),data=await response.json();
+   assert.equal(response.status,200,JSON.stringify(data));assert.equal(data.answerMode,'verified-data');assert.equal(data.modelUnavailable,true);assert.equal(calls,1);
+   assert.equal(data.scannerDiscovery.candidates.length,3);for(const c of data.scannerDiscovery.candidates)assert.ok(data.answer.includes(c.symbol));assert.match(data.answer,/ניתוח ה־AI לא הושלם/);
+  }finally{process.env=oldEnv;globalThis.fetch=oldFetch;Date.now=oldNow}
+ }
+});
+
+test('expired trial data never becomes an outage fallback, even if it was authorized before inference',async()=>{
+ const oldEnv=process.env,oldFetch=globalThis.fetch,oldNow=Date.now,f=fixture(),expires=now+1000;
+ const trial={...env,ASAF_TWELVE_PRIVATE_TRIAL:'true',ASAF_TWELVE_TRIAL_MEMBER_ID:id,ASAF_TWELVE_TRIAL_ENDS_AT:new Date(expires).toISOString()};process.env=trial;Date.now=()=>now;
+ const user=seed(f,'owner@example.test',id);f.db.set(sharedScannerKey(trial)+':snapshot',JSON.stringify(snapshot));
+ globalThis.fetch=async(url,init)=>{
+  const b=JSON.parse(init.body);if(url==='https://test.upstash.io'){if(b[0]==='EVAL'&&b[1].includes('owner-chat-burst'))return Response.json({result:1});return Response.json({result:await f.run(b)})}
+  Date.now=()=>expires;return Response.json({error:{}},{status:503});
+ };
+ try{const response=await handler(request('free-chat',{message:'מניות ללונג',language:'he'},user.cookie)),data=await response.json();assert.equal(response.status,502);assert.equal(data.answer,undefined);assert.equal(data.scannerDiscovery,undefined)}
+ finally{process.env=oldEnv;globalThis.fetch=oldFetch;Date.now=oldNow}
+});
+
+test('an outage data summary refunds the reserved application credits',async()=>{
+ const oldEnv=process.env,oldFetch=globalThis.fetch,oldNow=Date.now,f=fixture();process.env={...env,ASAF_WEEKLY_CREDITS_ENABLED:'true',ASAF_BILLING_ENABLED:'true',PAYPAL_ENVIRONMENT:'sandbox',PAYPAL_CLIENT_ID:'mock',PAYPAL_CLIENT_SECRET:'mock',PAYPAL_WEBHOOK_ID:'mock',PAYPAL_PLAN_STARTER_ID:'P-STARTER',PAYPAL_PLAN_PLUS_ID:'P-PLUS',PAYPAL_PLAN_PRO_ID:'P-PRO',PAYPAL_PLAN_PREMIUM_ID:'P-PREMIUM'};Date.now=()=>now;
+ const user=seed(f,'customer@example.test','bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+ const identity=await billingIdentity(user.record.id,{env:process.env,run:f.run});await saveBilling(identity,{trialStartedAt:now-86400000,trialEndsAt:now+6*86400000,trialTotalCredits:50},{env:process.env,run:f.run});
+ f.db.set(sharedScannerKey(env)+':snapshot',JSON.stringify(snapshot));let refunds=0,usageKey;
+ globalThis.fetch=async(url,init)=>{
+  const b=JSON.parse(init.body);if(url!=='https://test.upstash.io')return Response.json({error:{}},{status:503});
+  if(b[0]==='EVAL'){
+   if(b[1].includes('trial-total-migration'))return Response.json({result:1});
+   if(b[1].includes('weekly-credit-reserve')){const [key,res,cost]=b.slice(3);usageKey=key;f.db.set(key,cost);f.db.set(res,cost);return Response.json({result:Number(cost)})}
+   if(b[1].includes('weekly-credit-refund')){const [key,res]=b.slice(3);refunds++;f.db.set(key,'0');f.db.delete(res);return Response.json({result:1})}
+  }
+  return Response.json({result:await f.run(b)});
+ };
+ try{
+  const response=await handler(request('free-chat',{message:'מניות ללונג',language:'he',creditConsent:4},user.cookie)),data=await response.json();
+  assert.equal(response.status,200,JSON.stringify(data));assert.equal(data.answerMode,'verified-data');assert.equal(data.credits.charged,0);assert.equal(data.credits.remaining,50);assert.equal(refunds,1);assert.equal(f.db.get(usageKey),'0');
+ }finally{process.env=oldEnv;globalThis.fetch=oldFetch;Date.now=oldNow}
 });

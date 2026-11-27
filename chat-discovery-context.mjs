@@ -11,6 +11,13 @@ export function previousScannerSymbols(history,allowed){
 
 const hasDirection=text=>/(?:לונג|שורט|\blong\b|\bshort\b)/iu.test(text);
 export function resolveDiscoveryContext(intent,history,question){
+ // A short follow-up is meaningful only immediately after stock discovery.
+ // Do not resurrect a scanner request across an intervening asset/topic.
+ if(!intent&&Array.isArray(history)){
+  const last=history.slice(-40).filter(m=>m?.role==='user'&&typeof m.content==='string').at(-1);
+  const follow=String(question||'').trim(),prior=last&&stockDiscoveryIntent(last.content);
+  if(prior&&!prior.unsupportedCriteria&&prior.side!=='invalid'&&/^(?:(?:תן|תביא|תרשום|רשום|אפשר)\s+(?:לי\s+)?)?עוד\s+(?:\d{1,2}|שתיים|שתי|שלוש|שלושה|ארבע|חמש)(?:\s+(?:אחרות|אחרים|ללונג|לשורט))*[?.!]?$/u.test(follow)){intent=stockDiscoveryIntent('תן לי '+follow.replace(/[?.!]$/u,'')+' מניות');const count=follow.match(/עוד\s+(\d{1,2})/u);if(intent&&count)intent.limit=Math.max(1,Math.min(12,Number(count[1])));}
+ }
  if(!intent?.more||!Array.isArray(history))return intent;
  const merge=(prior,current,text)=>({...prior,...current,side:hasDirection(text)?current.side:prior.side,...(prior.filters||current.filters?{filters:{...prior.filters,...current.filters}}:{})});
  let previous=null;
