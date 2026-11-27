@@ -26,5 +26,5 @@ export async function scannerChartContext({selected,context,env,run,fetcher,now,
  const actions=[{type:'indicator',indicator:'MA20',enabled:true},{type:'indicator',indicator:'MA150',enabled:true},
   {type:'pattern',pattern:'all'},{type:'levels',kind:'both'},{type:'trendlines'},...(tradeScenario?[{type:'tradelevels',side}]:[])];
  return {snapshot:{...record,latestBarTime:context.asOf,cached:true,delayMinutes:Number(env.ASAF_MARKET_DELAY_MINUTES)},
-  context:{asOf:context.asOf,receivedAt:context.receivedAt,side,...(context.filters?{filters}:{})},actions,tradeScenario};
+  context:{asOf:context.asOf,receivedAt:context.receivedAt,side,...(context.filters?{filters}:{})},scenarioStage:candidate?.stage||null,actions,tradeScenario};
 }

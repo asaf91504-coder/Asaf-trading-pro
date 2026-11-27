@@ -1,4 +1,5 @@
 // Raster presentation only: no provider OHLCV is received or reconstructed here.
+import {scannerStageText} from './scanner-result-copy.mjs';
 const markLabels={support:'תמיכה',resistance:'התנגדות',trendline:'קווי המגמה',neckline:'קו צוואר',headShoulders:'ראש וכתפיים',inverseHeadShoulders:'ראש וכתפיים הפוך',doubleTop:'דאבל טופ',doubleBottom:'דאבל בוטום',cupHandle:'ספל וידית',entry:'כניסה',stop:'סטופ',target:'יעד'};
 export function accessibleResearchLevels(value){
  const levels=[];
@@ -33,6 +34,7 @@ export function createVentureChartView(local){
    list.hidden=!list.children.length;
   }
   note.textContent=translate(snapshot.scannerContext?'הסימונים מחושבים אוטומטית מנתוני הסריקה. תבניות וקווי מגמה מוצגים רק כאשר זוהו.':'תמונת מחקר מהשרת. אפשר לבקש סימונים בצ׳אט ולפתוח תצוגה רחבה.');
+  if(snapshot.scannerContext&&snapshot.scenarioStage)note.textContent+=' '+translate(scannerStageText(snapshot.scenarioStage));
   legend.replaceChildren();
   const indicators=snapshot.indicatorLegend||[...snapshot.chartSettings?.indicators||[]].map((id,i)=>({id,color:i?'#fbbf24':'#38bdf8',available:true}));
   for(const mark of [...indicators.filter(m=>m.available),...(snapshot.researchLegend||[])]){

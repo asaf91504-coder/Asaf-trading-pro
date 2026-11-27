@@ -22,7 +22,7 @@ export function createPublicMarketHandler({env=process.env,run=command,fetcher=f
    if((body.interval||'1day')!=='1day')throw new MarketError('גרף הסריקה משתמש בנרות יומיים.',400);
    const chart=await scannerChartContext({selected:body.symbol,context:body.scannerContext,memberId:user.id,env,run,fetcher,now:now()});
    const selectedActions=body.scannerContext.autoAnnotate===false?actions:chart.actions;
-   return reply({...await ventureChart(chart.snapshot,selectedActions,{scanner:true,tradeScenario:chart.tradeScenario,visibleCandles:200}),scannerContext:chart.context,researchActions:selectedActions});
+   return reply({...await ventureChart(chart.snapshot,selectedActions,{scanner:true,tradeScenario:chart.tradeScenario,visibleCandles:200}),scannerContext:chart.context,scenarioStage:chart.scenarioStage,researchActions:selectedActions});
   }
   const snapshot=await readMarketSnapshot({selected:body?.symbol,interval:body?.interval||'1day',memberId:user.id,env,run,fetcher,now:now(),cachedOnly:body.cachedOnly===true,maxAgeMs:body.cachedOnly===true?15*60000:60000});
   return reply(await ventureChart(snapshot,actions));

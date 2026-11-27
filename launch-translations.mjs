@@ -1,3 +1,4 @@
+import {beginnerTranslations} from './beginner-translations.mjs';
 import {chatRoutingTranslations} from './chat-routing-translations.mjs';
 import {scannerOpportunityTranslations} from './scanner-opportunity-copy.mjs';
 import {chatPresentationCopy} from './chat-presentation-copy.mjs';
@@ -71,3 +72,5 @@ for(const [code,copy] of Object.entries(methodologyTranslations))Object.assign(l
 for(const [code,copy] of Object.entries(chatPresentationCopy))if(code!=="he")for(const key of ["drawn","noScenario"])launchTranslations[code][chatPresentationCopy.he[key]]=copy[key];
 
 for(const [code,copy] of Object.entries(chatRoutingTranslations))Object.assign(launchTranslations[code],copy);
+
+for(const [code,copy] of Object.entries(beginnerTranslations))Object.assign(launchTranslations[code],copy);

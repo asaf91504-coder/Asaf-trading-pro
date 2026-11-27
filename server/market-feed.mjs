@@ -8,6 +8,7 @@ import {comparableDailyVolume,sameVolumeBasis} from '../comparable-volume.mjs';
 import {previousDailyBars,marketCoverage} from '../market-quality.mjs';
 import {validateBar} from '../netlify/functions/market.mjs';
 import {scannerUniverse} from './scanner-universe.mjs';
+import {readProviderQuota} from './provider-quota.mjs';
 export const marketIntervals=twelveIntervals;
 export const configuredMarketIntervals=(env=process.env)=>twelveSettings(env).intervals;
 const settingsValid=env=>{try{twelveSettings(env);return true}catch{return false}};
@@ -63,7 +64,7 @@ export function applyMarketDelay(bars,interval,delay,now){
 // Credits, not HTTP requests: /time_series costs 1, /statistics costs 50.
 export const MARKET_CREDIT_QUOTA="-- market-credit-reserve\nlocal cost=tonumber(ARGV[5]);for i=1,#KEYS do local n=tonumber(redis.call('GET',KEYS[i]) or '0');if n+cost>tonumber(ARGV[i]) then return 0 end end;for i=1,#KEYS do redis.call('INCRBY',KEYS[i],cost);redis.call('EXPIRE',KEYS[i],tonumber(ARGV[#KEYS+i])) end;return 1";
 export async function reserveMarketCredits({env=process.env,run=command,now=Date.now(),cost=1}={}){
- const minute=Math.floor(now/60000),day=new Date(now).toISOString().slice(0,10),min=twelveSettings(env).minuteCredits,daily=twelveSettings(env).dailyCredits;
+ const minute=Math.floor(now/60000),day=new Date(now).toISOString().slice(0,10),quota=await readProviderQuota({env,run,now}),min=quota.minuteCredits,daily=quota.dailyCredits;
  if(!Number.isInteger(cost)||cost<1||!Number.isInteger(min)||min<1||min>10000||!Number.isInteger(daily)||daily<1||daily>10000000)throw new MarketError('הגדרות מכסת ספק הנתונים אינן תקינות.');
  if(await run(['EVAL',MARKET_CREDIT_QUOTA,'2',storageKey('market:provider-minute:'+minute,env),storageKey('market:provider-day:'+day,env),String(min),String(daily),'120','172800',String(cost)],{env})!==1)throw new MarketError('מכסת הקרדיטים של ספק הנתונים אינה מספיקה לבקשה.',429);
 }

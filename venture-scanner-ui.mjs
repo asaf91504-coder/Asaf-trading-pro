@@ -1,10 +1,13 @@
 import {scannerScenarioFilters} from './scanner-scenario-filters.mjs';
+import {scannerStageText} from './scanner-result-copy.mjs';
+import {indexStocks} from './index-stock-catalogue.mjs';
 import {collectScannerResults,SCANNER_SEARCH_POOL_LIMIT,SCANNER_MATCH_LIMIT} from './scanner-search-policy.mjs';
 import {rankedScannerCandidates} from './scanner-candidates.mjs';
 import {partialVolumeReason,volumeUnavailableReason} from './comparable-volume.mjs';
 const $=id=>document.getElementById(id),pretty=v=>Number.isFinite(v)?Number(v).toLocaleString('en-US',{maximumFractionDigits:2}):'חסר';
 const capValue=r=>r.marketCapStatus==='available'&&Number.isFinite(r.company?.marketCapUsd)?new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:2}).format(r.company.marketCapUsd):null;
 const headers=['מניה / יום בסיס','התאמה למסננים','מעל MA20 / MA150','ATR%','מחזור יחסי EOD','כיוון Supertrend','RSI14','ADX14','תבניות','יעד מדוד (%)','יחס סיכוי / סיכון','כיוון תרחיש','שווי שוק ($)','סיבות / מקור','פעולות'];
+const companyNames=new Map(indexStocks.map(s=>[s.symbol,s.name]));
 // Combine cancellation and timeout without AbortSignal.any(), absent on older Safari.
 export async function scannerJson(fetcher,url,options,signal,timeoutMs){
  const scoped=new AbortController();
@@ -22,6 +25,8 @@ export async function scannerJson(fetcher,url,options,signal,timeoutMs){
 export function mountVentureScanner({filters,openCharts}){
  const records=new Map();let busy=false,controller=null,revision=0,lastFilters='',dirty=true,inspectedSymbol=null,page=0,sharedScan=false,discoverySymbols=[];
  const pageSize=100;
+ let coverage=null;
+ const coverageLabel=document.createElement('p');coverageLabel.id='scanCoverageSummary';coverageLabel.setAttribute('role','status');$('scanSummary').after(coverageLabel);
  const translate=value=>window.asafTranslate?.(value)??value;
  const localized=(element,parts)=>{element.translate=false;element.textContent=parts.map(translate).join('');};
  const enumLabel=value=>document.documentElement?.lang&&document.documentElement.lang!=='he'?value:({up:'עולה',down:'יורד',long:'לונג',short:'שורט',crossed:'נחצה בנר האחרון',waiting:'ממתין לחצייה',above:'כבר מעל הרמה',below:'כבר מתחת לרמה',observed:'זוהה בנתונים'}[value]||value);
@@ -34,13 +39,14 @@ export function mountVentureScanner({filters,openCharts}){
  function render(){
   const host=$('scanRows');host.replaceChildren();const shortlist=$('scanShortlist');shortlist?.replaceChildren();
   const sorted=ordered(),matched=dirty?0:sorted.filter(r=>r.screen.matches).length,visible=sorted.filter(r=>dirty||!$('scanOnlyMatches').checked||r.screen.matches);
+  coverageLabel.textContent=coverage?translate('זמינות נתונים: {available} · חסרים: {missing} · טרם נבדקו: {pending} · נפסלו במסננים: {rejected}.').replace('{available}',String(coverage.available)).replace('{missing}',String(coverage.missing)).replace('{pending}',String(coverage.pending)).replace('{rejected}',String(coverage.rejected)):'';
   const pages=Math.max(1,Math.ceil(visible.length/pageSize));page=Math.min(page,pages-1);
   pager.hidden=pages<=1;previous.disabled=page===0;next.disabled=page>=pages-1;localized(previous,['הקודם']);localized(next,['הבא']);localized(pageLabel,['עמוד ',String(page+1),' מתוך ',String(pages)]);
   for(const r of visible.slice(page*pageSize,(page+1)*pageSize)){
    const m=r.metrics,patterns=r.patterns,yes=v=>v===true?'כן':v===false?'לא':'חסר';
    const join=(items,separator)=>items.flatMap((item,index)=>index?[separator,item]:[item]);
    const formatted=(value,suffix='')=>Number.isFinite(value)?pretty(value)+suffix:'חסר';
-   const values=[r.symbol+' · '+r.asOf,dirty?'נדרש עדכון':r.screen.matches?(r.methodology?.label||'עברה'):r.screen.reasons.some(reason=>reason===volumeUnavailableReason||reason===partialVolumeReason)?'לא ניתן לאמת':'נפסלה',[yes(m.aboveMA20),' / ',yes(m.aboveMA150)],formatted(m.atrPercent,'%'),[m.volumeComparison==='unverifiable'?'מחזור לא מאומת':formatted(m.relativeVolume,'×'),...(m.volumeCoverage==='partial'?[' · ','מחזור חלקי']:[])],[enumLabel(m.supertrendDirection||'חסר')],formatted(m.rsi14),formatted(m.adx14),patterns.length?join(patterns.map(p=>p.label),' | '):'לא נמצאה',patterns.length?join(patterns.map(p=>formatted(p.movePercent)),' / '):'—',patterns.length?join(patterns.map(p=>formatted(p.riskReward)),' / '):'—',patterns.length?join(patterns.map(p=>enumLabel(p.side||'—')),' / '):'—',capValue(r)||'חסר',dirty?'המסננים השתנו. לחץ עדכן תוצאות.':r.screen.reasons.length?join(r.screen.reasons,' · '):'Twelve Data · נרות יומיים קודמים'];
+   const values=[r.symbol+' · '+r.asOf,dirty?'נדרש עדכון':r.screen.matches?'עומדת במסננים':r.screen.reasons.some(reason=>reason===volumeUnavailableReason||reason===partialVolumeReason)?'לא ניתן לאמת':'נפסלה',[yes(m.aboveMA20),' / ',yes(m.aboveMA150)],formatted(m.atrPercent,'%'),[m.volumeComparison==='unverifiable'?'מחזור לא מאומת':formatted(m.relativeVolume,'×'),...(m.volumeCoverage==='partial'?[' · ','מחזור חלקי']:[])],[enumLabel(m.supertrendDirection||'חסר')],formatted(m.rsi14),formatted(m.adx14),patterns.length?join(patterns.map(p=>p.label),' | '):'לא נמצאה',patterns.length?join(patterns.map(p=>formatted(p.movePercent)),' / '):'—',patterns.length?join(patterns.map(p=>formatted(p.riskReward)),' / '):'—',patterns.length?join(patterns.map(p=>enumLabel(p.side||'—')),' / '):'—',capValue(r)||'חסר',dirty?'המסננים השתנו. לחץ עדכן תוצאות.':r.screen.reasons.length?join(r.screen.reasons,' · '):'Twelve Data · נרות יומיים קודמים'];
    const row=document.createElement('tr');for(const value of values){const td=document.createElement('td');if(Array.isArray(value))localized(td,value);else td.textContent=value;row.append(td)}
    const actions=document.createElement('td'),button=document.createElement('button'),inspect=document.createElement('button');button.type=inspect.type='button';button.textContent='פתח גרף מסומן';button.onclick=()=>open(r);inspect.textContent='פרטי מחקר';inspect.onclick=()=>details(r);actions.append(button,inspect);row.append(actions);host.append(row);
 
@@ -56,12 +62,13 @@ export function mountVentureScanner({filters,openCharts}){
     if(!full)watchCount++;
     const card=document.createElement('article');card.className='scanner-candidate';
     const title=document.createElement('h4'),text=document.createElement('p'),company=document.createElement('p'),reason=document.createElement('p'),go=document.createElement('button');
-    localized(title,[r.symbol,' · ',enumLabel(o.side),' · ',full?'התאמה מלאה':'מועמדת למעקב']);
+    localized(title,[r.symbol,...(companyNames.has(r.symbol)?[' · ',companyNames.get(r.symbol)]:[]),' · ',enumLabel(o.side),' · ',full?'עומדת במסננים':'מועמדת למעקב']);
     localized(text,['ATR '+(Number.isFinite(m.atrPercent)?pretty(m.atrPercent):'—')+'% · מחזור יחסי EOD '+(Number.isFinite(m.relativeVolume)?pretty(m.relativeVolume):'—')+'× · בסיס '+r.asOf]);
     localized(company,['שווי שוק ($)',': ',capValue(r)||'חסר']);
     if(r.company?.receivedAt)company.title=translate('התקבל: ')+new Date(r.company.receivedAt).toLocaleString(document.documentElement.lang||'he');
     if(!full){localized(reason,['חסר לאישור: ',...o.reasons.slice(0,3).flatMap((item,i)=>i?[' · ',item]:[item])]);card.append(title,company,text,reason);}
     else card.append(title,company,text);
+    const stage=document.createElement('p');localized(stage,[scannerStageText(r.scenarioStage!==undefined?r.scenarioStage:r.methodology?.stage)]);card.append(stage);
     const inspect=document.createElement('button');inspect.type='button';localized(inspect,['פרטי מחקר']);inspect.onclick=()=>details(r);card.append(inspect);
     go.type='button';localized(go,['פתח גרף מסומן']);go.onclick=()=>open(r,o.side);card.append(go);shortlist.append(card);
    }
@@ -78,7 +85,7 @@ export function mountVentureScanner({filters,openCharts}){
   const coverage=(r.coverage||'').split(/(?<=\.)\s+/).filter(Boolean).map(sentence=>translate(sentence+' ').trim()).join(' ');
   localized(p,['Twelve Data · יום בסיס '+r.asOf+' · '+coverage+' הרמות והגרף מחושבים בשרת. יעד מדוד אינו תחזית.']);
   const company=document.createElement('p');localized(company,['שווי שוק ($)',': ',capValue(r)||'חסר',...(r.company?.receivedAt?[' · ','התקבל: ',new Date(r.company.receivedAt).toLocaleString(document.documentElement.lang||'he')]:[])]);
-  host.append(h,p,company);if(r.screen.reasons.length){const missing=document.createElement('p');localized(missing,['חסר לאישור: ',...r.screen.reasons.flatMap((item,i)=>i?[' · ',item]:[item])]);host.append(missing);}if(r.methodology){const method=document.createElement('p');localized(method,[r.methodology.label,' · ',enumLabel(r.methodology.side||'long'),' · ','סטופ 2×ATR']);host.append(method);for(const check of r.methodology.checks){const item=document.createElement('p');localized(item,[check.passed?'✓ ':'✗ ',check.passed?({closedDaily:'נרות יומיים שהושלמו ו־ATR תקין',marketCap:'שווי שוק מאומת מעל הסף',price:'מחיר מעל $5',ma20:r.methodology.side==='short'?'מחיר מתחת MA20':'מחיר מעל MA20',risingClose:r.methodology.side==='short'?'סגירה יורדת':'סגירה עולה',volume:'מחזור מאומת מעל הממוצע',pattern:r.methodology.side==='short'?'תבנית שורט עם פוטנציאל מדוד של 15% לפחות':'תבנית לונג עם פוטנציאל מדוד של 15% לפחות'}[check.key]||check.key):check.reason]);host.append(item)}for(const warning of r.methodology.warnings){const item=document.createElement('p');localized(item,[warning]);host.append(item)}}for(const c of r.patterns){const item=document.createElement('p');item.textContent=c.label+' · '+enumLabel(c.stage)+' · יעד מדוד '+(Number.isFinite(c.movePercent)?pretty(c.movePercent):'—')+'% · יחס '+(Number.isFinite(c.riskReward)?pretty(c.riskReward):'—');host.append(item)}
+  host.append(h,p,company);if(r.screen.reasons.length){const missing=document.createElement('p');localized(missing,['חסר לאישור: ',...r.screen.reasons.flatMap((item,i)=>i?[' · ',item]:[item])]);host.append(missing);}if(r.methodology){const method=document.createElement('p');localized(method,[r.methodology.eligible?scannerStageText(r.scenarioStage!==undefined?r.scenarioStage:r.methodology.stage):r.methodology.label,' · ',enumLabel(r.methodology.side||'long'),' · ','סטופ 2×ATR']);host.append(method);for(const check of r.methodology.checks){const item=document.createElement('p');localized(item,[check.passed?'✓ ':'✗ ',check.passed?({closedDaily:'נרות יומיים שהושלמו ו־ATR תקין',marketCap:'שווי שוק מאומת מעל הסף',price:'מחיר מעל $5',ma20:r.methodology.side==='short'?'מחיר מתחת MA20':'מחיר מעל MA20',risingClose:r.methodology.side==='short'?'סגירה יורדת':'סגירה עולה',volume:'מחזור מאומת מעל הממוצע',pattern:r.methodology.side==='short'?'תבנית שורט עם פוטנציאל מדוד של 15% לפחות':'תבנית לונג עם פוטנציאל מדוד של 15% לפחות'}[check.key]||check.key):check.reason]);host.append(item)}for(const warning of r.methodology.warnings){const item=document.createElement('p');localized(item,[warning]);host.append(item)}}for(const c of r.patterns){const item=document.createElement('p');item.textContent=c.label+' · '+enumLabel(c.stage)+' · יעד מדוד '+(Number.isFinite(c.movePercent)?pretty(c.movePercent):'—')+'% · יחס '+(Number.isFinite(c.riskReward)?pretty(c.riskReward):'—');host.append(item)}
   const close=document.createElement('button');close.type='button';close.textContent='סגור פרטי מחקר';close.onclick=()=>{inspectedSymbol=null;host.hidden=true};host.append(close);
  }
  async function scan({discover=false,cachedOnly=false}={}){
@@ -91,8 +98,8 @@ export function mountVentureScanner({filters,openCharts}){
    else {discoverySymbols=[];symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);}
    if(!symbols.length||(!discover&&!cachedOnly&&symbols.length>10))throw Error('בחר 1 עד 10 סימולים בכל סריקה ידנית.');
    // A failed cached filter update must remain retryable without refetching market data.
-   const staged=cachedOnly?new Map():records;
-   if(!cachedOnly)records.clear();page=0;dirty=true;render();
+   const staged=cachedOnly?new Map():records,available=new Set(),missing=new Set(),rejected=new Set();
+   if(!cachedOnly){records.clear();coverage=null;}page=0;dirty=true;render();
    for(let offset=0;offset<symbols.length;offset+=batchSize){
     if(offset&&!cachedOnly&&!shared){status.textContent='ממתין למכסת הקבוצה הבאה…';await new Promise((resolve,reject)=>{const abort=()=>{clearTimeout(timer);reject(new DOMException('Cancelled','AbortError'))},timer=setTimeout(()=>{signal.removeEventListener('abort',abort);resolve()},delay);signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort()})}
     status.textContent=`בודק ${offset+1}–${Math.min(symbols.length,offset+batchSize)} מתוך ${symbols.length}…`;
@@ -100,11 +107,16 @@ export function mountVentureScanner({filters,openCharts}){
     if(!response.ok)throw Error(data.error||'הסריקה נכשלה.');if(current!==revision||signal.aborted)return;
     if(data.shared){shared=sharedScan=true;sharedReceipt='סריקה משותפת · עדכון '+(data.updatedAt||data.completedAt)+' · עדכון הבא '+new Date(data.nextUpdateAt).toLocaleString(globalThis.document?.documentElement?.lang||'he-IL')+(data.stale?' · ממתין לרענון':'');if(data.progress&&!data.progress.complete)sharedReceipt+=' · '+translate('עדכון ברקע: {processed} מתוך {total} מניות').replace('{processed}',String(data.progress.processed)).replace('{total}',String(data.progress.total));}
     targetReached=collectScannerResults(staged,data.records)>=SCANNER_MATCH_LIMIT;
+    const returned=new Map((data.records||[]).filter(r=>r.presentation==='derived-only').map(r=>[r.symbol,r]));
+    for(const symbol of symbols.slice(offset,offset+batchSize)){
+     const record=returned.get(symbol.split(':').at(-1).toUpperCase());if(record){available.add(symbol);missing.delete(symbol);if(record.screen?.matches!==true)rejected.add(symbol);else rejected.delete(symbol);}else missing.add(symbol);
+    }
+    if(!cachedOnly)coverage={available:available.size,missing:missing.size,pending:Math.max(0,symbols.length-available.size-missing.size),rejected:rejected.size};
     if(!cachedOnly){dirty=JSON.stringify(filters())!==signature;lastFilters=signature;render();}
     if(data.errors?.length)$('scanProviderStatus').textContent=data.errors.slice(0,3).map(e=>e.symbol+': '+e.error).join(' | ');
     if(targetReached||JSON.stringify(filters())!==signature)break;
    }
-   if(cachedOnly){records.clear();for(const [symbol,result] of staged)records.set(symbol,result);dirty=JSON.stringify(filters())!==signature;lastFilters=signature;render();}
+   if(cachedOnly){records.clear();for(const [symbol,result] of staged)records.set(symbol,result);coverage={available:available.size,missing:missing.size,pending:Math.max(0,symbols.length-available.size-missing.size),rejected:rejected.size};dirty=JSON.stringify(filters())!==signature;lastFilters=signature;render();}
    const searchReceipt=discoverySymbols.length?translate('מאגר חיפוש: {total} מניות · עצירה אחרי 50 התאמות שונות.').replace('{total}',String(discoverySymbols.length))+' '+translate(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':targetReached?'הסריקה נעצרה לאחר 50 התאמות שונות.':'החיפוש בנתונים הזמינים הסתיים; נמצאו פחות מ־50 התאמות.')+' ':'';
    status.textContent=searchReceipt+(sharedReceipt||`הסריקה הסתיימה: התקבלו ${records.size} תוצאות נגזרות. `+(dirty?'המסננים השתנו במהלך הסריקה. עדכן תוצאות.':'החישוב בשרת; נפח יומי EOD, ללא מחירי מקור להורדה.'));
   }catch(e){status.textContent=e.name==='AbortError'?'הסריקה נעצרה.':e.message;}
@@ -114,8 +126,8 @@ export function mountVentureScanner({filters,openCharts}){
  document.addEventListener('click',e=>{if(e.target.id==='scanDiscover')scan({discover:true});if(e.target.id==='scanDiscoverStop')controller?.abort()});
  $('scanner').addEventListener('input',()=>{page=0;dirty=JSON.stringify(filters())!==lastFilters;render()});$('scanner').addEventListener('change',()=>{page=0;dirty=JSON.stringify(filters())!==lastFilters;render()});
  window.addEventListener('asaf:language',()=>{render();if(inspectedSymbol&&records.has(inspectedSymbol))details(records.get(inspectedSymbol));});
- $('scanClear').onclick=()=>{controller?.abort();records.clear();discoverySymbols=[];page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render()};
- window.addEventListener('asaf:logout',()=>{revision++;controller?.abort();busy=false;records.clear();discoverySymbols=[];page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render();update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if($('scanDiscoverStop'))$('scanDiscoverStop').hidden=true});
+ $('scanClear').onclick=()=>{controller?.abort();records.clear();coverage=null;discoverySymbols=[];page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render()};
+ window.addEventListener('asaf:logout',()=>{revision++;controller?.abort();busy=false;records.clear();coverage=null;discoverySymbols=[];page=0;sharedScan=false;dirty=true;inspectedSymbol=null;$('scanResearchDetails').hidden=true;render();update.disabled=false;$('scanProvider').disabled=false;if($('scanDiscover'))$('scanDiscover').disabled=false;if($('scanDiscoverStop'))$('scanDiscoverStop').hidden=true});
  $('scanProviderAuto').disabled=true;$('scanProviderAuto').closest('label').hidden=true;
  render();
 }

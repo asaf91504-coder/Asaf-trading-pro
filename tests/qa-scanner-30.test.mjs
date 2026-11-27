@@ -44,6 +44,8 @@ class Elem extends EventTarget {
  closest(kind){return this[kind]??=new Elem(kind);}
  querySelectorAll(){return [];}
  before(node){this.previous=node;}
+ after(node){this.next=node;}
+ setAttribute(key,value){this[key]=value;}
  click(){return this.onclick?.();}
 }
 const json=(data,ok=true)=>({ok,json:async()=>data});

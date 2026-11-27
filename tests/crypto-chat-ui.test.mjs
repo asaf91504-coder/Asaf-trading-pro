@@ -23,9 +23,9 @@ const installer=source.slice(source.indexOf('function installVentureSnapshot('),
 const restore=source.slice(source.indexOf('function restore('),source.indexOf('// The free AI endpoint'));
 const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,8,i+1)).toISOString().slice(0,10),open:100+i,high:102+i,low:98+i,close:101+i,volume:1000}));
 function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,resultPatch={},duringFetch}={}){
- const nodes=new Map(),requests=[],saved=[],ready=[],rendered=[];
+ const nodes=new Map(),requests=[],saved=[],ready=[],rendered=[],chartStates=[];
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='symbol'?symbol:id==='marketInterval'?interval:'',textContent:'',disabled:false});return nodes.get(id)};
- const context={marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,ventureActions:[],lastFetchBySymbol:new Map(),status:node('chatStatus'),
+ const context={chartLoadState:state=>chartStates.push(state),marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,ventureActions:[],lastFetchBySymbol:new Map(),status:node('chatStatus'),
   stockContext:(symbol,rows,meta)=>({symbol,bars:rows.length,date:rows.at(-1).date,source:'CSV',interval:meta.interval}),
   localChart:{setData(...args){rendered.push(args)},setSnapshot(value){rendered.push(value)}},sessionStorage:{removeItem(){},setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
   intrinioFeed:Promise.resolve({enabled:false}),
@@ -35,7 +35,7 @@ function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,
  context.refreshProviderFeed=async()=>{};
  context.providerFeed={get:async()=>({intrinio:await context.intrinioFeed,publicMarket:await context.publicFeed})};
  // Lexical declarations belong to the exact source under test.
- delete context.cryptoIntervals;vm.createContext(context);vm.runInContext(helpers+installer+loader+restore,context);return {context,nodes,requests,saved,ready,rendered};
+ delete context.cryptoIntervals;vm.createContext(context);vm.runInContext(helpers+installer+loader+restore,context);return {context,nodes,requests,saved,ready,rendered,chartStates};
 }
 test('owner crypto load bypasses stock feed, canonicalizes symbol and retains CoinLore research provenance',async()=>{
  const f=fixture();await f.context.loadMarketData({fromChat:true});assert.equal(f.requests.length,1);assert.equal(f.requests[0].url,'/.netlify/functions/crypto-research');assert.equal(f.requests[0].body.symbol,'COINLORE:BTCUSD');assert.equal(f.context.chartSymbol.value,'COINLORE:BTCUSD');assert.equal(f.context.loaded.source,'CoinLore');assert.equal(f.context.loaded.context.source,'CoinLore');assert.equal(f.context.loaded.internalResearchOnly,true);assert.equal(f.saved[0].source,'CoinLore');assert.equal(f.saved[0].latestBarMayBePartial,true);assert.equal(f.saved[0].internalResearchOnly,true);assert.equal(f.context.loaded.quote.price,222.5);assert.notEqual(f.context.loaded.quote.price,bars.at(-1).close);assert.match(f.context.marketStatus.textContent,/222.5/);assert.equal(f.rendered.length,1);assert.match(f.context.marketStatus.textContent,/REST/);assert.doesNotMatch(f.context.marketStatus.textContent,/CSV|Twelve Data|ארה״ב/);
@@ -138,4 +138,9 @@ test('two overlapping marked chart loads for the same ticker cannot let the olde
  const newer=f.context.loadMarketData({fromChat:true,scannerContext});await new Promise(r=>setImmediate(r));
  pending[1](response('NEW'));await newer;pending[0](response('OLD'));await assert.rejects(older,{name:'AbortError'});
  assert.equal(f.rendered.length,1);assert.equal(f.rendered[0].image,'NEW');
+});
+
+test('loader reports a selected-stock quota error and successful load clears the empty state',async()=>{
+ const failed=fixture({status:429,resultPatch:{error:"מכסת הקרדיטים נוצלה"}});await assert.rejects(failed.context.loadMarketData());assert.equal(failed.chartStates.at(-1).phase,"error");assert.match(failed.chartStates.at(-1).error,/מכסת/);
+ const ready=fixture();await ready.context.loadMarketData();assert.equal(ready.chartStates[0].phase,"loading");assert.equal(ready.chartStates.at(-1).phase,"ready");
 });

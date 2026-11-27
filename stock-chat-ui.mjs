@@ -28,6 +28,7 @@ import {executeChartActions} from './chart-command-controller.mjs';
 import {requestsChartAnalysis,hasAnalysisCandles} from './chart-analysis-request.mjs';
 import {historyForModel,selectConversationMessages} from './conversation-context.mjs';
 import {renderChatText} from './chat-text.mjs';
+import {chartLoadState} from './chart-load-state.mjs';
 
 const $=id=>document.getElementById(id);
 const log=$("chatLog"),message=$("chatInput"),badge=$("chatDataStatus");
@@ -496,6 +497,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true,scannerC
  }
  if(!crypto&&!memberMode&&passcode.length<20)throw Error('קוד הגישה חייב להכיל לפחות 20 תווים.');
  marketButton.disabled=true;
+ chartLoadState({phase:'loading',hasChart:!!loaded&&loaded.symbol===symbol});
  marketStatus.textContent=crypto?'טוען נרות מ־CoinLore לניסוי מחקר פנימי של בעל הפרויקט…':'מתחבר לספק הנתונים (בקשה מפורשת בלבד)…';
  try{
   const response=await fetch(crypto?'/.netlify/functions/crypto-research':intrinio?'/.netlify/functions/intrinio-research':memberMode?'/.netlify/functions/public-market':'/.netlify/functions/market',{
@@ -530,10 +532,10 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true,scannerC
   if(!fromChat)say('bot',crypto?'נטענו '+bars.length+' נרות של '+symbol+' מ־CoinLore בלבד לניסוי מחקר פנימי. נר אחרון: '+result.latestBarTime+'. זהו צילום מצב REST ולא פיד עסקאות רציף; הנר האחרון עשוי להיות חלקי.':'📡 קיבלתי '+bars.length+' נרות של '+symbol+' בטווח '+interval+'. נר אחרון: '+result.latestBarTime+'.');
   if(!fromChat)document.querySelector('[data-tab="charts"]').click();
   return loaded;
- }catch(error){if(current())marketStatus.textContent='לא התחבר: '+error.message;throw error;}
- finally{marketButton.disabled=false;}
+ }catch(error){if(current()){marketStatus.textContent='לא התחבר: '+error.message;chartLoadState({phase:'error',error:error.message,hasChart:!!loaded&&loaded.symbol===symbol});}throw error;}
+ finally{marketButton.disabled=false;if(current()&&loaded?.symbol===symbol)chartLoadState({phase:'ready',hasChart:true});}
 }
-marketButton.addEventListener("click",()=>loadMarketData().catch(error=>{marketStatus.textContent=error.message}));
+marketButton.addEventListener("click",()=>loadMarketData().catch(error=>{marketStatus.textContent=error.message;chartLoadState({phase:'error',error:error.message,hasChart:!!loaded&&loaded.symbol===normSymbol()})}));
 setInterval(()=>{if($('marketAutoRefresh')?.checked&&!document.hidden&&authState.authenticated&&!marketButton.disabled)marketButton.click()},61000);
 window.addEventListener('asaf:logout',()=>{if($('marketAutoRefresh'))$('marketAutoRefresh').checked=false;lastFetchBySymbol.clear();if(['CoinLore','Intrinio','Twelve Data'].includes(loaded?.source)){chartRevision++;resetRequest();loaded=null;localChart.clear();try{sessionStorage.removeItem(key)}catch{}renderStatus();window.dispatchEvent(new Event('asaf:dataset-cleared'))}});
 $("marketForgetCode").addEventListener("click",()=>{
