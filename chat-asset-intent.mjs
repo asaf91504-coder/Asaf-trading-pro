@@ -71,7 +71,20 @@ function discoveryExclusions(text){
 export function stockDiscoveryIntent(value){
  const text=String(value||'').normalize('NFKC');
  if(isLearningQuestion(text)||/^(?:הסבר|תסביר|איך|כיצד|מה ההבדל|explain|how to|what is)/iu.test(text))return null;
- if(!/(?:מניות|מועמדות|סטאפים|מנ(?:י|יי)ה\s+אחת|\b(?:stocks|candidates|setups|one stock|1 stock)\b)/iu.test(text)||!/(?:תן|תתן|תיתן|תביא|מצא|תמצא|חפש|תחפש|אני רוצה|אפשר|\b(?:find|give|show|scan|want)\b)/iu.test(text))return null;
+ if(/(?:^|\s)(?:תן|תתן|תיתן|תביא|תציג|הצג|ת?כתוב|ת?רשום|give|show|write|list)\s+(?:לי\s+|me\s+(?:an?\s+)?|an?\s+)?(?:צ[׳'’]?ק[־\s]*ליסט|checklist|מדריך|הסבר|מאמר|כתבה|סיכום|guide|article|explanation|summary)(?![\p{L}\p{N}_])/iu.test(text))return null;
+ // This shared browser/server classifier must route natural requests to the
+ // verified scanner, even when no chart is loaded. A missing verb used to
+ // send "תרשום לי 2 מניות" to an ungrounded general answer instead.
+ const stockNoun=/(?:מניות|מועמדות|סטאפים|מנ(?:י|יי)ה(?![\p{L}\p{N}_])|\b(?:stocks?|candidates?|setups?)\b)/iu.test(text);
+ const request=/(?:תן|תתן|תיתן|תביא|מצא|תמצא|חפש|תחפש|אני רוצה|אפשר|(?:ת?רשום|ת?כתוב|תציע|הצע|תמליץ|המלץ|תציג|הצג|מחפש(?:ת|ים)?|צריך|צריכ(?:ה|ים|ות))(?![\p{L}\p{N}_])|\b(?:find|give|show|scan|want|suggest|recommend|list|screen|need|looking\s+for)\b)/iu.test(text);
+ const compactRequest=/^\s*(?:בבקשה\s+)?(?:עוד\s+)?(?:\d{1,4}|שתי|שתיים|שלוש|שלושה|ארבע|ארבעה|חמש|חמישה|שש|שישה|שבע|שבעה|שמונה|תשע|תשעה|עשר|עשרה)\s+(?:מניות|מועמדות|סטאפים)(?![\p{L}\p{N}_])/u.test(text);
+ // The goal, rather than one particular imperative verb, can request a scan.
+ // Named-asset research must keep that asset instead of substituting a list.
+ const goal=/(?:לונג|שורט|להשק(?:יע|עה)|לקנות|לרכוש|מומלצות|הזדמנויות|\b(?:long|short|invest(?:ment|ing)?|buy|opportunities)\b)/iu.test(text);
+ const bareStock=/^(?:מניות|מניה|stocks?)[?!]?$/iu.test(text);
+ const selectionQuestion=/^(?:איזה|אילו|which)\s+(?:מניות|stocks?)/iu.test(text);
+ if(!stockNoun||!request&&!compactRequest&&!goal&&!selectionQuestion&&!bareStock)return null;
+ if(questionAsset(text)&&!/(?:לא כולל|למעט|חוץ מ|בלי|ללא|\b(?:excluding|exclude|except|without)\b)/iu.test(text))return null;
  const negative=side=>new RegExp('(?:^|[\\s,;])(?:ו?(?:לא|בלי|ללא)|not|no|without)\\s+(?:ל|ב|a |any |for )?(?:'+side+')(?![\\p{L}\\p{N}_])','iu').test(text);
  const noLong=negative('לונג|long'),noShort=negative('שורט|short');
  const long=!noLong&&(/(?:לונג|\blong\b)/iu.test(text)||noShort),short=!noShort&&(/(?:שורט|\bshort\b)/iu.test(text)||noLong);
@@ -81,5 +94,6 @@ export function stockDiscoveryIntent(value){
  const cap=thresholdMatch(text,'שווי\\s*שוק|market\\s*cap',{scale:true});if(cap!==null)filters.minMarketCap=cap;
  const price=thresholdMatch(text,'מחיר|price');if(price!==null)filters.minPrice=price;
  const unsupported=exclusions.invalid||/(?:\bcrores?\b|\blakhs?\b|\b(?:EUR|GBP|JPY|INR|ILS|euros?|pounds?|yen|rupees?)\b|יורו|אירו|שקלים?|ש״ח|€|£|₹|₪)/iu.test(text)||/(?:RSI|ATR|ADX|MACD|סקטור|sector|פוטנציאל|potential|מחזור|volume|מתחת|below|under|ממוצע|moving average|תבנית|pattern|%)/iu.test(text)||(/שווי\s*שוק|market\s*cap/iu.test(text)&&cap===null)||(/מחיר|price/iu.test(text)&&price===null);
- return {side:noLong&&noShort?'invalid':long===short?'any':short?'short':'long',limit:Math.max(1,Math.min(12,n?Number(n[1]):words.find(([re])=>re.test(text))?.[1]||3)),...(Object.keys(filters).length?{filters}:{}),...(exclusions.symbols.length?{excludeSymbols:exclusions.symbols}:{}),...(unsupported?{unsupportedCriteria:true}:{}),...(/(?:עוד|אחרות|אחרים|\b(?:more|other|different|another)\b)/iu.test(text)?{more:true}:{})};
+ const single=/(?:מנ(?:י|יי)ה(?![\p{L}\p{N}_])|\bstock\b)/iu.test(text);
+ return {side:noLong&&noShort?'invalid':long===short?'any':short?'short':'long',limit:Math.max(1,Math.min(12,n?Number(n[1]):words.find(([re])=>re.test(text))?.[1]||(single?1:3))),...(Object.keys(filters).length?{filters}:{}),...(exclusions.symbols.length?{excludeSymbols:exclusions.symbols}:{}),...(unsupported?{unsupportedCriteria:true}:{}),...(/(?:עוד|אחרות|אחרים|\b(?:more|other|different|another)\b)/iu.test(text)?{more:true}:{})};
 }

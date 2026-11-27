@@ -1,4 +1,5 @@
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../chat-asset-intent.mjs';
+import {resolveDiscoveryContext} from '../chat-discovery-context.mjs';
 import {chatAnswerText} from '../chat-answer-presentation.mjs';
 import {isLearningQuestion} from '../chat-request-intent.mjs';
 import {currentUSMarketIntent} from '../chat-market-intent.mjs';
@@ -25,7 +26,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
  const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
- ctx.questionAsset=questionAsset;ctx.sameChatAsset=sameChatAsset;ctx.stockDiscoveryIntent=stockDiscoveryIntent;ctx.chatAnswerText=chatAnswerText;ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
+ ctx.resolveDiscoveryContext=resolveDiscoveryContext;ctx.questionAsset=questionAsset;ctx.sameChatAsset=sameChatAsset;ctx.stockDiscoveryIntent=stockDiscoveryIntent;ctx.chatAnswerText=chatAnswerText;ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
  ctx.renderSearchSources=renderSearchSources;ctx.historyForModel=historyForModel;ctx.selectConversationMessages=selectConversationMessages;ctx.renderChatText=(el,text)=>{el.textContent=text};
@@ -500,6 +501,18 @@ test('a scanner request drops the selected chart, its receipt and history withou
  await s.ctx.ask('אני רוצה שתתן לי שלוש מניות לשורט או לונג');
  assert.equal(s.payloads.length,1);const p=s.payloads[0];assert.equal(p.symbol,undefined);assert.equal(p.history,undefined);assert.equal(p.useServerMarket,undefined);assert.equal(p.scannerContext,undefined);assert.ok(s.ctx.conversation.length>=1);
 });
+test('the reported write-two-stocks request reaches discovery with or without an open chart',async()=>{
+ for(const attached of [false,true]){
+  const s=setup();if(attached){s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;}
+  s.ctx.parseChartCommand=parseChartCommand;
+  s.ctx.conversation=[{role:'assistant',content:'אין לי נתונים על המניה הקודמת',chartContext:{symbol:'ACMR',source:'Twelve Data'}}];
+  s.ctx.runChatActions=async()=>assert.fail('discovery must not load the selected chart');
+  await s.ctx.ask('תרשום לי 2 מניות להשקיע לטווח של חודש מניות לונג');
+  assert.equal(s.payloads.length,1);
+  assert.equal(s.payloads[0].symbol,undefined);assert.equal(s.payloads[0].useServerMarket,undefined);assert.equal(s.payloads[0].history,undefined);
+  assert.equal(s.payloads[0].webSearch,false);assert.equal(s.payloads[0].message,'תרשום לי 2 מניות להשקיע לטווח של חודש מניות לונג');
+ }
+});
 test('switching named stocks loads the new asset and preserves the same conversation',async()=>{
  const s=setup();let stayedInChat=false;s.ctx.document.querySelector=selector=>{assert.equal(selector,'[data-tab="chat"]');return {click(){stayedInChat=true}}};s.ctx.chartSymbol=s.ctx.$('symbol');s.ctx.chartSymbol.value='ACMR';s.ctx.normSymbol=()=>s.ctx.chartSymbol.value;
  s.ctx.loaded=analysisData('ACMR');s.ctx.currentContext=()=>s.ctx.loaded.context;
@@ -528,4 +541,18 @@ test('ambiguous or negated asset requests do not switch the chart before clarifi
 });
 test('more-candidate requests send bounded prior context for exclusions while ordinary discovery stays isolated',async()=>{
  const s=setup();s.ctx.conversation=[{role:'assistant',content:'AMD, ACMR, TSLA',chartContext:{source:'Twelve Data'}}];await s.ctx.ask('תן לי עוד שלוש מניות אחרות');assert.equal(s.payloads.length,1);assert.ok(s.payloads[0].history.some(m=>m.content==='AMD, ACMR, TSLA'));assert.equal(s.payloads[0].symbol,undefined);
+});
+
+
+test('bare selection goals and short follow-ups use discovery without touching the selected chart',async()=>{
+ for(const question of ['מניות ללונג','עוד שתיים']){
+  const s=setup();s.ctx.conversation=[{role:'user',content:'רשום לי שתי מניות ללונג'},{role:'assistant',content:'AMD, TSLA',chartContext:{source:'Twelve Data'}}];
+  s.ctx.runChatActions=()=>assert.fail('must not switch chart');await s.ctx.ask(question);assert.equal(s.payloads.length,1);assert.equal(s.payloads[0].symbol,undefined);
+  if(question==='עוד שתיים')assert.ok(s.payloads[0].history.length);
+ }
+});
+test('verified-data recovery is displayed without claiming a model completed the analysis',async()=>{
+ const s=setup();let status;s.ctx.setAiStatus=text=>status=text;
+ s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:'סיכום נתונים מאומתים: TEST $100',answerMode:'verified-data',modelUnavailable:true,source:'Twelve Data',provider:'openai',credits:{charged:0,remaining:10}})});
+ await s.ctx.ask('מניות ללונג');assert.match(s.bubbles[1].textContent,/TEST/);assert.match(status,/ניתוח AI לא הושלם/);assert.doesNotMatch(status,/AI שיחתי מחובר/);
 });

@@ -39,3 +39,13 @@ test('more candidates retain prior explicit screening filters and side unless th
 test('repeated more requests exclude all earlier scanner lists in the bounded context',()=>{
  const history=[{role:'assistant',content:'AAPL, MSFT, NVDA',chartContext:{source:'Twelve Data'}},{role:'assistant',content:'AMD, TSLA, INTC',chartContext:{source:'Twelve Data'}}];assert.deepEqual(previousScannerSymbols(history,['AAPL','MSFT','NVDA','AMD','TSLA','INTC']),['AAPL','MSFT','NVDA','AMD','TSLA','INTC']);
 });
+
+
+test('short more requests continue immediately preceding discovery without borrowing an unrelated stock topic',()=>{
+ const history=[{role:'user',content:'רשום לי שתי מניות לשורט עם שווי שוק מעל 10 מיליארד'}];
+ const result=resolveDiscoveryContext(null,history,'עוד שתיים');assert.equal(result.limit,2);assert.equal(result.side,'short');assert.equal(result.more,true);assert.equal(result.filters.minMarketCap,1e10);
+ assert.equal(resolveDiscoveryContext(null,[...history,{role:'user',content:'מה דעתך על TSLA'}],'עוד שתיים'),null);
+ assert.equal(resolveDiscoveryContext(null,[],'עוד שתיים'),null);
+ const switched=resolveDiscoveryContext(null,history,'עוד 2 ללונג');assert.equal(switched.limit,2);assert.equal(switched.side,'long');
+ assert.equal(resolveDiscoveryContext(null,[{role:'user',content:'תן לי 3 מניות עם RSI מעל 60'}],'עוד שתיים'),null);
+});

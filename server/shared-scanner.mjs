@@ -17,15 +17,17 @@ export function sharedScannerKey(env,symbols=approvedMarketSymbols(env)){return 
 const parse=raw=>{try{return JSON.parse(raw)}catch{return null}};
 // Preserve existing research while the larger namespace fills progressively.
 export const previousScannerKey=env=>['us1000','us10000'].includes(env.ASAF_SCANNER_UNIVERSE)?sharedScannerKey(env,scannerUniverse(env,{legacy:true})):null;
-export async function readSharedScan({env=process.env,run=command,now=Date.now(),memberId,symbols}={}){
+export async function readSharedScan({env=process.env,run=command,now=Date.now(),memberId,symbols,page}={}){
  if(!sharedScannerEnabled(env)||!marketAccessAllowed(memberId,env,now))throw new MarketError('הסריקה המשותפת אינה זמינה לחשבון זה.',403);
+ if(page&&(!Number.isSafeInteger(page.offset)||page.offset<0||!Number.isInteger(page.limit)||page.limit<1||page.limit>100))throw new MarketError('עמוד הסריקה אינו תקין.',400);
  let snapshot=parse(await run(['GET',sharedScannerKey(env)+':snapshot'],{env}));
  const previousKey=previousScannerKey(env);
  if(!snapshot&&previousKey){snapshot=parse(await run(['GET',previousKey+':snapshot'],{env}));if(snapshot)snapshot={...snapshot,total:approvedMarketSymbols(env).length,partial:true,progress:{processed:0,total:approvedMarketSymbols(env).length,complete:false}};}
  const age=now-Date.parse(isScannerManifest(snapshot)?snapshot.updatedAt:snapshot?.completedAt);
  if(!snapshot||!Array.isArray(snapshot.records)||!Number.isFinite(age)||age<0||age>86400000)throw new MarketError('הסריקה התלת־שעתית עדיין אינה זמינה. נסה שוב לאחר העדכון הבא.',503);
  const selected=new Set(symbols||approvedMarketSymbols(env)),basis=scannerDailyVolumeBasis(env)||twelveSettings(env).dailyVolumeBasis;
- const loaded=isScannerManifest(snapshot)?await readScannerManifest(snapshot,{symbols:[...selected],run,env,now}):{records:snapshot.records,errors:[]};
+ const available=isScannerManifest(snapshot)?null:snapshot.records.filter(r=>selected.has(r.symbol));
+ const loaded=isScannerManifest(snapshot)?await readScannerManifest(snapshot,{symbols:[...selected],run,env,now,page}):{records:page?available.slice(page.offset,page.offset+page.limit):available,errors:[],...(page?{pagination:{nextOffset:Math.min(available.length,page.offset+page.limit),hasMore:page.offset+page.limit<available.length,total:available.length}}:{})};
  const records=loaded.records.filter(r=>selected.has(r.symbol)).map(r=>{
   // A cycle assembled before deployment or a basis change may still be readable
   // for price and existing setup reviews, but it cannot testify about volume.
@@ -35,7 +37,7 @@ export async function readSharedScan({env=process.env,run=command,now=Date.now()
   return {...r,coverage:marketCoverage(r.interval||'1day',comparison.coverage),volumeComparison:comparison,summary:{...r.summary,volumeRatio:comparison.ratio,...(!obvSafe?{obv:null,obvPrevious:null}:{})}};
  });
  const {rows,format,...metadata}=snapshot;
- return {...metadata,records,errors:[...snapshot.errors.filter(e=>selected.has(e.symbol)),...loaded.errors],shared:true,stale:now>=snapshot.nextUpdateAt,scope:'סריקה משותפת של המניות המורשות בלבד, לפי נרות יומיים קודמים. הבקשה לא פנתה לספק הנתונים.'};
+ return {...metadata,records,errors:[...snapshot.errors.filter(e=>selected.has(e.symbol)),...loaded.errors],...(loaded.pagination?{pagination:loaded.pagination}:{}),shared:true,stale:now>=snapshot.nextUpdateAt,scope:'סריקה משותפת של המניות המורשות בלבד, לפי נרות יומיים קודמים. הבקשה לא פנתה לספק הנתונים.'};
 }
 // A fencing token prevents an expired worker from overwriting a newer cycle.
 export const SCANNER_COMMIT=`-- scanner-hourly-commit

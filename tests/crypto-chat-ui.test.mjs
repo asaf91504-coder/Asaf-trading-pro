@@ -1,4 +1,5 @@
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../chat-asset-intent.mjs';
+import {resolveDiscoveryContext} from '../chat-discovery-context.mjs';
 import {chatAnswerText} from '../chat-answer-presentation.mjs';
 import {isLearningQuestion} from '../chat-request-intent.mjs';
 import {currentUSMarketIntent} from '../chat-market-intent.mjs';
@@ -64,7 +65,7 @@ test('AI receives a server-crypto request flag rather than a stock-provider or u
  c.localChart.settings=()=>({style:'candles',indicators:['MA20']});
  c.fetch=async(url,options)=>{assert.equal(url,'/.netlify/functions/free-chat');payload=JSON.parse(options.body);return {ok:true,json:async()=>({answer:'ניתוח נתוני CoinLore'})}};
  Object.assign(c,{renderSearchSources,requestsChartAnalysis,hasAnalysisCandles,historyForModel,renderChatText:(el,text)=>{el.textContent=text}});c.window.dispatchEvent=()=>{};
- c.questionAsset=questionAsset;c.sameChatAsset=sameChatAsset;c.stockDiscoveryIntent=stockDiscoveryIntent;c.chatAnswerText=chatAnswerText;c.isLearningQuestion=isLearningQuestion;c.currentUSMarketIntent=currentUSMarketIntent;c.languageCode=languageCode;c.entryStopText=entryStopText;c.compactEntryStopText=compactEntryStopText;c.withoutScenarioText=withoutScenarioText;c.analysisReceipts=new Map();c.appendScenario=()=>{};c.chatThrottleDisplay=chatThrottleDisplay;c.localizedChatReply=localizedChatReply;c.renderChatReply=(el,parts)=>c.renderChatText(el,localizedChatReply(parts,c.window.asafTranslate));
+ c.resolveDiscoveryContext=resolveDiscoveryContext;c.questionAsset=questionAsset;c.sameChatAsset=sameChatAsset;c.stockDiscoveryIntent=stockDiscoveryIntent;c.chatAnswerText=chatAnswerText;c.isLearningQuestion=isLearningQuestion;c.currentUSMarketIntent=currentUSMarketIntent;c.languageCode=languageCode;c.entryStopText=entryStopText;c.compactEntryStopText=compactEntryStopText;c.withoutScenarioText=withoutScenarioText;c.analysisReceipts=new Map();c.appendScenario=()=>{};c.chatThrottleDisplay=chatThrottleDisplay;c.localizedChatReply=localizedChatReply;c.renderChatReply=(el,parts)=>c.renderChatText(el,localizedChatReply(parts,c.window.asafTranslate));
  c.journalIntent=journalIntent;c.selectConversationMessages=selectConversationMessages;
  vm.runInContext(source.slice(source.indexOf('async function ask('),source.indexOf("$('clearConversation')")),c);await c.ask('explain this chart');
  assert.equal(payload.useServerCrypto,true);assert.equal(payload.useServerMarket,false);assert.equal(payload.source,'CoinLore');assert.equal(payload.symbol,'COINLORE:BTCUSD');assert.equal(payload.receivedAt,'2026-10-29T10:00:00Z');assert.match(bubbles.at(-1).textContent,/CoinLore/);

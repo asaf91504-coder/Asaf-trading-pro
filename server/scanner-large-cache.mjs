@@ -8,8 +8,9 @@ export const isScannerManifest=snapshot=>snapshot?.format===FORMAT&&Array.isArra
 
 // Read small groups of server-only rows; 1,000 OHLCV series must never become
 // one oversized Redis value or one large HTTP response from the data store.
-export async function readScannerManifest(snapshot,{symbols,run,env,now}){
- const selected=new Set(symbols),rows=snapshot.rows.filter(r=>selected.has(r.symbol)),records=[],errors=[];
+export async function readScannerManifest(snapshot,{symbols,run,env,now,page}){
+ const selected=new Set(symbols),available=snapshot.rows.filter(r=>selected.has(r.symbol));
+ const rows=page?available.slice(page.offset,page.offset+page.limit):available,records=[],errors=[];
  for(let offset=0;offset<rows.length;offset+=25){
   const batch=rows.slice(offset,offset+25),values=await run(['MGET',...batch.map(r=>r.key)],{env});
   for(let i=0;i<batch.length;i++){
@@ -18,7 +19,7 @@ export async function readScannerManifest(snapshot,{symbols,run,env,now}){
    else errors.push({symbol:batch[i].symbol,error:'נתוני המניה ממתינים לעדכון.'});
   }
  }
- return {records,errors};
+ return {records,errors,...(page?{pagination:{nextOffset:page.offset+rows.length,hasMore:page.offset+rows.length<available.length,total:available.length}}:{})};
 }
 
 export async function refreshLargeScanner({env,run,fetcher,now,key,seedKey,symbols,plan,memberId,readBars,readFundamentals,fundamentals,commitScript,periodMs}){
