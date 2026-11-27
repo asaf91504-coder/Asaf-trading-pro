@@ -28,7 +28,7 @@ export function createVentureChartView(local){
   for(const list of [levels,largeLevels]){
    list.replaceChildren();
    for(const level of accessibleResearchLevels(snapshot.accessibleLevels)){
-    const label=document.createElement('dt'),value=document.createElement('dd');label.textContent=translate(markLabels[level.kind]);value.textContent=new Intl.NumberFormat(document.documentElement.lang||'he',{maximumFractionDigits:8}).format(level.price);value.dir='ltr';value.translate=false;list.append(label,value);
+    const label=document.createElement('dt'),value=document.createElement('dd');label.textContent=translate(markLabels[level.kind]);value.textContent=new Intl.NumberFormat(document.documentElement.lang||'he',{maximumFractionDigits:level.price>=1?2:8}).format(level.price);value.dir='ltr';value.translate=false;list.append(label,value);
    }
    list.hidden=!list.children.length;
   }

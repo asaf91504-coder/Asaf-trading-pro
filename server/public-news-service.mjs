@@ -14,7 +14,12 @@ export async function refreshPublicNews({env=process.env,now=Date.now(),run=comm
 export async function readPublicNews({env=process.env,now=Date.now(),run=command}={}){const raw=await run(['GET',storageKey('news:public:us:snapshot',env)],{env}),value=raw?JSON.parse(raw):null;const scheduledRaw=await run(['GET',storageKey('news:public:scheduled',env)],{env});let scheduled=null;try{scheduled=scheduledRaw?JSON.parse(scheduledRaw):null}catch{}const snapshot=snapshotState(value,now);snapshot.articles=snapshot.articles.filter(isMarketHeadline).map(article=>({...article,symbols:[...new Set([...article.symbols,...publicHeadlineSymbols(article.title)])].slice(0,20)}));return {...snapshot,lastScheduledAt:typeof scheduled?.at==='string'&&Number.isFinite(Date.parse(scheduled.at))?scheduled.at:null,sources:Array.isArray(value?.sources)?value.sources.slice(0,3):[]}}
 
 export function isMarketHeadline(article){
- if(/^(print edition|home(?:page)?|latest news|news headlines)\s*(?:[|–—-]|$)/i.test(article.title||''))return false;
+ const title=article.title||'';
+ if(/^(print edition|home(?:page)?|latest news|news headlines)\s*(?:[|–—-]|$)/i.test(title))return false;
+ // Search feeds sometimes index quote directories and publisher home pages.
+ // Exclude these clear templates before a company/ticker can qualify them.
+ if(/\bstock price\s*,?\s*news\s*,?\s*quote\s*(?:&|and)\s*history(?:\s*[-|–—]\s*[^|]+)?\s*$/i.test(title))return false;
+ if(/^Yahoo Finance\s*[-|–—:]\s*Stock Market Live\s*,?\s*Quotes\s*,?\s*Business\s*(?:&|and)\s*Finance News(?:\s*[-|–—]\s*Yahoo Finance)?\s*$/i.test(title))return false;
  if(!/^(markets|major-news):/.test(article.id||''))return true;
  if(publicHeadlineSymbols(article.title||'').length)return true;
  return /\b(stock|stocks|share|shares|equity|equities|earnings|revenue|profit|profits|dividend|dividends|investor|investors|investing|investment|market|markets|nasdaq|nyse|wall street|s&p|dow|fed|federal reserve|inflation|interest rate|rates|treasury|bond|bonds|dollar|economy|economic|trade|tariff|tariffs|ipo|merger|acquisition|billion|trillion|bitcoin|crypto|ethereum|nvidia|huang|apple|microsoft|amazon|tesla|meta|alphabet|google|openai|anthropic|oil|gold|financial|finance|bank|banking|portfolio|fund|funds|hedge|etf|semiconductor|chip|chips)\b/i.test(article.title||'');
