@@ -1,6 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {sharedScannerKey,readSharedScan} from './shared-scanner.mjs';
-import {MarketError} from './market-feed.mjs';
+import {MarketError,marketAccessAllowed} from './market-feed.mjs';
 import {storageKey} from './storage.mjs';
 import {closedSetupAtr14,stopWithinSetupAtr,exactTwoAtrStop} from './setup-atr.mjs';
 const atrError='מרחק הסטופ ממחיר הכניסה חייב להיות בדיוק 2 ATR יומי.';
@@ -53,20 +53,42 @@ if (redis.call('GET',KEYS[1]) or '')~=ARGV[1] then return 0 end
 if (redis.call('GET',KEYS[2]) or '')~=ARGV[2] then return 0 end
 redis.call('SET',KEYS[2],ARGV[3],'EX',172800)
 return 1`;
-export async function setupReviewContext({env,run,now,memberId}){
- const scan=await readSharedScan({env,run,now,memberId});
- const key=sharedScannerKey(env),snapshot=await run(['GET',key+':snapshot'],{env});
- // Do not approve an entry from a scan that was replaced between reads.
+export async function setupReviewContext({env,run,now,memberId,includeCandidates=true,timeoutMs=10000}){
+ const startedAt=Date.now(),deadline=startedAt+Math.min(10000,Math.max(1,timeoutMs));
+ const read=async work=>{
+  const remaining=deadline-Date.now();if(remaining<=0)throw new MarketError('טעינת הסטאפים מתעכבת. אפשר לרענן שוב.',503);
+  let timer;try{return await Promise.race([work(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new MarketError('טעינת הסטאפים מתעכבת. אפשר לרענן שוב.',503)),remaining)})])}finally{clearTimeout(timer)}
+ };
+ // Published entries live in the approved book. Reading them must never load
+ // the entire stock universe, or depend on building the owner's private queue.
+ let scan=await read(()=>readSharedScan({env,run,now,memberId,symbols:[]}));
+ const key=sharedScannerKey(env),snapshot=await read(()=>run(['GET',key+':snapshot'],{env}));
  if(!snapshot||(JSON.parse(snapshot).updatedAt||JSON.parse(snapshot).completedAt)!==(scan.updatedAt||scan.completedAt))throw new MarketError('הסריקה עודכנה. רענן את העמוד.',409);
- const raw=await run(['GET',key+':reviews'],{env})||'';
+ const raw=await read(()=>run(['GET',key+':reviews'],{env}))||'';
  const book=raw?JSON.parse(raw):{};
- return {scan,key,snapshot,raw,book,candidates:setupCandidates(scan)};
+ if(includeCandidates){
+  const records=[],stamp=scan.updatedAt||scan.completedAt;
+  let offset=0,hasMore=true,queueUnavailable=false;
+  while(hasMore&&setupCandidates({...scan,records}).length<200&&Date.now()<deadline){
+   let next;
+   try{next=await read(()=>readSharedScan({env,run,now,memberId,page:{offset,limit:25}}))}
+   catch(error){if(!(error instanceof MarketError)||error.status===503){queueUnavailable=true;break;}throw error;}
+   if((next.updatedAt||next.completedAt)!==stamp)throw new MarketError('הסריקה עודכנה. רענן את העמוד.',409);
+   records.push(...next.records);hasMore=next.pagination?.hasMore===true;
+   if(hasMore&&(!Number.isSafeInteger(next.pagination.nextOffset)||next.pagination.nextOffset<=offset))throw new MarketError('עמוד הסריקה אינו תקין.',503);
+   offset=next.pagination?.nextOffset||0;
+  }
+  scan={...scan,records,partial:scan.partial||hasMore,queueUnavailable};
+ }
+ // An initially authorized read cannot outlive its configured trial window.
+ if(!marketAccessAllowed(memberId,env,now+Math.max(0,Date.now()-startedAt)))throw new MarketError('הסריקה המשותפת אינה זמינה לחשבון זה.',403);
+ return {scan,key,snapshot,raw,book,candidates:includeCandidates?setupCandidates(scan):[]};
 }
 function freshApproval(v,now){return v.status==='approved'&&now-Date.parse(v.item.scanAt)<86400000}
 export function visibleSetups(context,reviewer,now){
  const {scan,book,candidates}=context;
  const published=Object.values(book).filter(v=>freshApproval(v,now)).map(v=>publishedItem(v.item,v.at));
- return {reviewer,published,completedAt:scan.completedAt,nextUpdateAt:scan.nextUpdateAt,stale:scan.stale,partial:scan.partial,...(reviewer?{queue:candidates.map(item=>{
+ return {reviewer,published,updatedAt:scan.updatedAt||scan.completedAt,completedAt:scan.completedAt,nextUpdateAt:scan.nextUpdateAt,stale:scan.stale,partial:scan.partial,...(scan.queueUnavailable?{queueUnavailable:true}:{}),...(reviewer?{queue:candidates.map(item=>{
   const entry=book[item.id],draft=entry?.draft;
   if(entry?.status==='approved'&&entry.original)return {...publishedItem(entry.item,entry.at),status:'approved',originalScenario:item.scenario};
   return {...item,status:entry?.status||'pending',...(entry?.status!=='approved'&&draft?{draft:{revision:draft.revision,title:draft.title,analysis:draft.analysis,...Object.fromEntries(PRICE_FIELDS.map(k=>[k,draft[k]]))}}:{})};

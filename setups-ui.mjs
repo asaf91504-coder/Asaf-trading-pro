@@ -1,4 +1,5 @@
 import {languageCode} from './interface-language.mjs';
+import {requestSetups,setupLoadingMessage} from './setup-loading.mjs';
 const $=id=>document.getElementById(id);
 const locale=()=>languageCode(document.documentElement.lang);
 const names={entry:'כניסה',stop:'סטופ',target:'יעד יציאה'};
@@ -126,16 +127,11 @@ function render(){
  }
  $('review').hidden=!data.reviewer;$('manualSetup').hidden=data.canAuthor!==true;$('count').textContent=data.published.length.toLocaleString(locale())+' סטאפים';
 }
-function renderStatus(){$('status').textContent='סריקה אחרונה: '+date(data.completedAt)+' · הבאה: '+date(data.nextUpdateAt)+(data.stale?' · העדכון מתעכב':'')+(data.partial?' · חלק מהנתונים אינם זמינים':'')}
-async function jsonRequest(body){
- const response=await fetch('/.netlify/functions/setups',{cache:'no-store',signal:AbortSignal.timeout(15000),
-  ...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
- const result=await response.json();
- if(!response.ok){const error=Error(result.error||'הטעינה נכשלה');error.status=response.status;throw error;}
- return result;
-}
+function renderStatus(){$('status').textContent='סריקה אחרונה: '+date(data.updatedAt||data.completedAt)+' · הבאה: '+date(data.nextUpdateAt)+(data.stale?' · העדכון מתעכב':'')+(data.partial?' · חלק מהנתונים אינם זמינים':'')+(data.queueUnavailable?' · '+setupLoadingMessage('queue',locale()):'')}
+const jsonRequest=body=>requestSetups(fetch,{body,language:locale()});
 const post=body=>jsonRequest(body);
 async function load(){
+ if(!data)$('status').textContent=setupLoadingMessage('loading',locale());
  const result=await jsonRequest();data=result;
  if(editing){
   const item=data.reviewer&&allQueue().find(item=>item.id===editing.id&&item.status==='pending'&&(item.manual?data.canAuthor===true:!data.stale));
@@ -152,9 +148,13 @@ async function perform(work,{reload=false}={}){
  if(data)render();
  try{await work();$('status').classList.remove('error')}
  catch(e){
-  if(reload||!data||[401,403].includes(e.status)){
+  if(!data||[401,403].includes(e.status)){
    data=null;editing=null;$('status').textContent=e.message;$('status').classList.add('error');
    $('published').replaceChildren();$('queue').replaceChildren();$('review').hidden=true;$('manualSetup').hidden=true;$('count').textContent='';
+  }else if(reload){
+   const stamp=item=>Date.parse(item.manual?item.approvedAt:item.scanAt),now=Date.now();
+   data={...data,stale:true,partial:true,queue:[],manualQueue:[],published:data.published.filter(item=>Number.isFinite(stamp(item))&&now-stamp(item)>=0&&now-stamp(item)<86400000)};editing=null;render();
+   $('status').textContent=e.message+' '+setupLoadingMessage('previous',locale());$('status').classList.add('error');
   }else reportError(e.message);
  }finally{busy=false;$('refresh').disabled=false;$('filter').disabled=false;for(const c of $('manualForm').elements)c.disabled=false;if(data)render()}
 }

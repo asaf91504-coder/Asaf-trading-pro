@@ -129,3 +129,22 @@ test('review enforces exactly 2 ATR against edited entry and never changes an al
  x.f.db.set(x.key+':snapshot',JSON.stringify(x.snapshot));
  assert.equal((await get(x,x.other)).published[0].scenario.stop,98);
 });
+
+test('published setups never read the 10,000-stock candle queue and owner review stops at 200 candidates',async()=>{
+ const x=setup(),initial=await get(x),id=initial.queue[0].id;
+ await x.handler(request('setups',{id,decision:'approved'},x.owner.cookie));
+ const symbols=['AAPL',...Array.from({length:9999},(_,i)=>'S'+i)],env={...x.env,ASAF_MARKET_ALLOWED_SYMBOLS:symbols.join(',')},key=sharedScannerKey(env);
+ const rows=symbols.map(symbol=>({symbol,key:'setup-row:'+symbol}));
+ const manifest={...x.snapshot,format:'scanner-symbol-manifest-v1',records:[],rows,total:10000,updatedAt:x.snapshot.completedAt};
+ for(const row of rows.slice(0,25)){
+  const base=x.snapshot.records[0];x.f.db.set(row.key,JSON.stringify({...base,symbol:row.symbol,research:{candidates:Array.from({length:20},(_,i)=>({...base.research.candidates[0],kind:'kind'+i}))}}));
+ }
+ x.f.db.set(key+':snapshot',JSON.stringify(manifest));x.f.db.set(key+':reviews',x.f.db.get(x.key+':reviews'));
+ const commands=[],run=async a=>{commands.push(a);return x.run(a)},handler=createSetupsHandler({env,run,now:()=>x.now});
+ const response=await handler(request('setups',null,x.other.cookie)),published=await response.json();assert.equal(response.status,200);assert.equal(published.published.length,1);assert.equal(published.queue,undefined);assert.equal(commands.filter(a=>a[0]==='MGET').length,0);
+ commands.length=0;
+ const ownerResponse=await handler(request('setups',null,x.owner.cookie)),review=await ownerResponse.json();assert.equal(ownerResponse.status,200,JSON.stringify(review));assert.equal(review.queue.length,200);assert.equal(review.partial,true);assert.equal(commands.filter(a=>a[0]==='MGET').length,1);
+ assert.doesNotMatch(JSON.stringify(review),/"bars"|setup-row:|"rows"/);
+ const unavailable=createSetupsHandler({env,now:()=>x.now,run:async a=>{if(a[0]==='MGET')throw Error('queue storage temporarily unavailable');return x.run(a)}});
+ const fallback=await unavailable(request('setups',null,x.owner.cookie)),retained=await fallback.json();assert.equal(fallback.status,200);assert.equal(retained.published.length,1);assert.equal(retained.queueUnavailable,true);assert.equal(retained.queue.length,0);
+});

@@ -4,8 +4,9 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {languageCode,languageNames} from '../interface-language.mjs';
 import {launchTranslations} from '../launch-translations.mjs';
+import {requestSetups,setupLoadingMessage} from '../setup-loading.mjs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const source=read('setups-ui.mjs').replace(/^import .*\n/,'');
+const source=read('setups-ui.mjs').replace(/^import .*\n/gm,'');
 const candidate={id:'a'.repeat(64),symbol:'AAPL',status:'pending',pattern:'Generated',scenario:{side:'long',entry:110,stop:100,target:130}};
 const rev='12345678-1234-1234-1234-123456789abc';
 const next={...candidate,draft:{revision:rev,title:'Review <script>',analysis:'Author',entry:111,stop:100,target:130}};
@@ -26,10 +27,10 @@ function harness(lang='he'){
   return elements.get(id);
  },querySelector:()=>null};
  const fetch=async(_path,opts)=>{
-  if(opts?.body)post.push(JSON.parse(opts.body));const body=queue.shift();assert.ok(body,'Unexpected network request');
+  if(opts?.body)post.push(JSON.parse(opts.body));const body=queue.shift();assert.ok(body,'Unexpected network request');if(body instanceof Error)throw body;
   return {ok:true,json:async()=>body};
  };
- vm.runInNewContext(source,{document,window:{addEventListener:(e,fn)=>events[e]=fn},fetch,AbortSignal,languageCode,Date,Number,Promise});
+ vm.runInNewContext(source,{document,window:{addEventListener:(e,fn)=>events[e]=fn},fetch,AbortSignal,languageCode,requestSetups,setupLoadingMessage,Date,Number,Promise});
  return {get:document.getElementById,events,post,queue,all:function all(node){return [node,...node.children.flatMap(all)]}};
 }
 const state=(queue,published=[])=>({reviewer:true,published,queue,completedAt:'2026-11-20T12:00:00Z'});
@@ -125,4 +126,14 @@ test('manual authoring is owner-only and submits just a new private draft even w
  assert.equal(buttons.find(n=>n.textContent==='אשר לפרסום').disabled,false);
  assert.equal(buttons.find(n=>n.textContent==='הרמות המקוריות מהסורק'),undefined);
  for(const locale of Object.keys(languageNames).filter(code=>code!=='he'))assert.ok(launchTranslations[locale]['הוספת סטאפ ידני']);
+});
+
+
+test('failed refresh keeps unexpired published cards, removes expired cards and re-enables controls',async()=>{
+ const h=harness(),valid={...candidate,scanAt:new Date().toISOString()},expired={...candidate,symbol:'OLD',scanAt:new Date(Date.now()-86400001).toISOString()};
+ h.queue.push({reviewer:false,published:[valid,expired]});await h.events.pageshow();
+ h.queue.push(new TypeError('Connection lost'));await h.get('refresh').onclick();
+ assert.equal(h.get('refresh').disabled,false);assert.equal(h.get('filter').disabled,false);assert.match(h.get('status').textContent,/תוצאות קודמות/);
+ assert.ok(h.all(h.get('published')).some(n=>n.textContent==='AAPL'));assert.equal(h.all(h.get('published')).some(n=>n.textContent==='OLD'),false);
+ h.queue.push({reviewer:false,published:[]});await h.get('refresh').onclick();assert.ok(h.all(h.get('published')).some(n=>n.textContent==='עדיין אין סטאפים מאושרים להצגה.'));
 });
