@@ -1,3 +1,4 @@
+import {subscriptionAccessError} from './subscription-access.mjs';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from './chat-asset-intent.mjs';
 import {resolveDiscoveryContext} from './chat-discovery-context.mjs';
 import {chatAnswerText} from './chat-answer-presentation.mjs';
@@ -166,14 +167,14 @@ async function runVentureActions(actions,{signal,epoch}={}){
  if(selected&&selected!==normSymbol()){chartRevision++;loaded=null;ventureActions=[];chartSymbol.value=selected;$('activeSymbol').textContent=selected;localChart.clear();rememberSymbol();renderStatus();}
  const current=()=>epoch===conversationEpoch&&!signal?.aborted;
  if(!loaded||loaded.symbol!==normSymbol()||loaded.interval!==$('marketInterval').value){
-  try{await loadMarketData({fromChat:true,signal,isCurrent:current});}catch(e){return {changed:false,dataLoadAttempted:true,messages:['לא נטענו נתונים: '+e.message]};}
+  try{await loadMarketData({fromChat:true,signal,isCurrent:current});}catch(e){if(e.subscriptionRequired)throw e;return {changed:false,dataLoadAttempted:true,messages:['לא נטענו נתונים: '+e.message]};}
  }
  if(!current())throw new DOMException('Cancelled','AbortError');
  const render=actions.filter(a=>a.type!=='symbol');
  if(!render.length){window.dispatchEvent(new Event('asaf:chart-actions'));return {changed:true,dataLoadAttempted:true,messages:['נפתחה תמונת מחקר מהשרת עבור '+normSymbol()+'.']};}
  const next=mergeResearchActions(ventureActions,render),symbol=normSymbol(),interval=$('marketInterval').value;
  const response=await fetch('/.netlify/functions/public-market',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbol,interval,actions:next,cachedOnly:true,...(loaded?.scannerContext?{scannerContext:{...loaded.scannerContext,autoAnnotate:false}}:{})}),signal});
- const result=await response.json();if(!response.ok)throw Error(result.error||'לא ניתן לעדכן את תמונת המחקר.');
+ const result=await response.json();if(!response.ok)throw subscriptionAccessError(response,result)||Error(result.error||'לא ניתן לעדכן את תמונת המחקר.');
  if(!current()||normSymbol()!==symbol||$('marketInterval').value!==interval)throw new DOMException('Cancelled','AbortError');
  installVentureSnapshot(result,symbol);ventureActions=next;window.dispatchEvent(new Event('asaf:chart-actions'));
  return {changed:true,dataLoadAttempted:true,messages:['תמונת המחקר עודכנה בשרת.',...(result.messages||[])]};
@@ -354,7 +355,7 @@ async function ask(q,extra={}){
    const limited=chatThrottleDisplay(response.status,null,preparedPayload.language);if(limited)throw Error(limited);
    throw Error(response.ok?'התקבלה תשובה לא תקינה משירות ה-AI. השאלה נשמרה; אפשר לנסות שוב.':'שירות ה-AI החזיר שגיאת חיבור (HTTP '+response.status+'). השאלה נשמרה; אפשר לנסות שוב.');
   }
-  if(response.status===402&&['credits_exhausted','subscription_required'].includes(data?.code)){showCreditPlans();}
+  if(response.status===402){const billingError=subscriptionAccessError(response,data);if(billingError)throw billingError;if(data?.code==='credits_exhausted')showCreditPlans();}
   if(!response.ok){
    if(response.status===401)sessionStorage.removeItem(freeAiAccessKey);
    const creditError=data?.code==='credits_exhausted'&&typeof data.error==='string'?window.asafTranslate?.(data.error):null;
@@ -372,7 +373,7 @@ async function ask(q,extra={}){
   if(chartChanged)suffix+='\n\nשים לב: זו תשובה על צילום הנתונים שנשלח. הגרף השתנה בזמן ההמתנה; הניתוח אינו מתייחס לתצוגה החדשה.';
   if(Array.isArray(data.actions)&&data.actions.length){
    if(chartChanged)suffix+='\nלא בוצעו כלים: המניה או נתוני הגרף השתנו מאז שליחת הבקשה. שלח בקשה חדשה על הגרף הנוכחי.';
-   else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;localReceipt=[localReceipt,...execution.messages].filter(Boolean).join('\n');}catch(error){if(error.name==='AbortError')throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
+   else{try{const execution=await runChatActions(data.actions,{signal:activeController.signal,epoch});if(epoch!==conversationEpoch)return;localReceipt=[localReceipt,...execution.messages].filter(Boolean).join('\n');}catch(error){if(error.name==='AbortError'||error.subscriptionRequired)throw error;suffix+='\nלא ניתן לבצע את פעולות הגרף. נסה שוב.';}}
   }
   const scenarioText=data.tradeScenario?compactEntryStopText(data.tradeScenario,data.responseLanguage||preparedPayload.language):'';
   const modelAnswer=chatAnswerText(withoutScenarioText(data.answer,data.tradeScenario,data.responseLanguage||preparedPayload.language));
@@ -400,6 +401,14 @@ async function ask(q,extra={}){
   setAiStatus(aiStatusBase+(data.ownerChatNoAppCredits===true?' · גישת בעלים: ללא ניכוי קרדיטים באתר':''));
  }catch(e){
   if(epoch!==conversationEpoch)return;
+  if(e.subscriptionRequired){
+   waiting.textContent=window.asafTranslate?.(e.message)||e.message;
+   if(!message.value.trim()){message.value=question;message.dispatchEvent(new Event('input'))}
+   const plans=document.createElement('a');plans.href='/subscription.html';plans.textContent=window.asafTranslate?.('ניהול המנוי')||'ניהול המנוי';waiting.append(plans);
+   setAiStatus(window.asafTranslate?.('תקופת הניסיון הסתיימה. בחר מסלול להמשך השימוש.')||'תקופת הניסיון הסתיימה. בחר מסלול להמשך השימוש.');
+   globalThis.location?.assign('/subscription.html');
+   return;
+  }
   waiting.textContent=(localReceipt?localReceipt+"\n\n":"")+"⚠️ "+(e.name==="AbortError"?(timedOut?"הזמן להמתנה לתשובה הסתיים.":"הבקשה בוטלה."):e.message);
   // Recover text locally, without making another request or spending quota.
   // The next send is an explicit new request using the then-visible context.
@@ -505,7 +514,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true,scannerC
    method:'POST',signal,credentials:'same-origin',headers:{'Content-Type':'application/json',...(!crypto&&!memberMode?{'x-asaf-market-access':passcode}:{})},body:JSON.stringify({symbol,interval,...(scannerContext?{scannerContext,cachedOnly:true}:{})})
   });
   let result;try{result=await response.json()}catch{throw Error('פונקציית הנתונים החזירה תשובה לא תקינה.');}
-  if(!response.ok){if(response.status===401&&!crypto)sessionStorage.removeItem(privateAccessKey);throw Error(result.error||'קריאת נתונים נכשלה');}
+  if(!response.ok){if(response.status===401&&!crypto)sessionStorage.removeItem(privateAccessKey);throw subscriptionAccessError(response,result)||Error(result.error||'קריאת נתונים נכשלה');}
   if(result.presentation!=='server-raster'&&(!Array.isArray(result.bars)||result.bars.length<21))throw Error('התקבלו פחות מ־21 נרות.');
   if(!current()||signal?.aborted)throw new DOMException('Cancelled','AbortError');
   if(normSymbol()!==symbol||$('marketInterval').value!==interval)throw Error('הסימול או טווח הזמן השתנו בזמן הטעינה. שלח בקשה חדשה.');
@@ -533,7 +542,7 @@ async function loadMarketData({fromChat=false,signal,isCurrent=()=>true,scannerC
   if(!fromChat)say('bot',crypto?'נטענו '+bars.length+' נרות של '+symbol+' מ־CoinLore בלבד לניסוי מחקר פנימי. נר אחרון: '+result.latestBarTime+'. זהו צילום מצב REST ולא פיד עסקאות רציף; הנר האחרון עשוי להיות חלקי.':'📡 קיבלתי '+bars.length+' נרות של '+symbol+' בטווח '+interval+'. נר אחרון: '+result.latestBarTime+'.');
   if(!fromChat)document.querySelector('[data-tab="charts"]').click();
   return loaded;
- }catch(error){if(current()){marketStatus.textContent='לא התחבר: '+error.message;chartLoadState({phase:'error',error:error.message,hasChart:!!loaded&&loaded.symbol===symbol});}throw error;}
+ }catch(error){if(current()&&error.subscriptionRequired&&!fromChat)globalThis.location?.assign('/subscription.html');if(current()){marketStatus.textContent='לא התחבר: '+error.message;chartLoadState({phase:'error',error:error.message,hasChart:!!loaded&&loaded.symbol===symbol});}throw error;}
  finally{marketButton.disabled=false;if(current()&&loaded?.symbol===symbol)chartLoadState({phase:'ready',hasChart:true});}
 }
 marketButton.addEventListener("click",()=>loadMarketData().catch(error=>{marketStatus.textContent=error.message;chartLoadState({phase:'error',error:error.message,hasChart:!!loaded&&loaded.symbol===normSymbol()})}));

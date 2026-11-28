@@ -1,3 +1,4 @@
+import {subscriptionAccessError} from '../subscription-access.mjs';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../chat-asset-intent.mjs';
 import {resolveDiscoveryContext} from '../chat-discovery-context.mjs';
 import {chatAnswerText} from '../chat-answer-presentation.mjs';
@@ -26,7 +27,7 @@ const bars=Array.from({length:30},(_,i)=>({date:new Date(Date.UTC(2026,8,i+1)).t
 function fixture({symbol='BTCUSD',interval='1day',authenticated=true,status=200,resultPatch={},duringFetch}={}){
  const nodes=new Map(),requests=[],saved=[],ready=[],rendered=[],chartStates=[];
  const node=id=>{if(!nodes.has(id))nodes.set(id,{value:id==='symbol'?symbol:id==='marketInterval'?interval:'',textContent:'',disabled:false});return nodes.get(id)};
- const context={chartLoadState:state=>chartStates.push(state),marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,ventureActions:[],lastFetchBySymbol:new Map(),status:node('chatStatus'),
+ const context={subscriptionAccessError,chartLoadState:state=>chartStates.push(state),marketSnapshotMetadata,CHART_HISTORY_LIMIT:2000,URLSearchParams,location:{search:''},Event,DOMException,Map,Set,Date,cryptoIntervals:undefined,authState:{enabled:true,authenticated},$:node,chartSymbol:node('symbol'),normSymbol:()=>node('symbol').value,marketStatus:node('marketFetchStatus'),marketButton:node('marketFetch'),privateAccessKey:'private',key:'cache',loaded:null,chartRevision:0,lastVisibleChart:null,ventureActions:[],lastFetchBySymbol:new Map(),status:node('chatStatus'),
   stockContext:(symbol,rows,meta)=>({symbol,bars:rows.length,date:rows.at(-1).date,source:'CSV',interval:meta.interval}),
   localChart:{setData(...args){rendered.push(args)},setSnapshot(value){rendered.push(value)}},sessionStorage:{removeItem(){},setItem(_key,value){saved.push(JSON.parse(value))},getItem(){return null}},renderStatus(){},datasetReady(){ready.push(context.loaded)},rememberSymbol(){},say(){},window:{prompt(){throw Error('Unexpected private-code prompt')}},document:{querySelector(){return {click(){}}}},
   intrinioFeed:Promise.resolve({enabled:false}),
@@ -144,4 +145,14 @@ test('two overlapping marked chart loads for the same ticker cannot let the olde
 test('loader reports a selected-stock quota error and successful load clears the empty state',async()=>{
  const failed=fixture({status:429,resultPatch:{error:"מכסת הקרדיטים נוצלה"}});await assert.rejects(failed.context.loadMarketData());assert.equal(failed.chartStates.at(-1).phase,"error");assert.match(failed.chartStates.at(-1).error,/מכסת/);
  const ready=fixture();await ready.context.loadMarketData();assert.equal(ready.chartStates[0].phase,"loading");assert.equal(ready.chartStates.at(-1).phase,"ready");
+});
+
+test('chart loader preserves subscription denials and only direct chart loads navigate',async()=>{
+ for(const fromChat of [true,false]){
+  const f=fixture({status:402,resultPatch:{code:'subscription_required',error:'תקופת הניסיון הסתיימה.'}}),destinations=[];
+  f.context.location={assign:url=>destinations.push(url)};
+  await assert.rejects(f.context.loadMarketData({fromChat}),e=>e.subscriptionRequired===true&&e.code==='subscription_required');
+  assert.equal(destinations.length,fromChat?0:1);if(!fromChat)assert.equal(destinations[0],'/subscription.html');
+  assert.equal(f.rendered.length,0);assert.equal(f.context.marketButton.disabled,false);
+ }
 });
