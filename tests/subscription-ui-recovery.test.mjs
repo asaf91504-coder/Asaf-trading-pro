@@ -1,3 +1,4 @@
+import {ownerCreditCopy} from '../owner-credit-copy.mjs';
 import {subscriptionCopy} from '../subscription-copy.mjs';
 import {PLANS,consentFor,CHECKOUT_PRICE_VERSION,usdPriceText} from '../server/plans.mjs';
 import test from 'node:test';
@@ -10,7 +11,7 @@ const paid={...expired,access:true,status:'paid',subscriptionStatus:'ACTIVE',can
 async function page(responses,search=''){
  const elements=new Map(),calls=[],navigation=[];
  const get=id=>{if(!elements.has(id))elements.set(id,{hidden:true,disabled:false,checked:false,textContent:'',setAttribute(){},value:id==='billingPlan'?'starter':''});return elements.get(id);};
- const context={subscriptionCopy,PLANS,consentFor,CHECKOUT_PRICE_VERSION,usdPriceText,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
+ const context={ownerCreditCopy,subscriptionCopy,PLANS,consentFor,CHECKOUT_PRICE_VERSION,usdPriceText,URL,URLSearchParams,Intl,Date,AbortSignal,document:{getElementById:get,querySelector:()=>get("price"),documentElement:{lang:'he'}},window:{confirm:()=>true,addEventListener(){}},history:{replaceState(){}},location:{search,assign:url=>navigation.push(url)},fetch:async(_url,options)=>{
   calls.push(options.body?JSON.parse(options.body).action:'GET');
   const next=responses.shift();assert.ok(next,'Unexpected request');if(next instanceof Error)throw next;
   return {ok:!next.httpError,status:next.httpError||200,json:async()=>next.httpError?{error:'יש להיכנס לחשבון.'}:next};
@@ -97,4 +98,14 @@ test('open checkout and administrator pilot retain distinct controls and notices
  assert.equal(adminPage.get('billingCheckout').hidden,false);
  assert.equal(adminPage.get('billingStatus').textContent,'תקופת הניסיון הסתיימה.');
  assert.match(adminPage.get('billingAvailability').textContent,/חיוב אמיתי ומתחדש/);
+});
+
+test('owner sees unlimited credits and no new checkout even with a stale legacy pending subscription',async()=>{
+ const s=await page([{...expired,status:'owner',access:true,ownerUnlimited:true,credits:{unlimited:true},priorCheckoutUnresolved:true}]);
+ assert.match(s.get('billingStatus').textContent,/ללא הגבלה/);assert.match(s.get('billingCredits').textContent,/ללא הגבלה/);assert.equal(s.get('billingCheckout').hidden,true);assert.equal(s.get('billingAvailability').hidden,true);assert.equal(s.get('billingContinue').hidden,false);
+});
+
+test('gift credits are separate from the renewable weekly allowance in customer copy',async()=>{
+ const s=await page([{...paid,credits:{planId:'starter',limit:200,baseLimit:150,baseRemaining:140,remaining:180,bonusRemaining:40,resetsAt:Date.now()+100000}}]);
+ assert.match(s.get('billingCredits').textContent,/140/);assert.match(s.get('billingCredits').textContent,/150/);assert.match(s.get('billingCredits').textContent,/במתנה: 40/);assert.doesNotMatch(s.get('billingCredits').textContent,/200/);
 });

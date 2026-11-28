@@ -1,3 +1,4 @@
+import {isChatOwner} from './owner-chat.mjs';
 import {NEW_TRIAL_CREDITS,creditsEnabled,planFor,planEnv,LEGACY_PLAN_PRICES,CHECKOUT_PRICE_VERSION,creditCheckoutReady,usdCents} from './plans.mjs';
 import {randomUUID} from 'node:crypto';
 import {command,storageKey} from './storage.mjs';
@@ -35,6 +36,7 @@ export function entitlement(record,now=Date.now()){
  return {access:trial||paid,status:paid?'paid':trial?'trial':record?'expired':'not_started',trialEndsAt:trialEndsAt||null,paidUntil:record?.paidUntil||null,daysRemaining:trial?Math.ceil((trialEndsAt-now)/DAY):0,subscriptionStatus:record?.subscriptionStatus||null,canCancel:['ACTIVE','SUSPENDED','APPROVED'].includes(record?.subscriptionStatus)};
 }
 export async function subscriptionGuard(user,{env=process.env,run=command,now=Date.now()}={}){
+ if(isChatOwner(user,env))return null;
  if(!billingEnabled(env))return null;
  if(!billingReady(env))return Response.json({error:'שירות המנויים אינו זמין כרגע. נסה שוב.',code:'billing_unavailable'},{status:503,headers:{'Cache-Control':'no-store'}});
  try{
@@ -48,6 +50,7 @@ export async function subscriptionGuard(user,{env=process.env,run=command,now=Da
 export async function paidSubscriptionGuard(user,{env=process.env,run=command,now=Date.now()}={}){
  const reply=(error,code,status)=>Response.json({enabled:false,error,code},{status,headers:{'Cache-Control':'no-store'}});
  if(!user?.id)return reply('יש להיכנס לחשבון.','authentication_required',401);
+ if(isChatOwner(user,env))return null;
  if(!billingEnabled(env))return reply('שירות המנויים אינו זמין כרגע.','billing_unavailable',503);
  try{
   const identity=await billingIdentity(user.id,{env,run}),record=await readBilling(identity,{env,run});

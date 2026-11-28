@@ -1,8 +1,9 @@
+import {ownerCreditCopy} from './owner-credit-copy.mjs';
 import {authState} from './auth-ui.mjs';
 const banner=document.createElement('aside');banner.className='subscription-banner';banner.hidden=true;banner.setAttribute('aria-label','מצב המנוי');
 const text=document.createElement('span'),link=document.createElement('a');link.href='/subscription.html';link.textContent='ניהול המנוי';banner.append(text,link);document.querySelector('header')?.after(banner);
 let revision=0,lastBilling=null;
-function render(){if(!lastBilling)return;const d=lastBilling;text.textContent=d.status==='trial'?'תקופת הניסיון שלך פעילה עד · '+new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:'medium'}).format(new Date(d.trialEndsAt)):d.status==='paid'?'המנוי שלך פעיל.':'תקופת הניסיון הסתיימה. בחר מסלול להמשך השימוש.';if(d.credits)text.textContent+=` · ${d.credits.remaining}/${d.credits.limit} קרדיטים`;}
+function render(){if(!lastBilling)return;const d=lastBilling;if(d.ownerUnlimited){text.textContent=ownerCreditCopy(document.documentElement.lang,'unlimited');return;}text.textContent=d.status==='trial'?'תקופת הניסיון שלך פעילה עד · '+new Intl.DateTimeFormat(document.documentElement.lang,{dateStyle:'medium'}).format(new Date(d.trialEndsAt)):d.status==='paid'?'המנוי שלך פעיל.':'תקופת הניסיון הסתיימה. בחר מסלול להמשך השימוש.';if(d.credits)text.textContent+=` · ${d.credits.remaining}/${d.credits.limit} קרדיטים`;}
 window.addEventListener('asaf:language',render);
 async function refresh(){
  const current=++revision,member=authState.memberId;lastBilling=null;banner.hidden=true;if(!authState.authenticated||!member)return;
