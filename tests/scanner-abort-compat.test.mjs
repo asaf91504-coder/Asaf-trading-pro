@@ -23,3 +23,22 @@ test('scanner request uses hard deadline and parent cancellation without AbortSi
   await assert.rejects(scannerJson(()=>assert.fail('pre-aborted must not fetch'),endpoint,{},req.signal,500),{name:'AbortError'});
  }finally{AbortSignal.any=original;}
 });
+
+// Exercise the same request wrapper used by discovery, manual scans and filters.
+test('explicit expired-trial and paid-scanner denials navigate to local plan selection',async()=>{
+ const original=Object.getOwnPropertyDescriptor(globalThis,'location'),destinations=[];
+ Object.defineProperty(globalThis,'location',{configurable:true,value:{assign:url=>destinations.push(url)}});
+ try{
+  for(const method of ['GET','POST'])for(const code of ['subscription_required','paid_subscription_required']){
+   const result=await scannerJson(async()=>Response.json({code,subscriptionUrl:'https://foreign.invalid/checkout'},{status:402}),endpoint,{method},new AbortController().signal,500);
+   assert.equal(result.response.status,402);assert.equal(destinations.at(-1),'/subscription.html');
+  }
+  assert.equal(destinations.length,4);
+  for(const [status,code] of [[200,'subscription_required'],[401,'authentication_required'],[403,'license_required'],[402,'credits_exhausted'],[429,'rate_limited'],[503,'billing_unavailable']]){
+   await scannerJson(async()=>Response.json({code},{status}),endpoint,{},new AbortController().signal,500);
+  }
+  assert.equal(destinations.length,4,'auth, quota and provider outages must not redirect to payment');
+  await assert.rejects(scannerJson(async()=>{throw Error('Offline')},endpoint,{},new AbortController().signal,500));
+  assert.equal(destinations.length,4);
+ }finally{if(original)Object.defineProperty(globalThis,'location',original);else delete globalThis.location;}
+});

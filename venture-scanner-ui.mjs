@@ -17,7 +17,11 @@ export async function scannerJson(fetcher,url,options,signal,timeoutMs){
  try {
   if(scoped.signal.aborted)throw scoped.signal.reason||new DOMException('Cancelled','AbortError');
   const response=await fetcher(url,{...options,signal:scoped.signal});
-  return {response,data:await response.json()};
+  const data=await response.json();
+  // Navigate only on an explicit billing denial, never on network/license errors.
+  // Keep the destination local; a response URL must not control checkout navigation.
+  if(response.status===402&&['subscription_required','paid_subscription_required'].includes(data?.code))globalThis.location?.assign('/subscription.html');
+  return {response,data};
  } finally {
   clearTimeout(timer);signal.removeEventListener('abort',relay);
  }
@@ -94,7 +98,7 @@ export function mountVentureScanner({filters,openCharts}){
   try{
    let symbols,batchSize=10,delay=31000,shared=false,sharedReceipt='',targetReached=false;
    if(cachedOnly){shared=sharedScan;batchSize=shared?100:10;symbols=discoverySymbols.length?discoverySymbols:[...records.keys()];if(!symbols.length)throw Error('יש לבצע סריקה ראשונה לפני עדכון המסננים.');}
-   else if(discover){const {response,data:config}=await scannerJson(fetch,'/.netlify/functions/scan-market',{credentials:'same-origin'},signal,15000);if(!response.ok||!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=[...new Set(config.symbols)].slice(0,SCANNER_SEARCH_POOL_LIMIT);discoverySymbols=symbols;batchSize=Math.min(shared?100:10,config.maxSymbols||10);sharedScan=shared;delay=Math.max(31000,config.batchDelayMs||0);}
+   else if(discover){const {response,data:config}=await scannerJson(fetch,'/.netlify/functions/scan-market',{credentials:'same-origin'},signal,15000);if(!response.ok)throw Error(config.error||'יש להתחבר לחשבון עם גישה פעילה לסריקה.');if(!config.enabled||!config.symbols?.length)throw Error('יש להתחבר לחשבון עם גישה פעילה לסריקה.');shared=config.shared===true;symbols=[...new Set(config.symbols)].slice(0,SCANNER_SEARCH_POOL_LIMIT);discoverySymbols=symbols;batchSize=Math.min(shared?100:10,config.maxSymbols||10);sharedScan=shared;delay=Math.max(31000,config.batchDelayMs||0);}
    else {discoverySymbols=[];symbols=$('scanProviderSymbols').value.split(',').map(s=>s.trim()).filter(Boolean);}
    if(!symbols.length||(!discover&&!cachedOnly&&symbols.length>10))throw Error('בחר 1 עד 10 סימולים בכל סריקה ידנית.');
    // A failed cached filter update must remain retryable without refetching market data.
