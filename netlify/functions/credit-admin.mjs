@@ -32,7 +32,7 @@ export function createCreditAdminHandler({env=process.env,run=command,now=()=>Da
    const summary=async(updated,extra={})=>{
     const used=Number(await run(['GET',bonusUsedKey(identity,env)],{env})||0),giftTotal=bonusCreditTotal(updated);
     if(!Number.isSafeInteger(used)||used<0||used>giftTotal)throw Error('Invalid gift balance');
-    return reply({...extra,memberId:user.id,...entitlement(updated,time),ownerUnlimited:isChatOwner(user,env),bonusRemaining:giftTotal-used,credits:await creditStatus(user.id,{env,run,now:time})});
+    return reply({...extra,memberId:user.id,...entitlement(updated,time),...(isChatOwner(user,env)?{ownerUnlimited:true,access:true,status:'owner'}:{ownerUnlimited:false}),bonusRemaining:giftTotal-used,credits:await creditStatus(user.id,{env,run,now:time})});
    };
    if(body.action==='inspect')return summary(record);
    if(isChatOwner(user,env))return reply({error:'לחשבון הבעלים כבר יש קרדיטים ללא הגבלה.'},409);

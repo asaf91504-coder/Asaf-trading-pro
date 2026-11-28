@@ -82,3 +82,8 @@ test('account capability flags distinguish the owner, another admin and a regula
  const x=setup(),handler=createAccountHandler({env:x.env,run:x.run});
  for(const [user,admin,owner] of [[x.owner,true,true],[x.admin,true,false],[x.friend,false,false]]){const data=await (await handler(request('account',null,user.cookie))).json();assert.equal(data.admin,admin);assert.equal(data.owner,owner);}
 });
+
+test('inspecting the owner reports unlimited active access without requiring a trial record',async()=>{
+ const x=setup(),data=await (await x.handler(request('credit-admin',{action:'inspect',email:'owner@example.test'},x.owner.cookie))).json();
+ assert.equal(data.ownerUnlimited,true);assert.equal(data.access,true);assert.equal(data.status,'owner');assert.equal(data.credits.unlimited,true);
+});
