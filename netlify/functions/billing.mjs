@@ -1,3 +1,4 @@
+import {isChatOwner} from '../../server/owner-chat.mjs';
 import {resolvePromotion,publicPromotion} from '../../server/promotions.mjs';
 import {NEW_TRIAL_CREDITS,PLANS,creditsEnabled,consentFor,creditCheckoutReady,CHECKOUT_PRICE_VERSION} from '../../server/plans.mjs';
 import {creditStatus} from '../../server/credits.mjs';
@@ -12,12 +13,13 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
  const config={enabled:billingEnabled(env),ready:billingReady(env),pricingVersion:creditsEnabled(env)?2:1,checkoutPriceVersion:CHECKOUT_PRICE_VERSION,plans:Object.values(PLANS),trialTotalCredits:NEW_TRIAL_CREDITS,trialDays:7,monthlyPrice:creditsEnabled(env)?null:10,currency:'USD',sandbox:env.PAYPAL_ENVIRONMENT==='sandbox'};
  try{
   const user=await currentUser(request,{env,run});
+  const accessState=record=>({...entitlement(record,now()),...(isChatOwner(user,env)?{access:true,status:'owner',ownerUnlimited:true}:{})});
   const accountTerms=record=>({subscriptionMonthlyPrice:subscriptionMonthlyPrice(record,env),subscriptionPlanId:record?.subscriptionId&&Object.hasOwn(PLANS,record.planId)?record.planId:null,priorCheckoutUnresolved:creditsEnabled(env)&&!!record&&!record.priceContract&&((!!record.createRequestId&&!record.subscriptionId)||(!!record.subscriptionId&&record.subscriptionStatus==='APPROVAL_PENDING'))});
   config.paymentPilot=creditsEnabled(env)&&env.ASAF_PUBLIC_PAID_LAUNCH!=='true';
   config.checkoutAllowed=!creditsEnabled(env)||creditCheckoutReady(env)&&(!config.paymentPilot||!!user&&(env.ASAF_ADMIN_MEMBER_IDS||'').split(',').map(x=>x.trim()).includes(user.id));
   if(request.method==='GET'){
    const record=user?await readBilling(await billingIdentity(user.id,{env,run}),{env,run}):null;
-   return reply({...config,authenticated:!!user,credits:user?await creditStatus(user.id,{env,run,now:now()}):null,...accountTerms(record),...entitlement(record,now())});
+   return reply({...config,authenticated:!!user,credits:user?await creditStatus(user.id,{env,run,now:now()}):null,...accountTerms(record),...accessState(record)});
   }
   if(!user)return reply({error:'יש להיכנס לחשבון לפני ניהול המנוי.'},401);
   if(!config.ready)return reply({error:'ההרשמה למנוי תיפתח לאחר השלמת חיבור התשלום.'},503);
@@ -26,7 +28,7 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
   let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
   if(!['start-trial','subscribe','sync','cancel','promo-quote'].includes(body?.action))return reply({error:'Invalid action'},400);
   const identity=await billingIdentity(user.id,{env,run});
-  if(body.action==='start-trial'){const record=await startTrial(identity,{env,run,now:now()});return reply({...config,authenticated:true,...accountTerms(record),...entitlement(record,now())});}
+  if(body.action==='start-trial'){const record=await startTrial(identity,{env,run,now:now()});return reply({...config,authenticated:true,...accountTerms(record),...accessState(record)});}
   const allowed=await run(['EVAL',"local n=tonumber(redis.call('GET',KEYS[1]) or '0');if n>=10 then return 0 end;redis.call('INCR',KEYS[1]);redis.call('EXPIRE',KEYS[1],120);return 1",'1',storageKey('billing:requests:'+identity+':'+Math.floor(now()/60000),env)],{env});
   if(allowed!==1)return reply({error:'יותר מדי בקשות. נסה שוב בעוד דקה.'},429);
   return await withBillingLock(identity,async()=>{
@@ -46,13 +48,13 @@ export function createBillingHandler({env=process.env,run=command,now=()=>Date.n
     if(!creditsEnabled(env)&&entitlement(record,now()).access)return reply({error:'יש לממש קודם את תקופת הניסיון. לא נוצר חיוב.'},409);
     return reply(await createSubscription(identity,record,{env,run,api,now:now(),origin:new URL(request.url).origin,planId:body.planId,promotion}));
    }
-   if(!record?.subscriptionId)return reply({...config,authenticated:true,...accountTerms(record),...entitlement(record,now())});
+   if(!record?.subscriptionId)return reply({...config,authenticated:true,...accountTerms(record),...accessState(record)});
    record=await syncSubscription(identity,record,{env,run,api,now:now()});
    if(body.action==='cancel'&&['ACTIVE','SUSPENDED','APPROVED'].includes(record.subscriptionStatus)){
     await api('/v1/billing/subscriptions/'+record.subscriptionId+'/cancel',{method:'POST',body:{reason:'Customer cancelled renewal in ASAF Pro'}});
     record=await saveBilling(identity,{...record,subscriptionStatus:'CANCELLED',approvalUrl:null},{env,run});
    }
-   return reply({...config,authenticated:true,...accountTerms(record),...entitlement(record,now())});
+   return reply({...config,authenticated:true,...accountTerms(record),...accessState(record)});
   },{env,run});
  }catch{return reply({error:'לא ניתן להשלים את פעולת המנוי כרגע. נסה שוב; אם כבר אישרת ב־PayPal, לחץ על בדיקת תשלום לפני ניסיון נוסף.'},503)}
 };}

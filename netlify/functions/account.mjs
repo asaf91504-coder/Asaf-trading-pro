@@ -1,3 +1,4 @@
+import {isChatOwner} from '../../server/owner-chat.mjs';
 import {randomUUID} from 'node:crypto';
 import {billingIdentity,readBilling,withBillingLock} from '../../server/billing.mjs';
 import {publicAuthConfigured,currentUser,cookieToken,digest,normalizeEmail} from '../../server/auth-core.mjs';
@@ -29,7 +30,7 @@ export function createAccountHandler({env=process.env,run=command}={}){return as
   let userKey=typeof hash==='string'&&/^[a-f0-9]{64}$/.test(hash)?storageKey('auth:user:'+hash,env):null;
   let userRaw=userKey?await run(['GET',userKey],{env}):null,user=parse(userRaw);
   if(user&&user.id!==current.id)throw Error('Account mismatch');
-  if(request.method==='GET')return reply({authenticated:true,memberId:current.id,admin,googleLinked:!!user?.googleSubject,managementReady:!!user});
+  if(request.method==='GET')return reply({authenticated:true,memberId:current.id,admin,owner:isChatOwner(current,env),googleLinked:!!user?.googleSubject,managementReady:!!user});
   if(!(request.headers.get('content-type')||'').toLowerCase().includes('application/json'))return reply({error:'JSON only'},415);
   const raw=await request.text();if(raw.length>2048)return reply({error:'Request too large'},413);
   let body;try{body=JSON.parse(raw)}catch{return reply({error:'Invalid JSON'},400)}
