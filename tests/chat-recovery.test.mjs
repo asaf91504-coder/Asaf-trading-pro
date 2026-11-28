@@ -1,3 +1,4 @@
+import {subscriptionAccessError} from '../subscription-access.mjs';
 import {questionAsset,sameChatAsset,stockDiscoveryIntent} from '../chat-asset-intent.mjs';
 import {resolveDiscoveryContext} from '../chat-discovery-context.mjs';
 import {chatAnswerText} from '../chat-answer-presentation.mjs';
@@ -25,7 +26,7 @@ function setup({draft='',unavailable=false,cancelDuringAuth=false}={}){
  const nodes=new Map(),bubbles=[];let calls=0;const payloads=[];
  const element=()=>({value:'',textContent:'',disabled:false,style:{},children:[],append(v){this.children.push(v)},addEventListener(type,fn){this[type]=fn},dispatchEvent(){},focus(){this.focused=true}});
  const message=element();message.value=draft;const button=element();
- const ctx={chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
+ const ctx={subscriptionAccessError,chatHistory:{complete(){},newConversation(){return true}},log:{scrollTop:0,scrollHeight:0},chartRevision:0,requestsChartControl:()=>false,parseChartCommand:()=>({recognized:false,actions:[]}),message,chatBusy:false,conversationEpoch:0,conversation:[],pendingImage:null,requestController:null,authState:{enabled:true,authenticated:true,checkAvailable:!unavailable},form:{querySelector:()=>button},$:id=>{if(!nodes.has(id))nodes.set(id,element());return nodes.get(id)},say:(role,content)=>{const el=element();el.textContent=content;bubbles.push(el);return el},document:{createElement:element},window:{confirm:()=>true},setTimeout,clearTimeout,AbortController,DOMException,Event,sessionStorage:{removeItem(){},getItem(){return ''}},freeAiAccessKey:'test',refreshAuth:async()=>{if(cancelDuringAuth)ctx.requestController.abort()},currentContext:()=>null,loaded:null,normSymbol:()=> 'AAPL',chartAttachment:()=>null,recentAIBars:()=>[],localChart:{},fetch:async(url,options)=>{calls++;payloads.push(JSON.parse(options.body));throw Error('network failed')},imageInput:null,imageStatus:null,setAiStatus(){}};
  ctx.resolveDiscoveryContext=resolveDiscoveryContext;ctx.questionAsset=questionAsset;ctx.sameChatAsset=sameChatAsset;ctx.stockDiscoveryIntent=stockDiscoveryIntent;ctx.chatAnswerText=chatAnswerText;ctx.isLearningQuestion=isLearningQuestion;ctx.currentUSMarketIntent=currentUSMarketIntent;ctx.languageCode=languageCode;ctx.entryStopText=entryStopText;ctx.compactEntryStopText=compactEntryStopText;ctx.withoutScenarioText=withoutScenarioText;ctx.analysisReceipts=new Map();ctx.appendScenario=()=>{};ctx.chatThrottleDisplay=chatThrottleDisplay;ctx.localizedChatReply=localizedChatReply;ctx.renderChatReply=(el,parts)=>{ctx.lastReplyParts=parts;ctx.renderChatText(el,localizedChatReply(parts,ctx.window.asafTranslate))};
  ctx.journalIntent=journalIntent;ctx.mountJournalDraft=()=>{};ctx.isChatNearBottom=isChatNearBottom;ctx.recentAIBars=recentAIBars;
  ctx.requestsChartAnalysis=requestsChartAnalysis;ctx.hasAnalysisCandles=hasAnalysisCandles;
@@ -555,4 +556,27 @@ test('verified-data recovery is displayed without claiming a model completed the
  const s=setup();let status;s.ctx.setAiStatus=text=>status=text;
  s.ctx.fetch=async()=>({ok:true,json:async()=>({answer:'סיכום נתונים מאומתים: TEST $100',answerMode:'verified-data',modelUnavailable:true,source:'Twelve Data',provider:'openai',credits:{charged:0,remaining:10}})});
  await s.ctx.ask('מניות ללונג');assert.match(s.bubbles[1].textContent,/TEST/);assert.match(status,/ניתוח AI לא הושלם/);assert.doesNotMatch(status,/AI שיחתי מחובר/);
+});
+
+test('expired subscription during chart preparation offers plans without false missing-candle recovery',async()=>{
+ for(const command of [false,true]){
+  const s=setup(),destinations=[];
+  s.ctx.location={assign:url=>destinations.push(url)};
+  const denied=subscriptionAccessError({status:402},{code:'subscription_required',error:'תקופת הניסיון הסתיימה.'});
+  s.ctx.loadMarketData=async()=>{throw denied};
+  if(command){s.ctx.parseChartCommand=parseChartCommand;s.ctx.runChatActions=async()=>{throw denied};}
+  await s.ctx.ask('תנתח את הגרף הנוכחי והצג נקודת כניסה וסטופ־לוס עם התנאים לתרחיש');
+  assert.equal(s.calls(),0);assert.equal(s.ctx.chatBusy,false);assert.equal(s.button.disabled,false);
+  assert.deepEqual(destinations,['/subscription.html']);
+  const bubble=s.bubbles.at(-1);assert.equal(bubble.textContent,'תקופת הניסיון הסתיימה.');
+  assert.equal(bubble.children.length,1);assert.equal(bubble.children[0].href,'/subscription.html');
+  assert.doesNotMatch(bubble.textContent,/אין עדיין נרות|טעינת הנתונים לא הצליחה/);
+  assert.match(s.message.value,/תנתח/);
+ }
+});
+test('subscription denial from normal chat redirects without reopening a model retry',async()=>{
+ const s=setup(),destinations=[];s.ctx.location={assign:url=>destinations.push(url)};
+ s.ctx.fetch=async()=>Response.json({code:'subscription_required',error:'תקופת הניסיון הסתיימה.'},{status:402});
+ await s.ctx.ask('מה ההבדל בין מניה לאגח?');
+ assert.deepEqual(destinations,['/subscription.html']);assert.equal(s.bubbles.at(-1).children.length,1);assert.equal(s.ctx.chatBusy,false);
 });
